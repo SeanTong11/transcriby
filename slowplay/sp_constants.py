@@ -1,6 +1,6 @@
 # Definitions
 
-APP_TITLE = "SlowPlay"
+APP_TITLE = "Transcriby"
 APP_NAME = "slowplay"
 APP_DESCRIPTION = "SlowPlay is a simple audio player with speed/pitch \
 change capabilities, using sounddevice + scipy."
