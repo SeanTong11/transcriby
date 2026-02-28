@@ -88,88 +88,66 @@ If the last played song was extracted from a YouTube video, the app will not aut
 
 ### Prerequisites
 
-- **Python 3.8 or higher**
+- **Python 3.9 or higher**
+- **uv** - Fast Python package manager (install from [astral.sh/uv](https://astral.sh/uv))
 - **FFmpeg** (for YouTube support and audio export)
 
-### Windows
+### Quick Start with uv
 
-1. **Clone or download the repository**
-   ```cmd
-   git clone https://github.com/yourusername/slowplay.git
-   cd slowplay
-   ```
+[uv](https://github.com/astral-sh/uv) is a fast Python package manager written in Rust. It's the recommended way to install and run SlowPlay.
 
-2. **Create a virtual environment (recommended)**
-   ```cmd
-   python -m venv .venv
-   .venv\Scripts\activate
-   ```
+#### Windows
 
-3. **Install Python dependencies**
-   ```cmd
-   pip install -r requirements.txt
-   ```
+```cmd
+git clone https://github.com/yourusername/slowplay.git
+cd slowplay
 
-4. **Run the application**
-   ```cmd
-   python sp-launch.py
-   ```
+# Create venv and install dependencies
+uv sync
 
-   Or simply double-click `run_windows.bat`
+# Run the application
+uv run python sp-launch.py
 
-### Linux
-
-1. **Clone or download the repository**
-   ```bash
-   git clone https://github.com/yourusername/slowplay.git
-   cd slowplay
-   ```
-
-2. **Create a virtual environment (recommended)**
-   ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate
-   ```
-
-3. **Install system dependencies (if needed)**
-   ```bash
-   # Ubuntu/Debian
-   sudo apt-get install python3-pip python3-venv
-   
-   # Optional: for better export quality
-   sudo apt-get install rubberband-cli
-   ```
-
-4. **Install Python dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-5. **Run the application**
-   ```bash
-   python sp-launch.py
-   ```
-
-### WSL (Windows Subsystem for Linux)
-
-You can run SlowPlay in WSL using either method:
-
-**Method 1: WSL with Linux audio (PulseAudio)**
-```bash
-# Install dependencies
-sudo apt-get install python3-pip python3-venv
-
-# Setup virtual environment
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-
-# Run
+# Or activate the environment and run normally
+.venv\Scripts\activate
 python sp-launch.py
 ```
 
-**Method 2: Direct Windows Python (Recommended)**
-Just use Windows Python directly from Command Prompt or PowerShell as described in the Windows section above.
+#### Linux / WSL
+
+```bash
+git clone https://github.com/yourusername/slowplay.git
+cd slowplay
+
+# Create venv and install dependencies
+uv sync
+
+# Run the application
+uv run python sp-launch.py
+
+# Or activate the environment and run normally
+source .venv/bin/activate
+python sp-launch.py
+```
+
+### Development Setup
+
+To install with all development dependencies (pyinstaller, yt-dlp):
+
+```bash
+uv sync --dev
+```
+
+### Legacy pip Setup (Not Recommended)
+
+If you prefer not to use uv:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+python sp-launch.py
+```
 
 ## Shortcuts
 

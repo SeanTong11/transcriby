@@ -1,0 +1,68 @@
+[project]
+name = "slowplay"
+version = "0.3.2"
+description = "A simple audio player with speed/pitch change capabilities"
+readme = "README.md"
+license = {text = "GPL-3.0"}
+authors = [
+    {name = "Original: aFunkyBass", email = ""},
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Sound/Audio :: Players",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "CTkListbox>=1.5",
+    "CTkMessagebox>=2.7",
+    "CTkToolTip>=0.8",
+    "customtkinter>=5.2.2",
+    "pillow>=10.0.0",
+    "requests>=2.32.0",
+    "tkinterdnd2>=0.4.3",
+    "sounddevice>=0.4.6",
+    "soundfile>=0.12.1",
+    "scipy>=1.10.0",
+    "numpy>=1.24.0",
+]
+
+[project.optional-dependencies]
+build = [
+    "pyinstaller>=6.0.0",
+]
+youtube = [
+    "yt-dlp>=2024.0.0",
+]
+dev = [
+    "pyinstaller>=6.0.0",
+    "yt-dlp>=2024.0.0",
+]
+
+[project.scripts]
+slowplay = "slowplay.slowplay:main"
+
+[project.urls]
+Homepage = "https://github.com/aFunkyBass/slowplay"
+Repository = "https://github.com/aFunkyBass/slowplay"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["slowplay"]
+
+[dependency-groups]
+dev = [
+    "pyinstaller>=6.0.0",
+    "yt-dlp>=2024.0.0",
+]
