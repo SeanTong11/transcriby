@@ -19,6 +19,21 @@ def is_linux() -> bool:
     return platform.system() == "Linux"
 
 
+def is_wsl() -> bool:
+    """Check if running on Windows Subsystem for Linux (WSL)"""
+    if not is_linux():
+        return False
+    # Check for WSL-specific indicators
+    try:
+        with open('/proc/version', 'r') as f:
+            version_info = f.read().lower()
+            return 'microsoft' in version_info or 'wsl' in version_info
+    except:
+        pass
+    # Also check environment variable
+    return 'WSL_DISTRO_NAME' in os.environ or 'WSL_INTEROP' in os.environ
+
+
 def get_config_dir() -> str:
     """Get the appropriate config directory for the current platform"""
     if is_windows():

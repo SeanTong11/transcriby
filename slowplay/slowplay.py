@@ -23,7 +23,7 @@ _ = gettext.gettext
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 
 from slowplay.sp_constants import *
-from slowplay.platform_utils import uri_from_path, is_valid_absolute_path, is_windows
+from slowplay.platform_utils import uri_from_path, is_valid_absolute_path, is_windows, is_wsl
 from slowplay import utils
 from slowplay.player import slowPlayer
 from slowplay import filedialogs
@@ -44,8 +44,8 @@ def _init_tkdnd():
 class App(ctk.CTk):
     def __init__(self, args, *orig_args, **orig_kwargs):
         super().__init__(className=APP_TITLE, *orig_args, **orig_kwargs)
-        # Initialize drag and drop support (Windows only - avoids X11 threading issues on Linux/WSL)
-        if is_windows():
+        # Initialize drag and drop support (disabled on WSL to avoid X11 threading issues)
+        if not is_wsl():
             _init_tkdnd()
             if TkinterDnD:
                 self.TkdndVersion = TkinterDnD._require(self)
@@ -1310,8 +1310,8 @@ def main():
     app.bind_all('<KeyPress>', app._hotkey_manager_)
     app.bind_all('<1>', app._click_manager_)
     
-    # Initialize drag and drop if available (Windows only)
-    if is_windows() and TkinterDnD:
+    # Initialize drag and drop if available (disabled on WSL)
+    if not is_wsl() and TkinterDnD:
         from tkinterdnd2 import DND_FILES
         app.drop_target_register(DND_FILES)
         app.dnd_bind("<<Drop>>", app._drop_manager_)
