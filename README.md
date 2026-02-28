@@ -92,6 +92,9 @@ If the last played song was extracted from a YouTube video, the app will not aut
 - **uv** - Fast Python package manager (install from [astral.sh/uv](https://astral.sh/uv))
 - **FFmpeg** (for YouTube support and audio export)
 
+**Linux/WSL Only:**
+- **PortAudio** system library (`sudo apt-get install libportaudio2`)
+
 ### Quick Start with uv
 
 [uv](https://github.com/astral-sh/uv) is a fast Python package manager written in Rust. It's the recommended way to install and run SlowPlay.
@@ -114,6 +117,18 @@ python sp-launch.py
 ```
 
 #### Linux / WSL
+
+**System Dependencies Required:**
+```bash
+# Ubuntu/Debian/WSL
+sudo apt-get install libportaudio2
+
+# Fedora
+sudo dnf install portaudio
+
+# Arch
+sudo pacman -S portaudio
+```
 
 ```bash
 git clone https://github.com/yourusername/slowplay.git
@@ -222,6 +237,19 @@ Without rubberband, export will use scipy (good quality but not as professional)
 ### "yt-dlp not found" error
 - Install yt-dlp: `pip install yt-dlp`
 - Or download from https://github.com/yt-dlp/yt-dlp/releases
+
+### "PortAudio library not found" (Linux/WSL)
+- Install the PortAudio system library:
+  ```bash
+  # Ubuntu/Debian/WSL
+  sudo apt-get install libportaudio2
+  
+  # Fedora
+  sudo dnf install portaudio
+  
+  # Arch
+  sudo pacman -S portaudio
+  ```
 
 ## Credits
 
