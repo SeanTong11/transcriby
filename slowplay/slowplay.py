@@ -43,24 +43,24 @@ from slowplay.CTkRangeSlider import *
 # This is a known WSL-specific compatibility issue with tkinterdnd2
 # and the X11 display server. Native Linux is not affected.
 #
-# Workaround: We delay the import and only enable DnD on non-WSL systems.
-TkinterDnD = None
-def _init_tkdnd():
-    global TkinterDnD
-    if TkinterDnD is None:
-        from tkinterdnd2 import TkinterDnD as _TkinterDnD
-        TkinterDnD = _TkinterDnD
+# Workaround: Dynamically select base class based on platform.
+if is_wsl():
+    # WSL: No DnD support to avoid X11 crash
+    _AppBase = ctk.CTk
+    _dnd_available = False
+else:
+    # Windows/Native Linux: Full DnD support
+    from tkinterdnd2 import TkinterDnD
+    class _AppBase(ctk.CTk, TkinterDnD.DnDWrapper):
+        pass
+    _dnd_available = True
 
-class App(ctk.CTk):
+class App(_AppBase):
     def __init__(self, args, *orig_args, **orig_kwargs):
         super().__init__(className=APP_TITLE, *orig_args, **orig_kwargs)
-        # Initialize drag and drop support
-        # Note: Disabled on WSL due to X11 threading crash (see _init_tkdnd() comment above)
-        # Native Linux and Windows are unaffected and have full DnD support
-        if not is_wsl():
-            _init_tkdnd()
-            if TkinterDnD:
-                self.TkdndVersion = TkinterDnD._require(self)
+        # Initialize drag and drop on supported platforms
+        if _dnd_available:
+            self.TkdndVersion = TkinterDnD._require(self)
 
         # Load app settings
         self.settings = AppSettings()
@@ -1323,7 +1323,7 @@ def main():
     app.bind_all('<1>', app._click_manager_)
     
     # Initialize drag and drop if available (disabled on WSL)
-    if not is_wsl() and TkinterDnD:
+    if _dnd_available:
         from tkinterdnd2 import DND_FILES
         app.drop_target_register(DND_FILES)
         app.dnd_bind("<<Drop>>", app._drop_manager_)
