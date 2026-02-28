@@ -3,7 +3,7 @@
 APP_TITLE = "SlowPlay"
 APP_NAME = "slowplay"
 APP_DESCRIPTION = "SlowPlay is a simple audio player with speed/pitch \
-change capabilities, based on GStreamer."
+change capabilities, using sounddevice + scipy."
 
 APP_VERSION = "0.3.2"
 

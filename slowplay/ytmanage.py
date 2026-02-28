@@ -7,12 +7,12 @@ from CTkMessagebox import CTkMessagebox
 from CTkToolTip import *
 import subprocess
 import os
-import utils
-import json
+from slowplay import utils
 import json
 import hashlib
+from slowplay.platform_utils import get_external_cmd, check_cmd_exists
 
-from sp_constants import *
+from slowplay.sp_constants import *
 
 import gettext
 _ = gettext.gettext
@@ -257,13 +257,7 @@ class ytManage:
 
     # Checks to see if yt-dlp is installed on the system
     def checkYTDLP(self):
-        curEnv = utils.__get_env__()
-
-        try:
-            subprocess.run([YTDLP_CMD, "-h"], env = curEnv, capture_output = True, text = True)
-            return(True)
-        except:
-            return(False)
+        return check_cmd_exists("yt-dlp")
     
     # Actually performs download the audio from the YouTube url
     def downloadAudioFile(self, process_callback = None, show_output = False, include_stderr = False):

@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 #
-# https://lazka.github.io/pgi-docs/#Gst-1.0/classes/Element.html
 # https://tkinterexamples.com/
-# https://developer.ridgerun.com/wiki/index.php/How_to_generate_a_GStreamer_pipeline_diagram
-# https://github.com/gkralik/python-gst-tutorial/tree/master
 # https://deepwiki.com/TomSchimansky/CustomTkinter/1-overview
 #
 #import tkinter as tk
@@ -26,15 +23,16 @@ _ = gettext.gettext
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 
-from sp_constants import *
-import utils
-from player import slowPlayer
-import filedialogs
-from appsettings import *
-import recentdialog
-import aboutdialog
-import ytmanage
-from CTkRangeSlider import *
+from slowplay.sp_constants import *
+from slowplay.platform_utils import uri_from_path, is_valid_absolute_path, is_windows
+from slowplay import utils
+from slowplay.player import slowPlayer
+from slowplay import filedialogs
+from slowplay.appsettings import *
+from slowplay import recentdialog
+from slowplay import aboutdialog
+from slowplay import ytmanage
+from slowplay.CTkRangeSlider import *
 
 class App(ctk.CTk, TkinterDnD.DnDWrapper):
     def __init__(self, args, *orig_args, **orig_kwargs):
@@ -60,8 +58,8 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         # Sets the app icon
         self.wm_iconphoto(True, PhotoImage(file=f"{resources_dir}/Icona-32.png"))
 
-        # Instanciate the GStreamer player
-        self.player = slowPlayer(args.sink)
+        # Initialize the audio player
+        self.player = slowPlayer()
         self.player.updateInterval = UPDATE_INTERVAL
 
         # set style and theme
@@ -431,8 +429,8 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
 
     def filename2Uri(self, fname):
         # Compose a valid uri
-        if(str(fname).startswith('/')):
-            Uri = "file://" + fname
+        if is_valid_absolute_path(fname):
+            Uri = uri_from_path(fname)
         else:
             Uri = fname
 
@@ -445,10 +443,20 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         if(not filename or filename == ''):
             return
         elif not os.path.isfile(filename):
-            CTkMessagebox(master = self, title = _("Error: file not found"), 
-                          message=_("Unable to open file: {}").format(filename),
-                          icon = "cancel", font = ("", LBL_FONT_SIZE))
-            return
+            # On Windows, path may be returned with forward slashes from dialog
+            # Try normalizing it
+            if is_windows():
+                filename = os.path.normpath(filename)
+                if not os.path.isfile(filename):
+                    CTkMessagebox(master = self, title = _("Error: file not found"), 
+                                  message=_("Unable to open file: {}").format(filename),
+                                  icon = "cancel", font = ("", LBL_FONT_SIZE))
+                    return
+            else:
+                CTkMessagebox(master = self, title = _("Error: file not found"), 
+                              message=_("Unable to open file: {}").format(filename),
+                              icon = "cancel", font = ("", LBL_FONT_SIZE))
+                return
 
         # Saves the path and name of the selected file
         self.media = os.path.realpath(filename)
@@ -963,7 +971,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
             self.player.tempo = newtempo
             curpos = self.player.songPosition
             self.player.set_speed(self.player.tempo)
-            # hack to get gstreamer to calculate the position again
+            # force position recalculation
             if(curpos):
                 self.player.seek_absolute(self.player.pipeline_time(curpos))
             
@@ -1280,7 +1288,6 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
 
 def main():
     parser = argparse.ArgumentParser(description = APP_DESCRIPTION, prog = APP_NAME)
-    parser.add_argument("--sink", help=_("Specify a GStreamer custom sink"))
     parser.add_argument("--delete-recent", help=_("Clear the list of recently played media"), action='store_true')
     parser.add_argument("-v", "--version", action="version", version=f"{APP_NAME} - {APP_VERSION}")
     parser.add_argument("media", nargs="?", help=_("URI of the media to open"))

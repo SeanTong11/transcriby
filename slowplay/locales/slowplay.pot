@@ -155,14 +155,6 @@ msgstr ""
 msgid "All files"
 msgstr ""
 
-#: player.py:41
-msgid "You need to install the Gstreamer soundtouch elements for this program to work."
-msgstr ""
-
-#: player.py:49
-msgid "Error: impossible to instantiate sink: '{}'. Reverting to default sink"
-msgstr ""
-
 #: recentdialog.py:13
 msgid "Select recent file..."
 msgstr ""
@@ -374,10 +366,6 @@ msgstr ""
 
 #: slowplay.py:706
 msgid "Loop disabled"
-msgstr ""
-
-#: slowplay.py:1276
-msgid "Specify a GStreamer custom sink"
 msgstr ""
 
 #: slowplay.py:1278

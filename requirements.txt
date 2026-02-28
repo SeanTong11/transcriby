@@ -1,3 +1,4 @@
+# Core dependencies
 altgraph==0.17.4
 certifi==2025.8.3
 charset-normalizer==3.4.3
@@ -9,11 +10,25 @@ darkdetect==0.8.0
 idna==3.10
 packaging==25.0
 pillow==11.3.0
-pycairo==1.28.0
-PyGObject==3.54.2
-pyinstaller==6.16.0
-pyinstaller-hooks-contrib==2025.8
 requests==2.32.5
 setuptools==80.9.0
 tkinterdnd2==0.4.3
 urllib3==2.5.0
+
+# Audio playback (lightweight alternative to GStreamer)
+sounddevice>=0.4.6
+soundfile>=0.12.1
+scipy>=1.10.0
+numpy>=1.24.0
+
+# Optional: High quality time-stretching for export
+# Install separately for best export quality:
+# pip install pyrubberband
+# And install rubberband CLI tool:
+# - Ubuntu/Debian: sudo apt-get install rubberband-cli
+# - macOS: brew install rubberband
+# - Windows: download from https://breakfastquay.com/rubberband/
+
+# Build tools (optional, for creating executable)
+pyinstaller==6.16.0
+pyinstaller-hooks-contrib==2025.8

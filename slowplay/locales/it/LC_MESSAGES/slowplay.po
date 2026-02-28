@@ -156,20 +156,6 @@ msgstr "Tutti i file: *"
 msgid "All files"
 msgstr "Tutti i file"
 
-#: player.py:41
-msgid ""
-"You need to install the Gstreamer soundtouch elements for this program to "
-"work."
-msgstr ""
-"E' necessario installare gli elementi soundtouch di GStreamer per far "
-"funzionare questo programma."
-
-#: player.py:49
-msgid "Error: impossible to instantiate sink: '{}'. Reverting to default sink"
-msgstr ""
-"Errore: impossibile attivare l'uscita {}. Verrà utilizzata l'uscita di "
-"default"
-
 #: recentdialog.py:13
 msgid "Select recent file..."
 msgstr "Selezione file recente..."
@@ -405,10 +391,6 @@ msgstr "Loop abilitato"
 msgid "Loop disabled"
 msgstr "Loop disabilitato"
 
-#: slowplay.py:1276
-msgid "Specify a GStreamer custom sink"
-msgstr "Specifica un sink di GStreamer personalizzato"
-
 #: slowplay.py:1278
 msgid "URI of the media to open"
 msgstr "URI del file da aprire"
@@ -473,9 +455,4 @@ msgstr ""
 "\n"
 "Uhmmmmm... Questo è piuttosto strano"
 
-#~ msgid ""
-#~ "SlowPlay is a simple audio player with speed/pitch change capabilities, "
-#~ "based on GStreamer."
-#~ msgstr ""
-#~ "SlowPlay è un semplice player audio basato su GStreamer in grado di "
-#~ "cambiare velocità e intonazione."
+

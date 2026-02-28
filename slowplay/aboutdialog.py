@@ -3,7 +3,7 @@ from PIL import Image, ImageTk
 import os
 import webbrowser
 
-from sp_constants import *
+from slowplay.sp_constants import *
 
 import gettext
 _ = gettext.gettext

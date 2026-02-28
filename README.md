@@ -1,18 +1,22 @@
 # SlowPlay
 
-**SlowPlay** is a simple audio player with speed/pitch change capabilities, based on GStreamer. It is meant to help music students/teachers transcribe music and play along with it.
+**SlowPlay** is a simple audio player with speed/pitch change capabilities. It is meant to help music students/teachers transcribe music and play along with it.
+
+- **Cross-platform**: Works on both Windows and Linux
+- **Lightweight**: Uses `sounddevice` + `scipy` for audio playback (no GStreamer required)
 
 **Made by a musician for musicians**
 
 ![Screenshot](slowplay/resources/Screenshot.png)
 
-## Inspiration
+## About This Fork
 
-This software is heavily inspired, although not forked, by [Play It Slowly](https://github.com/jwagner/playitslowly) by Jonas Wagner.
+This project is modified from the original [SlowPlay](https://github.com/aFunkyBass/slowplay) by aFunkyBass.
 
-I've been using Play It Slowly as my music classes companion for ages, but unfortunately it is no longer mantained and I started experiencing problems since I've updated my laptop OS, so I decided to rewrite it.
-
-Thank you Jonas for your work.
+**Key changes in this fork:**
+- ✅ **Removed GStreamer dependency** - Now uses `sounddevice` + `scipy` on all platforms
+- ✅ **Full Windows support** - Native Windows support without complex setup
+- ✅ **Simplified installation** - No need to install GStreamer or its plugins
 
 ## Features
 
@@ -80,32 +84,92 @@ If the last played song was extracted from a YouTube video, the app will not aut
 
 - **Drag-n-drop**: you can drop audio files straight from your file manager or from other applications.
 
-- **gstreamer audio sink**: you can specify a different gstreamer sink for particular needs by supplying the **--sink** option from the command line. Example: the following command will send output to JACK audio `slowplay --sink jackaudiosink`
-
 ## Installation
 
-There are a couple of options to install SlowPlay depending upon your Linux distribution.
+### Prerequisites
 
-*NOTE: currently SlowPlay is only available for the Linux operating system.*
+- **Python 3.8 or higher**
+- **FFmpeg** (for YouTube support and audio export)
 
-### Debian derivative distributions (Debian, Ubuntu, Mint etc...)
+### Windows
 
-Please download the `slowplay[version-num].deb` from this repository [latest release](https://github.com/aFunkyBass/slowplay/releases/latest) and install it with your package manager.
+1. **Clone or download the repository**
+   ```cmd
+   git clone https://github.com/yourusername/slowplay.git
+   cd slowplay
+   ```
 
-You can also install it from the command line. Here's an example, assuming you have downloaded the .DEB file into your home folder:
+2. **Create a virtual environment (recommended)**
+   ```cmd
+   python -m venv .venv
+   .venv\Scripts\activate
+   ```
 
-    dpkg -i ~/slowplay[version-num].deb
+3. **Install Python dependencies**
+   ```cmd
+   pip install -r requirements.txt
+   ```
 
-### Other distributions
+4. **Run the application**
+   ```cmd
+   python sp-launch.py
+   ```
 
-For other distributions, you can manually install the app. Here are the steps to follow:
+   Or simply double-click `run_windows.bat`
 
-- Download the compressed file `slowplay[version-num].tar.gz` from the [latest release](https://github.com/aFunkyBass/slowplay/releases/latest).
-- Extract it on a folder present your system path (tipically `/opt` or `~/.local/bin`)
-- Run the executable file `slowplay`
+### Linux
 
-Optionally, you can integrate SlowPlay into you desktop environment using a menu editor or by creating a .desktop file into `~/.local/share/applications`. The detailed procedure on how to integrate the app into your DE is beyond the scope of this manual. Please refer to your distro documentation.
+1. **Clone or download the repository**
+   ```bash
+   git clone https://github.com/yourusername/slowplay.git
+   cd slowplay
+   ```
 
+2. **Create a virtual environment (recommended)**
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
+   ```
+
+3. **Install system dependencies (if needed)**
+   ```bash
+   # Ubuntu/Debian
+   sudo apt-get install python3-pip python3-venv
+   
+   # Optional: for better export quality
+   sudo apt-get install rubberband-cli
+   ```
+
+4. **Install Python dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+5. **Run the application**
+   ```bash
+   python sp-launch.py
+   ```
+
+### WSL (Windows Subsystem for Linux)
+
+You can run SlowPlay in WSL using either method:
+
+**Method 1: WSL with Linux audio (PulseAudio)**
+```bash
+# Install dependencies
+sudo apt-get install python3-pip python3-venv
+
+# Setup virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+# Run
+python sp-launch.py
+```
+
+**Method 2: Direct Windows Python (Recommended)**
+Just use Windows Python directly from Command Prompt or PowerShell as described in the Windows section above.
 
 ## Shortcuts
 
@@ -152,3 +216,41 @@ The following commands are all assigned to the numeric keypad. Refer to the draw
 ![Keypad shortcuts](slowplay/resources/Keypad.png)
 
 *(please make sure none of the input boxes have the focus. Click on an empty area of the app to take the focus back from an input box)*
+
+## Optional: High Quality Export
+
+For best audio export quality, install the `rubberband` CLI tool:
+
+- **Windows**: Download from https://breakfastquay.com/rubberband/ and add to PATH
+- **Ubuntu/Debian**: `sudo apt-get install rubberband-cli`
+- **macOS**: `brew install rubberband`
+
+Without rubberband, export will use scipy (good quality but not as professional).
+
+## Troubleshooting
+
+### "No audio device found"
+- Make sure your audio drivers are installed
+- Check system sound settings to ensure an output device is selected
+
+### Audio sounds choppy or distorted
+- Close other applications using audio
+- Try increasing the buffer size (edit `player.py` and change `DEFAULT_BLOCK_SIZE`)
+
+### "Module not found" error
+- Make sure you installed all requirements: `pip install -r requirements.txt`
+- Ensure your virtual environment is activated
+
+### "yt-dlp not found" error
+- Install yt-dlp: `pip install yt-dlp`
+- Or download from https://github.com/yt-dlp/yt-dlp/releases
+
+## Credits
+
+- Original [SlowPlay](https://github.com/aFunkyBass/slowplay) by aFunkyBass
+- Inspired by [Play It Slowly](https://github.com/jwagner/playitslowly) by Jonas Wagner
+
+## License
+
+This project is licensed under the GNU General Public License v3.0 (GPL-3.0).
+See [COPYING](COPYING) for details.

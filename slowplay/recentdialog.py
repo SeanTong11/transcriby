@@ -1,7 +1,7 @@
 import customtkinter as ctk
 from CTkListbox import *
 import os
-from appsettings import *
+from slowplay.appsettings import *
 
 import gettext
 _ = gettext.gettext

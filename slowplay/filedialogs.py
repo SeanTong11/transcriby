@@ -1,6 +1,7 @@
 import subprocess
 import os
-import utils
+from slowplay import utils
+from slowplay.platform_utils import is_windows
 
 import gettext
 _ = gettext.gettext
@@ -9,6 +10,10 @@ ZEN_CMD = "zenity"
 
 # Checks to see id Zenity is installed on the system
 def __check_zenity__() -> bool:
+  # On Windows, always use Tkinter dialogs
+  if is_windows():
+    return False
+  
   curEnv = utils.__get_env__()
   try:
     subprocess.run([ZEN_CMD, "-h"], env = curEnv, capture_output = True, text = True)
@@ -91,8 +96,15 @@ def __z_dialog__(title = None, filter = None, initialdir = None, initialfile = N
 
 # Pops up the TKInter file selection
 def __tk_dialog__(title = None, filter = None, initialdir = None, initialfile = None, save = False, overwrite = False):
-  from tkinter import Tk
+  from tkinter import Tk, Tcl
   import tkinter.filedialog
+  
+  # Ensure tkinter is properly initialized on Windows
+  if is_windows():
+    try:
+      Tcl().eval('package require Tk')
+    except:
+      pass
 
   # creates a complex admitted extensions array starting from a simple tuple
   filetypes = []

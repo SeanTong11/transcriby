@@ -1,9 +1,9 @@
 import os
 import json
+from slowplay.platform_utils import get_config_dir
 
 USER_HOME_DIR = os.path.expanduser("~")
-USER_CFG_DIR = os.path.join(USER_HOME_DIR, ".config")
-APP_CFG_DIR = os.path.join(USER_CFG_DIR, "slowplay")
+APP_CFG_DIR = get_config_dir()
 APP_CFG_FILENAME = os.path.join(APP_CFG_DIR, "slowplaycfg.json")
 
 MAX_RECENTFILE_LIST = 16
@@ -28,7 +28,7 @@ class AppSettings(object):
         # Check for the existence of the config directory
         # and creates it if not
         if(not os.path.exists(APP_CFG_DIR)):
-            os.makedirs(APP_CFG_DIR)
+            os.makedirs(APP_CFG_DIR, exist_ok=True)
 
         self.bUpdateForbidden = False     # Disallow setting new values
 

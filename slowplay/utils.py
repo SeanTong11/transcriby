@@ -4,26 +4,15 @@ import string
 import tempfile
 import subprocess
 import io
-import selectors
 import sys
 from datetime import datetime
+from slowplay.platform_utils import get_env_with_original_path, is_windows
 
 
-# Function to restore the original LD_LIBRARY_PATH environment
+# Function to restore the original LD_LIBRARY_PATH/PATH environment
 # if the app is running as a frozen app with pyinstaller
 def __get_env__():
-    env = dict(os.environ)
-
-    lp_key = 'LD_LIBRARY_PATH'
-
-    lp_orig = env.get(lp_key + '_ORIG')
-
-    if lp_orig is not None:
-        env[lp_key] = lp_orig  # restore the original, unmodified value
-    else:
-        env.pop(lp_key, None)
-
-    return(env)
+    return get_env_with_original_path()
 
 
 # Function to generate a filename on the temporary directory
@@ -46,48 +35,72 @@ def capture_subprocess_output(subprocess_args, callback_func = None, show_output
     # bufsize = 1 means output is line buffered
     # universal_newlines = True is required for line buffering
 
-    # restores the original LD_LIBRARY_PATH environment
+    # restores the original LD_LIBRARY_PATH/PATH environment
     # Pyinstaller safe
     curEnv = __get_env__()
+
+    # On Windows, may need to use shell=False and hide console window
+    startupinfo = None
+    if is_windows():
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo.wShowWindow = subprocess.SW_HIDE
 
     process = subprocess.Popen(subprocess_args,
                                bufsize=1,
                                stdout=subprocess.PIPE,
                                stderr=subprocess.PIPE if (include_stderr == False) else subprocess.STDOUT,
                                universal_newlines=True,
-                               env=curEnv)
+                               env=curEnv,
+                               startupinfo=startupinfo)
 
     # Create callback function for process output
     buf = io.StringIO()
-    def handle_output(stream, mask):
-        # Because the process' output is line buffered, there's only ever one
-        # line to read when this function is called
-        line = stream.readline()
-        buf.write(line)
+    
+    if is_windows():
+        # Windows: use simpler approach without selectors
+        for line in process.stdout:
+            buf.write(line)
+            if callback_func is not None:
+                callback_func(line)
+            if show_output:
+                sys.stdout.write(line)
+        
+        # Get process return code
+        return_code = process.wait()
+    else:
+        # Linux/macOS: use selectors for async I/O
+        import selectors
+        
+        def handle_output(stream, mask):
+            # Because the process' output is line buffered, there's only ever one
+            # line to read when this function is called
+            line = stream.readline()
+            buf.write(line)
 
-        # If defined, passes the parsed line to the callback function
-        if(callback_func is not None):
-            callback_func(line)
+            # If defined, passes the parsed line to the callback function
+            if(callback_func is not None):
+                callback_func(line)
 
-        # shows output if requested
-        if(show_output == True):
-            sys.stdout.write(line)
+            # shows output if requested
+            if(show_output == True):
+                sys.stdout.write(line)
 
-    # Register callback for an "available for read" event from subprocess' stdout stream
-    selector = selectors.DefaultSelector()
-    selector.register(process.stdout, selectors.EVENT_READ, handle_output)
+        # Register callback for an "available for read" event from subprocess' stdout stream
+        selector = selectors.DefaultSelector()
+        selector.register(process.stdout, selectors.EVENT_READ, handle_output)
 
-    # Loop until subprocess is terminated
-    while process.poll() is None:
-        # Wait for events and handle them with their registered callbacks
-        events = selector.select()
-        for key, mask in events:
-            callback = key.data
-            callback(key.fileobj, mask)
+        # Loop until subprocess is terminated
+        while process.poll() is None:
+            # Wait for events and handle them with their registered callbacks
+            events = selector.select()
+            for key, mask in events:
+                callback = key.data
+                callback(key.fileobj, mask)
 
-    # Get process return code
-    return_code = process.wait()
-    selector.close()
+        # Get process return code
+        return_code = process.wait()
+        selector.close()
 
     success = (return_code == 0)
 

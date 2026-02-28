@@ -13,3 +13,6 @@ binaries/
 /sp
 /setup.py
 /hook-tkinterdnd2.py
+
+# Windows WSL metadata files
+*:Zone.Identifier
