@@ -7,7 +7,6 @@
 import customtkinter as ctk
 from CTkMessagebox import CTkMessagebox
 from CTkToolTip import *
-from tkinterdnd2 import *
 #from tkinter import ttk
 from tkinter import PhotoImage
 import datetime as dt
@@ -34,10 +33,22 @@ from slowplay import aboutdialog
 from slowplay import ytmanage
 from slowplay.CTkRangeSlider import *
 
-class App(ctk.CTk, TkinterDnD.DnDWrapper):
+# Delay import tkinterdnd2 to avoid X11 threading issues
+TkinterDnD = None
+def _init_tkdnd():
+    global TkinterDnD
+    if TkinterDnD is None:
+        from tkinterdnd2 import TkinterDnD as _TkinterDnD
+        TkinterDnD = _TkinterDnD
+
+class App(ctk.CTk):
     def __init__(self, args, *orig_args, **orig_kwargs):
         super().__init__(className=APP_TITLE, *orig_args, **orig_kwargs)
-        self.TkdndVersion = TkinterDnD._require(self)
+        # Initialize drag and drop support (Windows only - avoids X11 threading issues on Linux/WSL)
+        if is_windows():
+            _init_tkdnd()
+            if TkinterDnD:
+                self.TkdndVersion = TkinterDnD._require(self)
 
         # Load app settings
         self.settings = AppSettings()
@@ -1298,9 +1309,13 @@ def main():
 
     app.bind_all('<KeyPress>', app._hotkey_manager_)
     app.bind_all('<1>', app._click_manager_)
-    app.drop_target_register(DND_FILES)
-    app.dnd_bind("<<Drop>>", app._drop_manager_)
-    app.dnd_bind("<<DropEnter>>", app._drop_check_)
+    
+    # Initialize drag and drop if available (Windows only)
+    if is_windows() and TkinterDnD:
+        from tkinterdnd2 import DND_FILES
+        app.drop_target_register(DND_FILES)
+        app.dnd_bind("<<Drop>>", app._drop_manager_)
+        app.dnd_bind("<<DropEnter>>", app._drop_check_)
 
     app.after(10, app._tasks_)
 
