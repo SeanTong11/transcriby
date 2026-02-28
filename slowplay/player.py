@@ -61,28 +61,38 @@ class slowPlayer():
         # Thread safety
         self._lock = threading.Lock()
         
+        # Crossfade buffer to eliminate clicks between blocks
+        self._prev_block_tail = None
+        self._crossfade_samples = 64  # Number of samples to crossfade
+        
         # For compatibility
         self.semitones = 0
         self.cents = 0
         self.tempo = 1.0
 
-    def _resample_block(self, block, target_ratio):
-        """Resample audio block to change speed/pitch"""
+    def _resample_block(self, block, target_ratio, exact_output_len=None):
+        """Resample audio block to change speed/pitch using linear interpolation"""
         if target_ratio == 1.0:
             return block
         
-        # Calculate new length
+        # Calculate output length - use exact length if specified
         orig_len = block.shape[-1]
-        new_len = int(orig_len * target_ratio)
+        if exact_output_len is not None:
+            new_len = exact_output_len
+        else:
+            new_len = int(orig_len * target_ratio)
         
+        # Use linear interpolation (faster, more stable boundaries than FFT)
         if len(block.shape) == 1:
             # Mono
-            return signal.resample(block, new_len)
+            indices = np.linspace(0, orig_len - 1, new_len)
+            return np.interp(indices, np.arange(orig_len), block).astype(block.dtype)
         else:
             # Multi-channel
             result = np.zeros((block.shape[0], new_len), dtype=block.dtype)
+            indices = np.linspace(0, orig_len - 1, new_len)
             for ch in range(block.shape[0]):
-                result[ch] = signal.resample(block[ch], new_len)
+                result[ch] = np.interp(indices, np.arange(orig_len), block[ch]).astype(block.dtype)
             return result
 
     def _get_audio_block(self, block_size):
@@ -111,6 +121,8 @@ class slowPlayer():
                         self._current_frame = int(start_time * self._sample_rate)
                     else:
                         self._current_frame = 0
+                    # Reset crossfade buffer on loop
+                    self._prev_block_tail = None
             
             # Calculate read range
             start_frame = self._current_frame
@@ -125,6 +137,8 @@ class slowPlayer():
                         self._current_frame = int(start_time * self._sample_rate)
                     else:
                         self._current_frame = 0
+                    # Reset crossfade buffer on loop
+                    self._prev_block_tail = None
                     return self._get_audio_block(block_size)
                 else:
                     return None  # End of file
@@ -167,6 +181,35 @@ class slowPlayer():
             
             # Apply volume
             audio_slice = audio_slice * self._volume
+            
+            # Apply crossfade with previous block to eliminate clicks
+            if self._prev_block_tail is not None:
+                fade_len = min(self._crossfade_samples, audio_slice.shape[-1])
+                if fade_len > 0:
+                    fade_in = np.linspace(0, 1, fade_len)
+                    fade_out = np.linspace(1, 0, fade_len)
+                    
+                    if len(audio_slice.shape) == 1:
+                        # Mono
+                        audio_slice[:fade_len] = (
+                            self._prev_block_tail * fade_out + 
+                            audio_slice[:fade_len] * fade_in
+                        )
+                    else:
+                        # Multi-channel
+                        for ch in range(audio_slice.shape[0]):
+                            audio_slice[ch, :fade_len] = (
+                                self._prev_block_tail[ch] * fade_out + 
+                                audio_slice[ch, :fade_len] * fade_in
+                            )
+            
+            # Store tail for next block's crossfade
+            tail_len = min(self._crossfade_samples, audio_slice.shape[-1])
+            if tail_len > 0:
+                if len(audio_slice.shape) == 1:
+                    self._prev_block_tail = audio_slice[-tail_len:].copy()
+                else:
+                    self._prev_block_tail = audio_slice[:, -tail_len:].copy()
             
             return audio_slice.astype(np.float32)
 
@@ -232,6 +275,9 @@ class slowPlayer():
         """Load audio file"""
         # Stop current playback
         self.Pause()
+        
+        # Reset crossfade buffer
+        self._prev_block_tail = None
         
         # Convert URI to path
         if mediafile.startswith("file://"):
@@ -372,6 +418,9 @@ class slowPlayer():
             
             # Clamp to valid range
             self._current_frame = max(0, min(self._current_frame, self._total_frames - 1))
+            
+            # Reset crossfade buffer
+            self._prev_block_tail = None
 
     def seek_absolute(self, newPos):
         """Seek to absolute position (newPos in nanoseconds)"""
@@ -380,12 +429,16 @@ class slowPlayer():
             self._current_frame = int(new_time * self._sample_rate)
             self._current_frame = max(0, min(self._current_frame, self._total_frames - 1))
             self.songPosition = new_time
+            
+            # Reset crossfade buffer
+            self._prev_block_tail = None
 
     def seek_relative(self, newPos):
         """Seek relative to current position (newPos in seconds)"""
         current_time = self._current_frame / self._sample_rate
         new_time = current_time + newPos
         self.seek_absolute(new_time * NANOSEC)
+        # seek_absolute resets crossfade buffer
 
     def query_position(self):
         """Get current position in nanoseconds"""
