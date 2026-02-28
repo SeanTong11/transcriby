@@ -4,15 +4,21 @@ SlowPlay for Windows uses `sounddevice` + `scipy` for lightweight audio playback
 
 ---
 
-## Method 1: Run from Source (Recommended)
+## Method 1: Run from Source with uv (Recommended)
+
+[uv](https://github.com/astral-sh/uv) is a fast Python package manager written in Rust.
 
 ### Prerequisites
 
-1. **Python 3.8 or higher**
+1. **Python 3.9 or higher**
    - Download from https://python.org
    - **Important**: Check "Add Python to PATH" during installation
 
-2. **FFmpeg** (optional, for YouTube support)
+2. **uv**
+   - Install from https://astral.sh/uv
+   - Or run: `powershell -c "irm https://astral.sh/uv/install.ps1 | iex"`
+
+3. **FFmpeg** (optional, for YouTube support)
    - Download from https://ffmpeg.org/download.html
    - Add to PATH or place in the same folder as SlowPlay
 
@@ -24,23 +30,34 @@ SlowPlay for Windows uses `sounddevice` + `scipy` for lightweight audio playback
    cd slowplay
    ```
 
-2. **Create a virtual environment (recommended)**
+2. **Install dependencies with uv**
    ```cmd
-   python -m venv .venv
+   uv sync
+   ```
+
+3. **Run the application**
+   ```cmd
+   uv run python sp-launch.py
+   ```
+
+   Or activate the environment and run:
+   ```cmd
    .venv\Scripts\activate
-   ```
-
-3. **Install Python dependencies**
-   ```cmd
-   pip install -r requirements.txt
-   ```
-
-4. **Run the application**
-   ```cmd
    python sp-launch.py
    ```
 
-   Or simply double-click `run_windows.bat`
+---
+
+## Method 1b: Legacy pip Setup (Not Recommended)
+
+If you prefer not to use uv:
+
+```cmd
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+python sp-launch.py
+```
 
 ---
 
