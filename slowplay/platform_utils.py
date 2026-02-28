@@ -20,17 +20,27 @@ def is_linux() -> bool:
 
 
 def is_wsl() -> bool:
-    """Check if running on Windows Subsystem for Linux (WSL)"""
+    """Check if running on Windows Subsystem for Linux (WSL)
+    
+    WSL has different behavior than native Linux in some cases,
+    especially regarding X11 GUI threading. This function helps
+    us apply WSL-specific workarounds when needed.
+    
+    Detection methods:
+    1. Check /proc/version for "microsoft" or "wsl" strings
+    2. Check for WSL-specific environment variables
+    """
     if not is_linux():
         return False
-    # Check for WSL-specific indicators
+    # Check for WSL-specific indicators in kernel version
     try:
         with open('/proc/version', 'r') as f:
             version_info = f.read().lower()
             return 'microsoft' in version_info or 'wsl' in version_info
     except:
         pass
-    # Also check environment variable
+    # Fallback: check WSL-specific environment variables
+    # These are set by WSL but not in native Linux
     return 'WSL_DISTRO_NAME' in os.environ or 'WSL_INTEROP' in os.environ
 
 

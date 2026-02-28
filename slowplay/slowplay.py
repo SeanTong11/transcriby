@@ -33,7 +33,17 @@ from slowplay import aboutdialog
 from slowplay import ytmanage
 from slowplay.CTkRangeSlider import *
 
-# Delay import tkinterdnd2 to avoid X11 threading issues
+# Lazy import tkinterdnd2 to avoid X11 threading issues on WSL
+# 
+# Issue: On WSL, TkinterDnD._require() triggers a crash with:
+#   [xcb] Unknown sequence number while appending request
+#   python3: ../../src/xcb_io.c:157: append_pending_request: 
+#   Assertion `!xcb_xlib_unknown_seq_number' failed.
+#
+# This is a known WSL-specific compatibility issue with tkinterdnd2
+# and the X11 display server. Native Linux is not affected.
+#
+# Workaround: We delay the import and only enable DnD on non-WSL systems.
 TkinterDnD = None
 def _init_tkdnd():
     global TkinterDnD
@@ -44,7 +54,9 @@ def _init_tkdnd():
 class App(ctk.CTk):
     def __init__(self, args, *orig_args, **orig_kwargs):
         super().__init__(className=APP_TITLE, *orig_args, **orig_kwargs)
-        # Initialize drag and drop support (disabled on WSL to avoid X11 threading issues)
+        # Initialize drag and drop support
+        # Note: Disabled on WSL due to X11 threading crash (see _init_tkdnd() comment above)
+        # Native Linux and Windows are unaffected and have full DnD support
         if not is_wsl():
             _init_tkdnd()
             if TkinterDnD:
