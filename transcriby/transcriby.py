@@ -106,6 +106,7 @@ class App(_AppBase):
 
         # set style and theme
         ctk.set_appearance_mode("Dark")
+        self.configure(fg_color=UI_BG_APP)
 
         # Loads the reset buttons icon
         resetIcon = ctk.CTkImage(
@@ -395,7 +396,7 @@ class App(_AppBase):
             self.loopCenterFrame,
             text="",
             font=("", max(10, LBL_FONT_SIZE - 1)),
-            text_color="#8FA1B8",
+            text_color=UI_TEXT_MUTED,
             justify="center",
             wraplength=280,
         )
@@ -403,6 +404,14 @@ class App(_AppBase):
         self.updateLoopHint()
 
         # Widgets on right panel
+        self.lblActionsTitle = ctk.CTkLabel(
+            self.RFrame,
+            text=_("Actions"),
+            font=("", LBL_FONT_SIZE),
+            anchor="w",
+        )
+        self.lblActionsTitle.grid(row=0, column=0, padx=UI_INNER_PAD, pady=(UI_INNER_PAD, 0), sticky="w", columnspan=2)
+
         self.loopIcon = ctk.CTkImage(
             light_image=Image.open(os.path.join(resources_dir, "Loop Icon.png")),
             dark_image=Image.open(os.path.join(resources_dir, "Loop Icon.png")),
@@ -414,17 +423,17 @@ class App(_AppBase):
         self.playButton.configure(
             height=MAIN_BUTTON_HEIGHT,
             font=("", MAIN_BUTTON_FONT_SIZE),
-            fg_color="#2F5D95",
-            hover_color="#23436C",
+            fg_color=UI_ACCENT,
+            hover_color=UI_ACCENT_HOVER,
         )
-        self.playButton.grid(row=0, column=0, pady=(UI_INNER_PAD, 0), sticky="ew", columnspan=2)
+        self.playButton.grid(row=1, column=0, pady=(UI_INNER_PAD, 0), sticky="ew", columnspan=2)
         self.playButton_tt = CTkToolTip(self.playButton, message=_("Play/Pause"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
 
         self.openButton = ctk.CTkButton(self.RFrame, text=_("Open"), font=("", SECONDARY_BUTTON_FONT_SIZE), 
                                         command=self.openFile, width=110)
         self.openButton.configure(height=SECONDARY_BUTTON_HEIGHT)
-        self.openButton.grid(row=1, column=0, pady=(UI_INNER_PAD, 0), sticky="ew")
+        self.openButton.grid(row=2, column=0, pady=(UI_INNER_PAD, 0), sticky="ew")
         self.openButton_tt = CTkToolTip(self.openButton, message=_("Open a file.\nRight-click to reopen a recent file"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
 
@@ -440,7 +449,7 @@ class App(_AppBase):
         self.YTBtn = ctk.CTkButton(self.RFrame, text="", width=ICON_BUTTON_WIDTH, font=("", SECONDARY_BUTTON_FONT_SIZE),
                                        image=YTIcon, command= lambda: self.openYouTubeDialog(None))
         self.YTBtn.configure(height=ICON_BUTTON_HEIGHT)
-        self.YTBtn.grid(row=1, column=1, sticky="e", pady=(UI_INNER_PAD, 0), padx=(UI_INNER_PAD, 0))
+        self.YTBtn.grid(row=2, column=1, sticky="e", pady=(UI_INNER_PAD, 0), padx=(UI_INNER_PAD, 0))
         self.YTBtn_tt = CTkToolTip(self.YTBtn, message=_("Click to extract audio from a YouTube video"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
 
@@ -451,7 +460,7 @@ class App(_AppBase):
             command=self.saveAs,
             height=SECONDARY_BUTTON_HEIGHT,
         )
-        self.saveasButton.grid(row=2, column=0, pady=UI_INNER_PAD, sticky="ew", columnspan=2)
+        self.saveasButton.grid(row=3, column=0, pady=UI_INNER_PAD, sticky="ew", columnspan=2)
         self.saveasButton_tt = CTkToolTip(self.saveasButton, message=_("Save the file with current speed/pitch settings as MP3 or WAV"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
 
@@ -463,13 +472,13 @@ class App(_AppBase):
             height=AUX_BUTTON_HEIGHT,
             fg_color="transparent",
             border_width=1,
-            border_color="#4A4D55",
+            border_color=UI_BORDER_COLOR,
         )
-        self.aboutButton.grid(row=3, column=0, pady=(UI_INNER_PAD, UI_INNER_PAD), sticky="sew", columnspan=2)
+        self.aboutButton.grid(row=4, column=0, pady=(UI_INNER_PAD, UI_INNER_PAD), sticky="sew", columnspan=2)
         self.aboutButton_tt = CTkToolTip(self.aboutButton, message=_("Show info about this software"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
         
-        self.RFrame.rowconfigure(3, weight=1)
+        self.RFrame.rowconfigure(4, weight=1)
         self.RFrame.columnconfigure(0, weight=1)
 
         # Widget on status bar
@@ -480,6 +489,8 @@ class App(_AppBase):
         self.loopContextMenu = tk.Menu(self, tearoff=0)
         self.loopContextMenu.add_command(label=_("Set loop start here"), command=self._set_loop_start_from_context)
         self.loopContextMenu.add_command(label=_("Set loop end here"), command=self._set_loop_end_from_context)
+
+        self._apply_ui_styles()
 
         self.dispSongTime(Force=True)
 
@@ -508,6 +519,152 @@ class App(_AppBase):
                         #self.setYouTubeUrl(lastPlayed, filePlabackOptions[PBO_DEF_METADATA])
                     else:
                         self.setFile(lastPlayed)
+
+    def _apply_ui_styles(self):
+        self.LFrame.configure(
+            fg_color=UI_BG_CARD,
+            corner_radius=UI_CARD_RADIUS,
+            border_width=1,
+            border_color=UI_BORDER_COLOR,
+        )
+        self.RFrame.configure(
+            fg_color=UI_BG_CARD,
+            corner_radius=UI_CARD_RADIUS,
+            border_width=1,
+            border_color=UI_BORDER_COLOR,
+        )
+        self.BFrame.configure(fg_color=UI_BG_CARD_ALT, corner_radius=0)
+        self.CTLFrame.configure(
+            fg_color=UI_BG_CARD_ALT,
+            corner_radius=max(8, UI_CARD_RADIUS - 2),
+            border_width=1,
+            border_color=UI_BORDER_COLOR,
+        )
+        self.loopControlsFrame.configure(
+            fg_color=UI_BG_CARD,
+            corner_radius=UI_INPUT_RADIUS,
+            border_width=1,
+            border_color=UI_BORDER_COLOR,
+        )
+        self.loopAFrame.configure(fg_color=UI_BG_CARD_ALT, corner_radius=UI_INPUT_RADIUS)
+        self.loopBFrame.configure(fg_color=UI_BG_CARD_ALT, corner_radius=UI_INPUT_RADIUS)
+        self.loopCenterFrame.configure(fg_color=UI_BG_CARD_ALT, corner_radius=UI_INPUT_RADIUS)
+
+        self.dispPosition.configure(text_color=UI_TEXT_PRIMARY, font=("", TITLE_FONT_SIZE, "bold"))
+        self.fileLabel.configure(text_color=UI_TEXT_MUTED)
+        self.lblActionsTitle.configure(text_color=UI_TEXT_MUTED)
+
+        self.progress.configure(
+            fg_color=UI_BG_INPUT,
+            progress_color=UI_ACCENT,
+            corner_radius=UI_INPUT_RADIUS,
+        )
+        self.scale.configure(
+            fg_color=UI_BG_INPUT,
+            progress_color=UI_ACCENT,
+            button_color=UI_ACCENT,
+            button_hover_color=UI_ACCENT_HOVER,
+        )
+
+        for slider in (self.sldSpeed, self.sldPitchST, self.sldPitchCents, self.sldVolume):
+            slider.configure(
+                fg_color=UI_BG_INPUT,
+                progress_color=UI_ACCENT,
+                button_color=UI_ACCENT,
+                button_hover_color=UI_ACCENT_HOVER,
+            )
+
+        for entry in (self.entSpeed, self.entPitchST, self.entPitchCents, self.entVolume):
+            entry.configure(
+                fg_color=UI_BG_INPUT,
+                border_color=UI_BORDER_COLOR,
+                corner_radius=UI_INPUT_RADIUS,
+                text_color=UI_TEXT_PRIMARY,
+            )
+
+        dim_labels = [
+            self.lblSpeed,
+            self.lblSpeedEntry,
+            self.lblPitchST,
+            self.lblPitchSTEntry,
+            self.lblPitchCents,
+            self.lblPitchCentsEntry,
+            self.lblVolume,
+            self.lblLoopControls,
+        ]
+        for label in dim_labels:
+            label.configure(text_color=UI_TEXT_MUTED)
+
+        self.lblLoopStart.configure(text_color=UI_TEXT_PRIMARY)
+        self.lblLoopEnd.configure(text_color=UI_TEXT_PRIMARY)
+        self.lblLoopHint.configure(text_color=UI_TEXT_MUTED)
+        self.swtLoopEnabled.configure(
+            text_color=UI_TEXT_PRIMARY,
+            fg_color=UI_BG_INPUT,
+            progress_color=UI_ACCENT,
+            button_color=UI_TEXT_PRIMARY,
+            button_hover_color=UI_TEXT_MUTED,
+        )
+
+        neutral_buttons = [
+            self.btnResetSpeed,
+            self.btnResetPitchST,
+            self.btnResetPitchCents,
+            self.btnResetLoopStart,
+            self.btnLoopASet,
+            self.btnLoopABack2,
+            self.btnLoopABack1,
+            self.btnLoopAFwd1,
+            self.btnLoopAFwd2,
+            self.btnResetLoopEnd,
+            self.btnLoopBSet,
+            self.btnLoopBBack2,
+            self.btnLoopBBack1,
+            self.btnLoopBFwd1,
+            self.btnLoopBFwd2,
+            self.btnLoopHelp,
+        ]
+        for button in neutral_buttons:
+            button.configure(
+                fg_color=UI_BG_INPUT,
+                hover_color=UI_BG_CARD_ALT,
+                border_width=1,
+                border_color=UI_BORDER_COLOR,
+                text_color=UI_TEXT_PRIMARY,
+            )
+
+        self.playButton.configure(
+            fg_color=UI_ACCENT,
+            hover_color=UI_ACCENT_HOVER,
+            text_color=UI_TEXT_PRIMARY,
+        )
+        self.openButton.configure(
+            fg_color=UI_BG_CARD_ALT,
+            hover_color=UI_BG_INPUT,
+            border_width=1,
+            border_color=UI_BORDER_COLOR,
+            text_color=UI_TEXT_PRIMARY,
+        )
+        self.YTBtn.configure(
+            fg_color=UI_BG_CARD_ALT,
+            hover_color=UI_BG_INPUT,
+            border_width=1,
+            border_color=UI_BORDER_COLOR,
+        )
+        self.saveasButton.configure(
+            fg_color=UI_BG_CARD_ALT,
+            hover_color=UI_BG_INPUT,
+            border_width=1,
+            border_color=UI_BORDER_COLOR,
+            text_color=UI_TEXT_PRIMARY,
+        )
+        self.aboutButton.configure(
+            fg_color="transparent",
+            hover_color=UI_BG_INPUT,
+            border_width=1,
+            border_color=UI_BORDER_COLOR,
+            text_color=UI_TEXT_MUTED,
+        )
 
     # Open file selection and sets it for playback
     def openFile(self):
@@ -696,12 +853,13 @@ class App(_AppBase):
         # Create a progress bar on the bottom panel
         self.save_prg_var = ctk.DoubleVar(self, value=0)
         self.save_prg = ctk.CTkProgressBar(self.BFrame, variable=self.save_prg_var, height=10, width=80)
+        self.save_prg.configure(fg_color=UI_BG_INPUT, progress_color=UI_ACCENT)
         self.save_prg.grid(row=0, column=1, padx=8, pady=10, sticky="e")
 
         # Sets a global variable to cancel the save process
         # and adds a button that handles it
         self.save_canc_var = False
-        self.save_canc = ctk.CTkButton(self.BFrame, text="X", fg_color="#aa0000", hover_color="red", 
+        self.save_canc = ctk.CTkButton(self.BFrame, text="X", fg_color=UI_DANGER, hover_color=UI_DANGER_HOVER,
                                        height=8, width=10, command=self.saveCancelButtonClick)
         self.save_canc.grid(row=0, column=2, padx=8, pady=8, sticky="e")
 
@@ -1105,12 +1263,12 @@ class App(_AppBase):
     # Start Playing   
     def Play(self):
         self.player.Play()
-        self.playButton.configure(fg_color="#2E7D32", hover_color="#1E5A24", require_redraw=True)
+        self.playButton.configure(fg_color=UI_SUCCESS, hover_color=UI_SUCCESS_HOVER, require_redraw=True)
     
     # Pause Playing
     def Pause(self):
         self.player.Pause()
-        self.playButton.configure(fg_color="#2F5D95", hover_color="#23436C", require_redraw=True)
+        self.playButton.configure(fg_color=UI_ACCENT, hover_color=UI_ACCENT_HOVER, require_redraw=True)
 
     # Stop playing and rewind
     def stopPlaying(self):
