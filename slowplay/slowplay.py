@@ -617,7 +617,7 @@ class App(_AppBase):
         # the progress bar afterwards
         self.statusBarMessage(_("Saving file: {}...").format(filename), static = True)
         try:
-            self.player.fileSave(self.mediaUri, filename, self.saveProgress)
+            self.player.fileSave(self.media, filename, self.saveProgress)
         finally:
             self.save_prg.destroy()
             self.save_prg_var.__del__()

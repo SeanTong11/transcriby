@@ -30,7 +30,7 @@ def check_requirements():
     
     # Check core dependencies
     required = [
-        ('sounddevice', 'sounddevice'),
+        ('mpv', 'python-mpv'),
         ('soundfile', 'soundfile'),
         ('scipy', 'scipy'),
         ('numpy', 'numpy'),
@@ -82,7 +82,7 @@ def build():
     
     # Hidden imports for audio libraries
     cmd.extend([
-        "--hidden-import", "sounddevice",
+        "--hidden-import", "mpv",
         "--hidden-import", "soundfile",
         "--hidden-import", "scipy",
         "--hidden-import", "numpy",

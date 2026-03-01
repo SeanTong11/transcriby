@@ -1,6 +1,6 @@
 # SlowPlay Windows Installation Guide
 
-SlowPlay for Windows uses `sounddevice` + `scipy` for lightweight audio playback (no GStreamer required!)
+SlowPlay for Windows uses `mpv` (libmpv) for lightweight audio playback (no GStreamer required!)
 
 ---
 
@@ -18,7 +18,11 @@ SlowPlay for Windows uses `sounddevice` + `scipy` for lightweight audio playback
    - Install from https://astral.sh/uv
    - Or run: `powershell -c "irm https://astral.sh/uv/install.ps1 | iex"`
 
-3. **FFmpeg** (optional, for YouTube support)
+3. **mpv** runtime (for audio playback)
+   - Download from https://mpv.io/installation/
+   - Ensure `mpv.exe` is on PATH or placed next to `SlowPlay.exe`
+
+4. **FFmpeg** (optional, for YouTube support)
    - Download from https://ffmpeg.org/download.html
    - Add to PATH or place in the same folder as SlowPlay
 
@@ -85,14 +89,9 @@ Same as Method 1, plus:
 
 ---
 
-## Optional: High Quality Export
+## Export Notes
 
-For best audio export quality, you can install the `rubberband` CLI tool:
-
-1. Download from https://breakfastquay.com/rubberband/
-2. Extract and add `rubberband.exe` to your PATH or place it next to `SlowPlay.exe`
-
-Without rubberband, export will use scipy (good quality but not as professional).
+Audio export uses `soundfile + scipy` and does not require ffmpeg.
 
 ---
 

@@ -15,19 +15,11 @@ setuptools==80.9.0
 tkinterdnd2==0.4.3
 urllib3==2.5.0
 
-# Audio playback (lightweight alternative to GStreamer)
-sounddevice>=0.4.6
+# Audio playback (mpv/libmpv) and export
+python-mpv>=1.0.0
 soundfile>=0.12.1
 scipy>=1.10.0
 numpy>=1.24.0
-
-# Optional: High quality time-stretching for export
-# Install separately for best export quality:
-# pip install pyrubberband
-# And install rubberband CLI tool:
-# - Ubuntu/Debian: sudo apt-get install rubberband-cli
-# - macOS: brew install rubberband
-# - Windows: download from https://breakfastquay.com/rubberband/
 
 # Build tools (optional, for creating executable)
 pyinstaller==6.16.0

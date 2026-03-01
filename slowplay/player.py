@@ -1,43 +1,67 @@
 #!/usr/bin/env python3
 """
-SlowPlay audio player using sounddevice + scipy
-Lightweight alternative to GStreamer with real-time speed/pitch control
+SlowPlay audio player using mpv (libmpv) for playback.
+Exports use soundfile + scipy (no rubberband).
 """
 
-import numpy as np
-import sounddevice as sd
-import soundfile as sf
-import threading
-import queue
+import math
 import os
-from scipy import signal
-from datetime import datetime
 
-from CTkMessagebox import CTkMessagebox
+import mpv
+import numpy as np
+import soundfile as sf
+from scipy import signal
+
+from platform_utils import is_windows
+
 import gettext
 _ = gettext.gettext
 
 # Constants
 NANOSEC = 1000000000
-DEFAULT_BLOCK_SIZE = 4096
-PRELOAD_BLOCKS = 4
+
+
+def _uri_to_path(uri: str) -> str:
+    if uri.startswith("file://"):
+        path = uri[7:]
+        # On Windows, remove leading '/' from paths like '/C:/...'
+        if is_windows() and path.startswith("/") and len(path) > 2 and path[2] == ":":
+            path = path[1:]
+        return path
+    return uri
+
+
+def _split_atempo(factor: float) -> list[float]:
+    """Split atempo factor into a chain of 0.5..2.0 values."""
+    if factor <= 0:
+        return [1.0]
+    parts = []
+    f = factor
+    while f < 0.5:
+        parts.append(0.5)
+        f /= 0.5
+    while f > 2.0:
+        parts.append(2.0)
+        f /= 2.0
+    parts.append(f)
+    return parts
 
 
 class slowPlayer():
     def __init__(self):
         """Initialize the audio player"""
-        
-        # Audio data storage
-        self._audio_data = None  # Shape: (channels, samples)
-        self._sample_rate = 44100
-        self._current_frame = 0  # Current position in frames
-        self._total_frames = 0
-        
+        # mpv player (audio only)
+        self._player = mpv.MPV(ytdl=False, vid="no", audio_display="no")
+        self._player.pause = True
+
         # Playback parameters
-        self._speed = 1.0  # 1.0 = normal, 0.5 = half speed, 2.0 = double speed
-        self._pitch = 1.0  # 1.0 = normal, 0.5 = octave down, 2.0 = octave up
+        self._speed = 1.0
+        self._pitch_semitones = 0.0
+        self._pitch_ratio = 1.0
         self._volume = 1.0
-        
+        self._sample_rate = None
+        self._media_path = ""
+
         # Playback state
         self.media = ""
         self.canPlay = False
@@ -47,418 +71,158 @@ class slowPlayer():
         self.startPoint = -2  # Loop start in nanoseconds
         self.endPoint = -1  # Loop end in nanoseconds
         self.loopEnabled = False
-        
+
         # Metadata
         self.title = ""
         self.artist = ""
-        
-        # Audio output
-        self._stream = None
-        self._audio_queue = queue.Queue(maxsize=PRELOAD_BLOCKS)
-        self._stop_thread = threading.Event()
-        self._processing_thread = None
-        
-        # Thread safety
-        self._lock = threading.Lock()
-        
-        # Crossfade buffer to eliminate clicks between blocks
-        self._prev_block_tail = None
-        self._crossfade_samples = 64  # Number of samples to crossfade
-        
+
         # For compatibility
         self.semitones = 0
         self.cents = 0
         self.tempo = 1.0
+        self.pitch = 0.0
 
-    def _resample_block(self, block, target_ratio, exact_output_len=None):
-        """Resample audio block to change speed/pitch using linear interpolation"""
-        if target_ratio == 1.0:
-            return block
-        
-        # Calculate output length - use exact length if specified
-        orig_len = block.shape[-1]
-        if exact_output_len is not None:
-            new_len = exact_output_len
-        else:
-            new_len = int(orig_len * target_ratio)
-        
-        # Use linear interpolation (faster, more stable boundaries than FFT)
-        if len(block.shape) == 1:
-            # Mono
-            indices = np.linspace(0, orig_len - 1, new_len)
-            return np.interp(indices, np.arange(orig_len), block).astype(block.dtype)
-        else:
-            # Multi-channel
-            result = np.zeros((block.shape[0], new_len), dtype=block.dtype)
-            indices = np.linspace(0, orig_len - 1, new_len)
-            for ch in range(block.shape[0]):
-                result[ch] = np.interp(indices, np.arange(orig_len), block[ch]).astype(block.dtype)
-            return result
-
-    def _get_audio_block(self, block_size):
-        """Get next audio block with speed/pitch applied"""
-        with self._lock:
-            if self._audio_data is None:
-                return None
-            
-            # Calculate how many input frames we need
-            # At speed 0.5, we need half the frames for same output
-            # At speed 2.0, we need double the frames
-            input_frames_needed = int(block_size * self._speed)
-            
-            # Get current channel count
-            channels = self._audio_data.shape[0]
-            
-            # Check for loop boundaries
-            if self.loopEnabled and self.endPoint > 0:
-                current_time = self._current_frame / self._sample_rate
-                end_time = self.endPoint / NANOSEC
-                
-                if current_time >= end_time:
-                    # Loop back
-                    if self.startPoint >= 0:
-                        start_time = self.startPoint / NANOSEC
-                        self._current_frame = int(start_time * self._sample_rate)
-                    else:
-                        self._current_frame = 0
-                    # Reset crossfade buffer on loop
-                    self._prev_block_tail = None
-            
-            # Calculate read range
-            start_frame = self._current_frame
-            end_frame = min(start_frame + input_frames_needed, self._total_frames)
-            
-            # Check if we've reached the end
-            if start_frame >= self._total_frames:
-                if self.loopEnabled:
-                    # Loop back to start
-                    if self.startPoint >= 0:
-                        start_time = self.startPoint / NANOSEC
-                        self._current_frame = int(start_time * self._sample_rate)
-                    else:
-                        self._current_frame = 0
-                    # Reset crossfade buffer on loop
-                    self._prev_block_tail = None
-                    return self._get_audio_block(block_size)
-                else:
-                    return None  # End of file
-            
-            # Extract audio slice
-            audio_slice = self._audio_data[:, start_frame:end_frame]
-            
-            # Update position
-            self._current_frame = end_frame
-            
-            # Apply pitch shift by resampling
-            if self._pitch != 1.0:
-                # Pitch shift is done by resampling
-                # Higher pitch = higher sample rate = shorter audio
-                pitch_ratio = 1.0 / self._pitch
-                audio_slice = self._resample_block(audio_slice, pitch_ratio)
-            
-            # Apply speed (tempo) change
-            # Speed < 1 (slower) = need more output samples
-            # Speed > 1 (faster) = need fewer output samples
-            speed_ratio = 1.0 / self._speed
-            
-            # Only resample if speed is not 1.0 and we need specific output size
-            if self._speed != 1.0:
-                audio_slice = self._resample_block(audio_slice, speed_ratio)
-            
-            # Ensure we have exactly block_size samples
-            current_len = audio_slice.shape[1] if len(audio_slice.shape) > 1 else len(audio_slice)
-            
-            if current_len < block_size:
-                # Pad with zeros
-                padding = block_size - current_len
-                if len(audio_slice.shape) == 1:
-                    audio_slice = np.pad(audio_slice, (0, padding), mode='constant')
-                else:
-                    audio_slice = np.pad(audio_slice, ((0, 0), (0, padding)), mode='constant')
-            elif current_len > block_size:
-                # Truncate
-                audio_slice = audio_slice[:, :block_size] if len(audio_slice.shape) > 1 else audio_slice[:block_size]
-            
-            # Apply volume
-            audio_slice = audio_slice * self._volume
-            
-            # Apply crossfade with previous block to eliminate clicks
-            if self._prev_block_tail is not None:
-                fade_len = min(self._crossfade_samples, audio_slice.shape[-1])
-                if fade_len > 0:
-                    fade_in = np.linspace(0, 1, fade_len)
-                    fade_out = np.linspace(1, 0, fade_len)
-                    
-                    if len(audio_slice.shape) == 1:
-                        # Mono
-                        audio_slice[:fade_len] = (
-                            self._prev_block_tail * fade_out + 
-                            audio_slice[:fade_len] * fade_in
-                        )
-                    else:
-                        # Multi-channel
-                        for ch in range(audio_slice.shape[0]):
-                            audio_slice[ch, :fade_len] = (
-                                self._prev_block_tail[ch] * fade_out + 
-                                audio_slice[ch, :fade_len] * fade_in
-                            )
-            
-            # Store tail for next block's crossfade
-            tail_len = min(self._crossfade_samples, audio_slice.shape[-1])
-            if tail_len > 0:
-                if len(audio_slice.shape) == 1:
-                    self._prev_block_tail = audio_slice[-tail_len:].copy()
-                else:
-                    self._prev_block_tail = audio_slice[:, -tail_len:].copy()
-            
-            return audio_slice.astype(np.float32)
-
-    def _audio_callback(self, outdata, frames, time_info, status):
-        """SoundDevice callback"""
-        if status:
-            if status.output_underflow:
-                print("Audio output underflow")
-        
+    def _get_prop(self, name, default=None):
         try:
-            data = self._audio_queue.get_nowait()
-            if data is None:
-                # End of playback
-                outdata.fill(0)
-                self.isPlaying = False
-                return
-            
-            # Ensure correct shape
-            if len(data.shape) == 1:
-                # Mono - copy to all output channels
-                if outdata.shape[1] == 1:
-                    outdata[:, 0] = data[:frames]
-                else:
-                    for ch in range(outdata.shape[1]):
-                        outdata[:, ch] = data[:frames]
-            else:
-                # Multi-channel
-                num_channels = min(data.shape[0], outdata.shape[1])
-                for ch in range(num_channels):
-                    outdata[:, ch] = data[ch, :frames]
-                
-                # Fill remaining channels if any
-                for ch in range(num_channels, outdata.shape[1]):
-                    outdata[:, ch] = outdata[:, 0]
-                    
-        except queue.Empty:
-            # Buffer underrun - fill with silence
-            outdata.fill(0)
+            return getattr(self._player, name)
+        except Exception:
+            return default
 
-    def _processing_thread_func(self):
-        """Background thread to pre-process audio"""
-        block_size = DEFAULT_BLOCK_SIZE
-        
-        while not self._stop_thread.is_set():
-            if self.isPlaying:
-                # Check if queue has space
-                if not self._audio_queue.full():
-                    block = self._get_audio_block(block_size)
-                    try:
-                        self._audio_queue.put(block, timeout=0.1)
-                        if block is None:
-                            # End of file
-                            break
-                    except queue.Full:
-                        pass
-                else:
-                    # Queue is full, wait a bit
-                    self._stop_thread.wait(0.01)
-            else:
-                self._stop_thread.wait(0.01)
+    def _set_prop(self, name, value):
+        try:
+            setattr(self._player, name, value)
+            return True
+        except Exception:
+            return False
+
+    def _refresh_audio_params(self) -> bool:
+        """Refresh audio params and return True if sample rate is available."""
+        sr = None
+        if self._media_path and os.path.isfile(self._media_path):
+            try:
+                info = sf.info(self._media_path)
+                sr = info.samplerate
+            except Exception:
+                sr = None
+
+        if sr is None:
+            params = self._get_prop("audio_params")
+            if isinstance(params, dict):
+                sr = params.get("samplerate") or params.get("sample_rate")
+
+        if sr is not None:
+            self._sample_rate = int(sr)
+            return True
+
+        return False
+
+    def _apply_pitch_filter(self):
+        """Apply pitch shift using mpv audio filters (lavfi)."""
+        if abs(self._pitch_semitones) < 1e-6:
+            # Clear filters
+            self._set_prop("af", "")
+            return
+
+        if not self._sample_rate:
+            return
+
+        ratio = self._pitch_ratio
+        atempo = 1.0 / ratio
+        atempo_parts = _split_atempo(atempo)
+
+        filters = [
+            f"asetrate={self._sample_rate * ratio}",
+            f"aresample={self._sample_rate}",
+        ]
+        filters.extend([f"atempo={part}" for part in atempo_parts])
+
+        af = "lavfi=[" + ",".join(filters) + "]"
+        self._set_prop("af", af)
 
     def MediaLoad(self, mediafile):
-        """Load audio file"""
-        # Stop current playback
+        """Load audio file or URL"""
         self.Pause()
-        
-        # Reset crossfade buffer
-        self._prev_block_tail = None
-        
-        # Convert URI to path
-        if mediafile.startswith("file://"):
-            mediafile = mediafile[7:]
-            # On Windows, remove leading '/' from paths like '/C:/...'
-            if mediafile.startswith("/") and len(mediafile) > 2 and mediafile[2] == ":":
-                mediafile = mediafile[1:]
-        
-        try:
-            # Load audio file
-            data, samplerate = sf.read(mediafile, dtype=np.float32)
-            
-            # Handle shape: ensure (channels, samples)
-            if len(data.shape) == 1:
-                # Mono - add channel dimension
-                self._audio_data = data.reshape(1, -1)
-            else:
-                # Stereo or more - transpose to (channels, samples)
-                self._audio_data = data.T
-            
-            self._sample_rate = samplerate
-            self._total_frames = self._audio_data.shape[1]
-            self._current_frame = 0
-            
-            self.media = mediafile
-            self.canPlay = True
-            self.title = os.path.splitext(os.path.basename(mediafile))[0]
-            self.artist = ""
-            
-            # Extract metadata if available
-            try:
-                info = sf.info(mediafile)
-                # Try to get title/artist from comments if available
-            except:
-                pass
-                
-        except Exception as e:
-            print(f"Error loading file: {e}")
-            self.canPlay = False
-            self._audio_data = None
 
-    def _init_stream(self):
-        """Initialize audio output stream"""
-        if self._stream is not None:
-            try:
-                self._stream.stop()
-                self._stream.close()
-            except:
-                pass
-        
-        if self._audio_data is None:
-            return
-        
-        channels = self._audio_data.shape[0]
-        
-        try:
-            self._stream = sd.OutputStream(
-                samplerate=self._sample_rate,
-                channels=channels,
-                dtype=np.float32,
-                blocksize=DEFAULT_BLOCK_SIZE,
-                callback=self._audio_callback
-            )
-        except Exception as e:
-            print(f"Error creating audio stream: {e}")
-            # Try with default device
-            sd.default.reset()
-            self._stream = sd.OutputStream(
-                samplerate=self._sample_rate,
-                channels=channels,
-                dtype=np.float32,
-                blocksize=DEFAULT_BLOCK_SIZE,
-                callback=self._audio_callback
-            )
+        self.media = mediafile
+        self._media_path = _uri_to_path(mediafile)
+        self._player.command("loadfile", mediafile)
+        self._player.pause = True
+
+        self.canPlay = True
+        self.isPlaying = False
+
+        # Update metadata (best effort)
+        if self._media_path:
+            self.title = os.path.splitext(os.path.basename(self._media_path))[0]
+        else:
+            self.title = ""
+        self.artist = ""
+
+        # Cache sample rate if available
+        self._refresh_audio_params()
+        self._apply_pitch_filter()
 
     def Play(self):
         """Start playback"""
-        if not self.canPlay or self._audio_data is None:
+        if not self.canPlay:
             return
-        
-        if not self.isPlaying:
-            self.isPlaying = True
-            
-            # Initialize stream if needed
-            if self._stream is None:
-                self._init_stream()
-            
-            # Clear and pre-fill queue
-            while not self._audio_queue.empty():
-                try:
-                    self._audio_queue.get_nowait()
-                except queue.Empty:
-                    break
-            
-            # Pre-fill buffer
-            for _ in range(PRELOAD_BLOCKS):
-                block = self._get_audio_block(DEFAULT_BLOCK_SIZE)
-                if block is not None:
-                    try:
-                        self._audio_queue.put(block, block=False)
-                    except queue.Full:
-                        break
-                else:
-                    break
-            
-            # Start stream
-            self._stream.start()
-            
-            # Start processing thread
-            self._stop_thread.clear()
-            self._processing_thread = threading.Thread(target=self._processing_thread_func, daemon=True)
-            self._processing_thread.start()
+        self._player.pause = False
+        self.isPlaying = True
 
     def Pause(self):
         """Pause playback"""
+        try:
+            self._player.pause = True
+        except Exception:
+            pass
         self.isPlaying = False
-        
-        if self._stream is not None:
-            try:
-                self._stream.stop()
-            except:
-                pass
-        
-        self._stop_thread.set()
-        
-        if self._processing_thread is not None:
-            self._processing_thread.join(timeout=0.5)
-            self._processing_thread = None
 
     def Rewind(self):
         """Rewind to start or loop point"""
-        with self._lock:
-            if self.loopEnabled and self.startPoint >= 0:
-                start_time = self.startPoint / NANOSEC
-                self._current_frame = int(start_time * self._sample_rate)
-            else:
-                self._current_frame = 0
-            
-            # Clamp to valid range
-            self._current_frame = max(0, min(self._current_frame, self._total_frames - 1))
-            
-            # Reset crossfade buffer
-            self._prev_block_tail = None
+        if self.loopEnabled and self.startPoint >= 0:
+            self.seek_absolute(self.startPoint)
+        else:
+            self.seek_absolute(0)
 
     def seek_absolute(self, newPos):
-        """Seek to absolute position (newPos in nanoseconds)"""
-        with self._lock:
-            new_time = newPos / NANOSEC
-            self._current_frame = int(new_time * self._sample_rate)
-            self._current_frame = max(0, min(self._current_frame, self._total_frames - 1))
-            self.songPosition = new_time
-            
-            # Reset crossfade buffer
-            self._prev_block_tail = None
+        """Seek to absolute position (newPos in nanoseconds, pipeline time)"""
+        if newPos is None:
+            return
+        song_seconds = self.song_time(newPos)
+        if song_seconds is None:
+            return
+        self._player.command("seek", str(song_seconds), "absolute", "exact")
+        self.songPosition = song_seconds
 
     def seek_relative(self, newPos):
         """Seek relative to current position (newPos in seconds)"""
-        current_time = self._current_frame / self._sample_rate
-        new_time = current_time + newPos
-        self.seek_absolute(new_time * NANOSEC)
-        # seek_absolute resets crossfade buffer
+        cur = self._get_prop("time_pos")
+        if cur is None:
+            return
+        new_time = cur + newPos
+        self.seek_absolute(self.pipeline_time(new_time))
 
     def query_position(self):
-        """Get current position in nanoseconds"""
-        if self._audio_data is None:
+        """Get current position in nanoseconds (pipeline time)"""
+        pos = self._get_prop("time_pos")
+        if pos is None:
             return None
-        pos_sec = self._current_frame / self._sample_rate
-        return int(pos_sec * NANOSEC)
+        return int(self.pipeline_time(pos))
 
     def query_duration(self):
-        """Get duration in nanoseconds"""
-        if self._audio_data is None:
+        """Get duration in nanoseconds (pipeline time)"""
+        duration = self._get_prop("duration")
+        if duration is None:
             return None
-        duration_sec = self._total_frames / self._sample_rate
-        return int(duration_sec * NANOSEC)
+        return int(self.pipeline_time(duration))
 
     def query_percentage(self):
         """Get position as percentage (0-1000000)"""
-        if self._audio_data is None or self._total_frames == 0:
+        pos = self._get_prop("time_pos")
+        duration = self._get_prop("duration")
+        if pos is None or duration is None or duration == 0:
             return None
-        return int(self._current_frame / self._total_frames * 1000000)
+        return int(pos / duration * 1000000)
 
     def update_position(self):
         """Update and return position"""
@@ -466,7 +230,21 @@ class slowPlayer():
 
     def handle_message(self):
         """Handle messages (compatibility)"""
-        pass
+        pause = self._get_prop("pause")
+        if pause is not None:
+            self.isPlaying = not pause
+
+        # Update metadata if available
+        if not self.artist or not self.title:
+            meta = self._get_prop("metadata")
+            if isinstance(meta, dict):
+                self.artist = self.artist or meta.get("artist", "")
+                self.title = self.title or meta.get("title", "")
+
+        # Refresh audio params if not set yet
+        if not self._sample_rate:
+            if self._refresh_audio_params():
+                self._apply_pitch_filter()
 
     def ReadyToPlay(self):
         """Prepare for playback"""
@@ -478,87 +256,72 @@ class slowPlayer():
 
     def set_speed(self, speed):
         """Set playback tempo"""
-        with self._lock:
-            self._speed = max(0.25, min(4.0, speed))
-            self.tempo = self._speed
+        self._speed = max(0.25, min(4.0, speed))
+        self.tempo = self._speed
+        self._set_prop("speed", self._speed)
 
     def set_pitch(self, semitones):
         """Set pitch shift in semitones"""
-        with self._lock:
-            # Convert semitones to ratio
-            # 12 semitones = 1 octave = 2x frequency
-            self._pitch = 2 ** (semitones / 12.0)
+        self._pitch_semitones = float(semitones)
+        self._pitch_ratio = 2 ** (self._pitch_semitones / 12.0)
+        self._apply_pitch_filter()
 
     def set_volume(self, volume):
         """Set volume (0.0 to 1.0)"""
         self._volume = max(0.0, min(1.0, volume))
+        # mpv volume is 0..100
+        self._set_prop("volume", self._volume * 100.0)
 
     def pipeline_time(self, t):
-        """Convert song time to pipeline time"""
+        """Convert song time (seconds) to pipeline time (ns)"""
         if t is None:
             return None
-        return int(t / self._speed * NANOSEC)
+        return t / self._speed * NANOSEC
 
     def song_time(self, t):
-        """Convert pipeline time to song time"""
+        """Convert pipeline time (ns) to song time (seconds)"""
         if t is None:
             return None
         return t * self._speed / NANOSEC
 
     def fileSave(self, src, dest, callback=None):
-        """Export audio file with current tempo/pitch settings using rubberband CLI"""
+        """Export audio file with current tempo/pitch settings using scipy"""
         try:
-            # For export, we use rubberband CLI if available, otherwise scipy
-            import subprocess
-            import shutil
-            
-            has_rubberband = shutil.which("rubberband") is not None or shutil.which("rubberband.exe") is not None
-            
-            if has_rubberband and self._speed != 1.0 or self._pitch != 1.0:
-                # Use rubberband for high quality export
-                tempo_opt = f"--tempo {self._speed * 100:.1f}"
-                pitch_opt = f"--pitch {12 * np.log2(self._pitch):.1f}" if self._pitch != 1.0 else ""
-                
-                cmd = ["rubberband", tempo_opt] + ([pitch_opt] if pitch_opt else []) + [src, dest]
-                result = subprocess.run(cmd, capture_output=True, text=True)
-                
-                if result.returncode != 0:
-                    raise RuntimeError(f"rubberband failed: {result.stderr}")
-            else:
-                # Use scipy for export (fallback)
-                data, sr = sf.read(src, dtype=np.float32)
-                
-                # Apply speed change
-                if self._speed != 1.0:
-                    orig_len = len(data)
-                    new_len = int(orig_len / self._speed)
-                    if len(data.shape) == 1:
-                        data = signal.resample(data, new_len)
-                    else:
-                        data = signal.resample(data, new_len, axis=0)
-                
-                # Apply pitch change
-                if self._pitch != 1.0:
-                    pitch_ratio = 1.0 / self._pitch
-                    if len(data.shape) == 1:
-                        data = signal.resample(data, int(len(data) * pitch_ratio))
-                    else:
-                        data = signal.resample(data, int(data.shape[0] * pitch_ratio), axis=0)
-                
-                sf.write(dest, data, sr)
-            
+            src_path = _uri_to_path(src)
+            if not os.path.isfile(src_path):
+                raise RuntimeError("Source file not found for export")
+
+            data, sr = sf.read(src_path, dtype=np.float32)
+
+            # Apply speed change
+            if self._speed != 1.0:
+                orig_len = len(data)
+                new_len = int(orig_len / self._speed)
+                if len(data.shape) == 1:
+                    data = signal.resample(data, new_len)
+                else:
+                    data = signal.resample(data, new_len, axis=0)
+
+            # Apply pitch change
+            if self._pitch_ratio != 1.0:
+                pitch_ratio = 1.0 / self._pitch_ratio
+                if len(data.shape) == 1:
+                    data = signal.resample(data, int(len(data) * pitch_ratio))
+                else:
+                    data = signal.resample(data, int(data.shape[0] * pitch_ratio), axis=0)
+
+            sf.write(dest, data, sr)
+
             if callback:
                 callback(100)
-                
+
         except Exception as e:
             print(f"Error saving file: {e}")
             raise
 
     def __del__(self):
         """Cleanup"""
-        self.Pause()
-        if self._stream is not None:
-            try:
-                self._stream.close()
-            except:
-                pass
+        try:
+            self._player.terminate()
+        except Exception:
+            pass

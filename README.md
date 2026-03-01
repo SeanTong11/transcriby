@@ -3,7 +3,7 @@
 **SlowPlay** is a simple audio player with speed/pitch change capabilities. It is meant to help music students/teachers transcribe music and play along with it.
 
 - **Cross-platform**: Works on both Windows and Linux
-- **Lightweight**: Uses `sounddevice` + `scipy` for audio playback (no GStreamer required)
+- **Lightweight**: Uses `mpv` (libmpv) for audio playback (no GStreamer required)
 
 **Made by a musician for musicians**
 
@@ -14,7 +14,7 @@
 This project is modified from the original [SlowPlay](https://github.com/aFunkyBass/slowplay) by aFunkyBass.
 
 **Key changes in this fork:**
-- ✅ **Removed GStreamer dependency** - Now uses `sounddevice` + `scipy` on all platforms
+- ✅ **Removed GStreamer dependency** - Now uses `mpv` (libmpv) on all platforms
 - ✅ **Full Windows support** - Native Windows support without complex setup
 - ✅ **Simplified installation** - No need to install GStreamer or its plugins
 
@@ -90,10 +90,15 @@ If the last played song was extracted from a YouTube video, the app will not aut
 
 - **Python 3.9 or higher**
 - **uv** - Fast Python package manager (install from [astral.sh/uv](https://astral.sh/uv))
-- **FFmpeg** (for YouTube support and audio export)
+- **mpv** runtime (for audio playback)
+- **FFmpeg** (for YouTube support only)
 
-**Linux/WSL Only:**
-- **PortAudio** system library (`sudo apt-get install libportaudio2`)
+**mpv runtime install:**
+- **Windows**: Download from https://mpv.io/installation/ and ensure `mpv.exe` and `libmpv-2.dll` are on PATH (or next to the app)
+- **macOS**: `brew install mpv`
+- **Ubuntu/Debian/WSL**: `sudo apt-get install mpv`
+- **Fedora**: `sudo dnf install mpv`
+- **Arch**: `sudo pacman -S mpv`
 
 ### Quick Start with uv
 
@@ -117,18 +122,6 @@ python sp-launch.py
 ```
 
 #### Linux / WSL
-
-**System Dependencies Required:**
-```bash
-# Ubuntu/Debian/WSL
-sudo apt-get install libportaudio2
-
-# Fedora
-sudo dnf install portaudio
-
-# Arch
-sudo pacman -S portaudio
-```
 
 ```bash
 git clone https://github.com/yourusername/slowplay.git
@@ -210,15 +203,9 @@ The following commands are all assigned to the numeric keypad. Refer to the draw
 
 *(please make sure none of the input boxes have the focus. Click on an empty area of the app to take the focus back from an input box)*
 
-## Optional: High Quality Export
+## Export Notes
 
-For best audio export quality, install the `rubberband` CLI tool:
-
-- **Windows**: Download from https://breakfastquay.com/rubberband/ and add to PATH
-- **Ubuntu/Debian**: `sudo apt-get install rubberband-cli`
-- **macOS**: `brew install rubberband`
-
-Without rubberband, export will use scipy (good quality but not as professional).
+Audio export is performed with `soundfile + scipy` and does not require ffmpeg.
 
 ## Troubleshooting
 
