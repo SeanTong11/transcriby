@@ -6,7 +6,6 @@ readme = "README.md"
 license = {text = "GPL-3.0"}
 authors = [
     {name = "Sean Tong", email = ""},
-    {name = "Original: aFunkyBass", email = ""},
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
