@@ -8,6 +8,12 @@ import customtkinter as ctk
 import numpy as np
 import soundfile as sf
 
+WAVE_BG_COLOR = "#101318"
+WAVE_LINE_COLOR = "#8DB8E6"
+LOOP_FILL_COLOR = "#2C4A63"
+LOOP_MARKER_COLOR = "#63D2FF"
+PLAYHEAD_COLOR = "#FF7B5C"
+
 
 class WaveformWidget(ctk.CTkFrame):
     def __init__(self, master, on_seek=None, height=120, **kwargs):
@@ -117,7 +123,7 @@ class WaveformWidget(ctk.CTkFrame):
         width = max(self.canvas.winfo_width(), 1)
         height = max(self.canvas.winfo_height(), 1)
 
-        self.canvas.create_rectangle(0, 0, width, height, fill="#1A1C20", outline="")
+        self.canvas.create_rectangle(0, 0, width, height, fill=WAVE_BG_COLOR, outline="")
 
         if self._envelope is None or len(self._envelope) == 0:
             self._draw_overlays()
@@ -126,13 +132,12 @@ class WaveformWidget(ctk.CTkFrame):
         center_y = height / 2
         amplitude = max(1, int(height * 0.45))
         n = len(self._envelope)
-        color = "#8DB8E6"
         for x in range(width):
             idx = int((x / max(width - 1, 1)) * (n - 1))
             amp = float(self._envelope[idx])
             y_top = center_y - amp * amplitude
             y_bot = center_y + amp * amplitude
-            self.canvas.create_line(x, y_top, x, y_bot, fill=color)
+            self.canvas.create_line(x, y_top, x, y_bot, fill=WAVE_LINE_COLOR)
 
         self._draw_overlays()
 
@@ -152,10 +157,10 @@ class WaveformWidget(ctk.CTkFrame):
         if a_x is not None and b_x is not None and b_x > a_x:
             if self._loop_rect_id is None:
                 self._loop_rect_id = self.canvas.create_rectangle(
-                    a_x, 0, b_x, height, fill="#2C4A63", outline="", stipple="gray50"
+                    a_x, 0, b_x, height, fill=LOOP_FILL_COLOR, outline="", stipple="gray50"
                 )
-                self._loop_a_id = self.canvas.create_line(a_x, 0, a_x, height, fill="#63D2FF", width=2)
-                self._loop_b_id = self.canvas.create_line(b_x, 0, b_x, height, fill="#63D2FF", width=2)
+                self._loop_a_id = self.canvas.create_line(a_x, 0, a_x, height, fill=LOOP_MARKER_COLOR, width=2)
+                self._loop_b_id = self.canvas.create_line(b_x, 0, b_x, height, fill=LOOP_MARKER_COLOR, width=2)
             else:
                 self.canvas.coords(self._loop_rect_id, a_x, 0, b_x, height)
                 self.canvas.coords(self._loop_a_id, a_x, 0, a_x, height)
@@ -171,6 +176,6 @@ class WaveformWidget(ctk.CTkFrame):
         playhead_x = self._seconds_to_x(self._playhead)
         if playhead_x is not None:
             if self._playhead_id is None:
-                self._playhead_id = self.canvas.create_line(playhead_x, 0, playhead_x, height, fill="#FF7B5C", width=2)
+                self._playhead_id = self.canvas.create_line(playhead_x, 0, playhead_x, height, fill=PLAYHEAD_COLOR, width=2)
             else:
                 self.canvas.coords(self._playhead_id, playhead_x, 0, playhead_x, height)

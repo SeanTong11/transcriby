@@ -135,28 +135,28 @@ class App(_AppBase):
         self.RFrame = ctk.CTkFrame(self)
         self.BFrame = ctk.CTkFrame(self, height=24)
 
-        self.LFrame.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
-        self.RFrame.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
+        self.LFrame.grid(row=0, column=0, sticky="nsew", padx=UI_OUTER_PAD, pady=UI_OUTER_PAD)
+        self.RFrame.grid(row=0, column=1, sticky="nsew", padx=UI_OUTER_PAD, pady=UI_OUTER_PAD)
         self.BFrame.grid(row=1, column=0, columnspan=2, sticky="nsew")
 
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
         # Widgets on left panel
-        self.dispPosition = ctk.CTkLabel(self.LFrame, textvariable=self.songTime, font=("", 28))
-        self.dispPosition.grid(row=0, column=0, pady=[10, 0], sticky="n")
+        self.dispPosition = ctk.CTkLabel(self.LFrame, textvariable=self.songTime, font=("", TITLE_FONT_SIZE))
+        self.dispPosition.grid(row=0, column=0, pady=[UI_INNER_PAD, 0], sticky="n")
 
         self.progress = ctk.CTkProgressBar(self.LFrame, variable=self.songProgress, height=24)
-        self.progress.grid(row=1, column=0, padx=8, pady=10, sticky="ew")
+        self.progress.grid(row=1, column=0, padx=UI_INNER_PAD, pady=UI_INNER_PAD, sticky="ew")
 
         self.scale = ctk.CTkSlider(self.LFrame, command=self.songSeek)
-        self.scale.grid(row=2, column=0, padx=8, sticky="ew")
+        self.scale.grid(row=2, column=0, padx=UI_INNER_PAD, sticky="ew")
 
-        self.waveform = WaveformWidget(self.LFrame, on_seek=self.waveformSeek, height=120)
-        self.waveform.grid(row=3, column=0, padx=8, pady=(8, 0), sticky="ew")
+        self.waveform = WaveformWidget(self.LFrame, on_seek=self.waveformSeek, height=WAVEFORM_HEIGHT)
+        self.waveform.grid(row=3, column=0, padx=UI_INNER_PAD, pady=(UI_INNER_PAD, 0), sticky="ew")
 
         self.CTLFrame = ctk.CTkFrame(self.LFrame)
-        self.CTLFrame.grid(row=4, column=0, padx=8, pady=8, sticky="nsew")
+        self.CTLFrame.grid(row=4, column=0, padx=UI_INNER_PAD, pady=UI_INNER_PAD, sticky="nsew")
         self.PlaybackTab = self.CTLFrame
 
         self.LFrame.grid_columnconfigure(0, weight=1)
@@ -168,18 +168,18 @@ class App(_AppBase):
         self.varSpeed = ctk.IntVar(self, value=DEFAULT_SPEED)
         self.varSpeed.trace_add("write", self.speedChanged)
         self.lblSpeed = ctk.CTkLabel(self.PlaybackTab, text=_("Speed:"), font=("", LBL_FONT_SIZE))
-        self.lblSpeed.grid(row=0, column=0, pady=(4, 0), sticky="w")
+        self.lblSpeed.grid(row=0, column=0, pady=(UI_CONTROL_PAD_Y, 0), sticky="w")
         self.sldSpeed = ctk.CTkSlider(self.PlaybackTab, from_=MIN_SPEED_PERCENT,
                                       to=MAX_SPEED_PERCENT, number_of_steps=20, variable=self.varSpeed)
-        self.sldSpeed.grid(row=0, column=1, padx=8, sticky="ew")
-        self.entSpeed = ctk.CTkEntry(self.PlaybackTab, width=50, justify="center",
+        self.sldSpeed.grid(row=0, column=1, padx=UI_INNER_PAD, sticky="ew")
+        self.entSpeed = ctk.CTkEntry(self.PlaybackTab, width=56, justify="center",
                                      validate='key', validatecommand=vint)
-        self.entSpeed.grid(row=0, column=2, padx=8, pady=8, sticky="w")
+        self.entSpeed.grid(row=0, column=2, padx=UI_INNER_PAD, pady=UI_CONTROL_PAD_Y, sticky="w")
         self.lblSpeedEntry = ctk.CTkLabel(self.PlaybackTab, text="%", font=("", LBL_FONT_SIZE))
-        self.lblSpeedEntry.grid(row=0, column=3, padx=(0, 8), pady=8, sticky="w")
-        self.btnResetSpeed = ctk.CTkButton(self.PlaybackTab, width=40, image=resetIcon,
+        self.lblSpeedEntry.grid(row=0, column=3, padx=(0, UI_INNER_PAD), pady=UI_CONTROL_PAD_Y, sticky="w")
+        self.btnResetSpeed = ctk.CTkButton(self.PlaybackTab, width=42, image=resetIcon,
                                            text=None, command= lambda: self.resetDefaultVar(self.varSpeed))
-        self.btnResetSpeed.grid(row=0, column=4, padx=(0, 8), pady=8, sticky="w")
+        self.btnResetSpeed.grid(row=0, column=4, padx=(0, UI_INNER_PAD), pady=UI_CONTROL_PAD_Y, sticky="w")
         self.btnResetSpeed_tt = CTkToolTip(self.btnResetSpeed, message=_("Reset speed"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
         self.entSpeed.bind('<Return>', self.checkSpeed)
@@ -191,18 +191,18 @@ class App(_AppBase):
         self.varPitchST = ctk.IntVar(self, value=DEFAULT_SEMITONES)
         self.varPitchST.trace_add("write", self.semitonesChanged)
         self.lblPitchST = ctk.CTkLabel(self.PlaybackTab, text=_("Transpose:"), font=("", LBL_FONT_SIZE))
-        self.lblPitchST.grid(row=1, column=0, pady=(4, 0), sticky="w")
+        self.lblPitchST.grid(row=1, column=0, pady=(UI_CONTROL_PAD_Y, 0), sticky="w")
         self.sldPitchST = ctk.CTkSlider(self.PlaybackTab,from_= MIN_PITCH_SEMITONES,
                                         to = MAX_PITCH_SEMITONES, variable=self.varPitchST)
-        self.sldPitchST.grid(row=1, column=1, padx=8, sticky="ew")
-        self.entPitchST = ctk.CTkEntry(self.PlaybackTab, width=50, justify="center",
+        self.sldPitchST.grid(row=1, column=1, padx=UI_INNER_PAD, sticky="ew")
+        self.entPitchST = ctk.CTkEntry(self.PlaybackTab, width=56, justify="center",
                                        validate='all', validatecommand=vnegint)
-        self.entPitchST.grid(row=1, column=2, padx=8, pady=8, sticky="w")
+        self.entPitchST.grid(row=1, column=2, padx=UI_INNER_PAD, pady=UI_CONTROL_PAD_Y, sticky="w")
         self.lblPitchSTEntry = ctk.CTkLabel(self.PlaybackTab, text="s/t", font=("", LBL_FONT_SIZE))
-        self.lblPitchSTEntry.grid(row=1, column=3, padx=(0, 8), pady=8, sticky="w")
-        self.btnResetPitchST = ctk.CTkButton(self.PlaybackTab, width=40, image=resetIcon,
+        self.lblPitchSTEntry.grid(row=1, column=3, padx=(0, UI_INNER_PAD), pady=UI_CONTROL_PAD_Y, sticky="w")
+        self.btnResetPitchST = ctk.CTkButton(self.PlaybackTab, width=42, image=resetIcon,
                                              text=None, command= lambda: self.resetDefaultVar(self.varPitchST))
-        self.btnResetPitchST.grid(row=1, column=4, padx=(0, 8), pady=8, sticky="w")
+        self.btnResetPitchST.grid(row=1, column=4, padx=(0, UI_INNER_PAD), pady=UI_CONTROL_PAD_Y, sticky="w")
         self.btnResetPitchST_tt = CTkToolTip(self.btnResetPitchST, message=_("Reset transpose"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
         self.entPitchST.bind('<Return>', self.checkSemitones)
@@ -212,20 +212,20 @@ class App(_AppBase):
         self.varPitchCents = ctk.IntVar(self, value=DEFAULT_CENTS)
         self.varPitchCents.trace_add("write", self.centsChanged)
         self.lblPitchCents = ctk.CTkLabel(self.PlaybackTab, text=_("Pitch (cents):"), font=("", LBL_FONT_SIZE))
-        self.lblPitchCents.grid(row=2, column=0, pady=(4, 0), sticky="w")
+        self.lblPitchCents.grid(row=2, column=0, pady=(UI_CONTROL_PAD_Y, 0), sticky="w")
         self.sldPitchCents = ctk.CTkSlider(self.PlaybackTab,from_= MIN_PITCH_CENTS,
                                            to = MAX_PITCH_CENTS, variable=self.varPitchCents)
-        self.sldPitchCents.grid(row=2, column=1, padx=8, sticky="ew")
-        self.entPitchCents = ctk.CTkEntry(self.PlaybackTab, width=50, justify="center",
+        self.sldPitchCents.grid(row=2, column=1, padx=UI_INNER_PAD, sticky="ew")
+        self.entPitchCents = ctk.CTkEntry(self.PlaybackTab, width=56, justify="center",
                                           validate='all', validatecommand=vnegint)
-        self.entPitchCents.grid(row=2, column=2, padx=8, pady=8, sticky="w")
+        self.entPitchCents.grid(row=2, column=2, padx=UI_INNER_PAD, pady=UI_CONTROL_PAD_Y, sticky="w")
         self.lblPitchCentsEntry = ctk.CTkLabel(self.PlaybackTab, text="c.", font=("", LBL_FONT_SIZE))
-        self.lblPitchCentsEntry.grid(row=2, column=3, padx=(0, 8), pady=8, sticky="w")
-        self.btnResetPitchCents = ctk.CTkButton(self.PlaybackTab, width=40, image=resetIcon, text=None,
+        self.lblPitchCentsEntry.grid(row=2, column=3, padx=(0, UI_INNER_PAD), pady=UI_CONTROL_PAD_Y, sticky="w")
+        self.btnResetPitchCents = ctk.CTkButton(self.PlaybackTab, width=42, image=resetIcon, text=None,
                                                 command= lambda: self.resetDefaultVar(self.varPitchCents))
         self.btnResetPitchST_tt = CTkToolTip(self.btnResetPitchCents, message=_("Reset pitch"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
-        self.btnResetPitchCents.grid(row=2, column=4, padx=(0, 8), pady=8, sticky="w")
+        self.btnResetPitchCents.grid(row=2, column=4, padx=(0, UI_INNER_PAD), pady=UI_CONTROL_PAD_Y, sticky="w")
         self.entPitchCents.bind('<Return>', self.checkCents)
         self.entPitchCents.bind('<KP_Enter>', self.checkCents)
         self.entPitchCents.bind('<FocusOut>', self.checkCents)
@@ -233,13 +233,13 @@ class App(_AppBase):
         self.varVolume = ctk.IntVar(self, value=DEFAULT_VOLUME)
         self.varVolume.trace_add("write", self.volumeChanged)
         self.lblVolume = ctk.CTkLabel(self.PlaybackTab, text=_("Volume:"), font=("", LBL_FONT_SIZE))
-        self.lblVolume.grid(row=3, column=0, pady=(4, 0), sticky="w")
+        self.lblVolume.grid(row=3, column=0, pady=(UI_CONTROL_PAD_Y, 0), sticky="w")
         self.sldVolume = ctk.CTkSlider(self.PlaybackTab,from_= MIN_VOLUME,
                                            to = MAX_VOLUME, variable=self.varVolume)
-        self.sldVolume.grid(row=3, column=1, padx=8, sticky="ew")
-        self.entVolume = ctk.CTkEntry(self.PlaybackTab, width=50, justify="center",
+        self.sldVolume.grid(row=3, column=1, padx=UI_INNER_PAD, sticky="ew")
+        self.entVolume = ctk.CTkEntry(self.PlaybackTab, width=56, justify="center",
                                           validate='all', validatecommand=vint)
-        self.entVolume.grid(row=3, column=2, padx=8, pady=8, sticky="w")
+        self.entVolume.grid(row=3, column=2, padx=UI_INNER_PAD, pady=UI_CONTROL_PAD_Y, sticky="w")
         self.entVolume.bind('<Return>', self.checkVolume)
         self.entVolume.bind('<KP_Enter>', self.checkVolume)
         self.entVolume.bind('<FocusOut>', self.checkVolume)
@@ -252,43 +252,43 @@ class App(_AppBase):
 
         # Inline loop controls
         self.lblLoopControls = ctk.CTkLabel(self.PlaybackTab, text=_("Loop control"), font=("", LBL_FONT_SIZE))
-        self.lblLoopControls.grid(row=4, column=0, pady=(12, 0), sticky="w")
+        self.lblLoopControls.grid(row=4, column=0, pady=(UI_INNER_PAD + 2, 0), sticky="w")
 
         self.sldLoop = CTkRangeSlider(self.PlaybackTab, from_=-2, to=-1, 
                                       command=(self.setLoopStart, self.setLoopEnd))
-        self.sldLoop.grid(row=5, column=0, columnspan=5, padx=8, pady=8, sticky="ew")
+        self.sldLoop.grid(row=5, column=0, columnspan=5, padx=UI_INNER_PAD, pady=UI_INNER_PAD, sticky="ew")
 
         self.loopControlsFrame = ctk.CTkFrame(self.PlaybackTab, fg_color="transparent")
-        self.loopControlsFrame.grid(row=6, column=0, columnspan=5, pady=(0, 8), sticky="ew")
+        self.loopControlsFrame.grid(row=6, column=0, columnspan=5, pady=(0, UI_INNER_PAD), sticky="ew")
         self.loopControlsFrame.grid_columnconfigure(1, weight=1)
 
-        self.loopAFrame = ctk.CTkFrame(self.loopControlsFrame)
+        self.loopAFrame = ctk.CTkFrame(self.loopControlsFrame, fg_color="transparent")
         self.loopAFrame.grid(row=0, column=0, pady=8, sticky="w")
 
         self.lblLoopStart = ctk.CTkLabel(self.loopAFrame, anchor="w", width=80, font=("", LBL_FONT_SIZE),
                                          text="---")
-        self.btnResetLoopStart = ctk.CTkButton(self.loopAFrame, width=40, image=resetIcon, text=None,
+        self.btnResetLoopStart = ctk.CTkButton(self.loopAFrame, width=42, image=resetIcon, text=None,
                                                command=lambda: self.setLoopStart(0))
         self.btnResetLoopStart_tt = CTkToolTip(self.btnResetLoopStart, message=_("Reset loop start point\nShortcut: Ctrl+A"),
                                             delay=0.8, alpha=0.5, justify="left", follow=False)
-        self.btnLoopASet = ctk.CTkButton(self.loopAFrame, width=40, text=" | ", font=("", LBL_FONT_SIZE),
+        self.btnLoopASet = ctk.CTkButton(self.loopAFrame, width=42, text=" | ", font=("", LBL_FONT_SIZE),
                                          command=lambda: self.setLoopStart(self.player.query_position()))
         self.btnLoopASet_tt = CTkToolTip(self.btnLoopASet, message=_("Set loop start point\nShortcut: A"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
         
-        self.btnLoopABack2 = ctk.CTkButton(self.loopAFrame, width=40, text="<<", font=("", LBL_FONT_SIZE),
+        self.btnLoopABack2 = ctk.CTkButton(self.loopAFrame, width=42, text="<<", font=("", LBL_FONT_SIZE),
                                            command=lambda: self.moveLoopStart(-MOVE_LOOP_POINTS_COARSE))
         self.btnLoopABack2_tt = CTkToolTip(self.btnLoopABack2, message=_("Move loop start left by") + f" {MOVE_LOOP_POINTS_COARSE} " + _("milliseconds"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
-        self.btnLoopABack1 = ctk.CTkButton(self.loopAFrame, width=40, text="<", font=("", LBL_FONT_SIZE),
+        self.btnLoopABack1 = ctk.CTkButton(self.loopAFrame, width=42, text="<", font=("", LBL_FONT_SIZE),
                                             command=lambda: self.moveLoopStart(-MOVE_LOOP_POINTS_FINE))
         self.btnLoopABack1_tt = CTkToolTip(self.btnLoopABack1, message=_("Move loop start left by") + f" {MOVE_LOOP_POINTS_FINE} " + _("milliseconds"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
-        self.btnLoopAFwd1 = ctk.CTkButton(self.loopAFrame, width=40, text=">", font=("", LBL_FONT_SIZE),
+        self.btnLoopAFwd1 = ctk.CTkButton(self.loopAFrame, width=42, text=">", font=("", LBL_FONT_SIZE),
                                           command=lambda: self.moveLoopStart(MOVE_LOOP_POINTS_FINE))
         self.btnLoopAFwd1_tt = CTkToolTip(self.btnLoopAFwd1, message=_("Move loop start right by") + f" {MOVE_LOOP_POINTS_FINE} " + _("milliseconds"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
-        self.btnLoopAFwd2 = ctk.CTkButton(self.loopAFrame, width=40, text=">>", font=("", LBL_FONT_SIZE),
+        self.btnLoopAFwd2 = ctk.CTkButton(self.loopAFrame, width=42, text=">>", font=("", LBL_FONT_SIZE),
                                           command=lambda: self.moveLoopStart(MOVE_LOOP_POINTS_COARSE))
         self.btnLoopAFwd2_tt = CTkToolTip(self.btnLoopAFwd2, message=_("Move loop start right by") + f" {MOVE_LOOP_POINTS_COARSE} " + _("milliseconds"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
@@ -301,33 +301,33 @@ class App(_AppBase):
         self.btnLoopAFwd1.grid(row = 1, column = 2, padx=(4, 0), pady = (8, 0))
         self.btnLoopAFwd2.grid(row = 1, column = 3, padx=(4, 0), pady = (8, 0))
 
-        self.loopBFrame = ctk.CTkFrame(self.loopControlsFrame)
+        self.loopBFrame = ctk.CTkFrame(self.loopControlsFrame, fg_color="transparent")
         self.loopBFrame.grid(row=0, column=2, pady=8, sticky="e")
 
         self.lblLoopEnd = ctk.CTkLabel(self.loopBFrame, anchor="e", width=80, font=("", LBL_FONT_SIZE),
                                        text="---")
-        self.btnResetLoopEnd = ctk.CTkButton(self.loopBFrame, width=40, image=resetIcon, text=None,
+        self.btnResetLoopEnd = ctk.CTkButton(self.loopBFrame, width=42, image=resetIcon, text=None,
                                              command=lambda: self.setLoopEnd(self.player.query_duration()))
         self.btnResetLoopStart_tt = CTkToolTip(self.btnResetLoopEnd, message=_("Reset loop end point\nShortcut: Ctrl+B"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
-        self.btnLoopBSet = ctk.CTkButton(self.loopBFrame, width=40, text=" | ", font=("", LBL_FONT_SIZE), 
+        self.btnLoopBSet = ctk.CTkButton(self.loopBFrame, width=42, text=" | ", font=("", LBL_FONT_SIZE), 
                                          command=lambda: self.setLoopEnd(self.player.query_position()))
         self.btnLoopBSet_tt = CTkToolTip(self.btnLoopBSet, message=_("Set loop end point\nShortcut: B"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
 
-        self.btnLoopBBack2 = ctk.CTkButton(self.loopBFrame, width=40, text="<<", font=("", LBL_FONT_SIZE),
+        self.btnLoopBBack2 = ctk.CTkButton(self.loopBFrame, width=42, text="<<", font=("", LBL_FONT_SIZE),
                                            command=lambda: self.moveLoopEnd(-MOVE_LOOP_POINTS_COARSE))
         self.btnLoopBBack2_tt = CTkToolTip(self.btnLoopBBack2, message=_("Move loop end left by") + f" {MOVE_LOOP_POINTS_COARSE} " + _("milliseconds"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
-        self.btnLoopBBack1 = ctk.CTkButton(self.loopBFrame, width=40, text="<", font=("", LBL_FONT_SIZE),
+        self.btnLoopBBack1 = ctk.CTkButton(self.loopBFrame, width=42, text="<", font=("", LBL_FONT_SIZE),
                                            command=lambda: self.moveLoopEnd(-MOVE_LOOP_POINTS_FINE))
         self.btnLoopBBack1_tt = CTkToolTip(self.btnLoopBBack1, message=_("Move loop end left by") + f" {MOVE_LOOP_POINTS_FINE} " + _("milliseconds"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
-        self.btnLoopBFwd1 =  ctk.CTkButton(self.loopBFrame, width=40, text=">", font=("", LBL_FONT_SIZE),
+        self.btnLoopBFwd1 =  ctk.CTkButton(self.loopBFrame, width=42, text=">", font=("", LBL_FONT_SIZE),
                                            command=lambda: self.moveLoopEnd(MOVE_LOOP_POINTS_FINE))
         self.btnLoopBFwd1_tt = CTkToolTip(self.btnLoopBFwd1, message=_("Move loop end right by") + f" {MOVE_LOOP_POINTS_FINE} " + _("milliseconds"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
-        self.btnLoopBFwd2 =  ctk.CTkButton(self.loopBFrame, width=40, text=">>", font=("", LBL_FONT_SIZE),
+        self.btnLoopBFwd2 =  ctk.CTkButton(self.loopBFrame, width=42, text=">>", font=("", LBL_FONT_SIZE),
                                            command=lambda: self.moveLoopEnd(MOVE_LOOP_POINTS_COARSE))
         self.btnLoopBFwd2_tt = CTkToolTip(self.btnLoopBFwd2, message=_("Move loop end right by") + f" {MOVE_LOOP_POINTS_COARSE} " + _("milliseconds"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
@@ -340,7 +340,7 @@ class App(_AppBase):
         self.btnLoopBFwd1.grid(row = 1, column = 2, padx=(4, 0), pady = (8, 0))
         self.btnLoopBFwd2.grid(row = 1, column = 3, padx=(4, 0), pady = (8, 0))
 
-        self.loopCenterFrame = ctk.CTkFrame(self.loopControlsFrame,bg_color="transparent")
+        self.loopCenterFrame = ctk.CTkFrame(self.loopControlsFrame, fg_color="transparent", bg_color="transparent")
         self.loopCenterFrame.grid(row=0, column=1, pady=8, sticky="nsew")
         
         self.swtLoopEnabled = ctk.CTkSwitch(self.loopCenterFrame, text=_("Enable loop"),
@@ -359,13 +359,20 @@ class App(_AppBase):
 
         self.playButton = ctk.CTkButton(self.RFrame, text=_("Play"), font=("", 18), 
                                         image=None, compound="right", command=self.togglePlay)
-        self.playButton.grid(row=0, column=0, pady=(8, 0), sticky="ew", columnspan=2)
+        self.playButton.configure(
+            height=MAIN_BUTTON_HEIGHT,
+            font=("", MAIN_BUTTON_FONT_SIZE),
+            fg_color="#2F5D95",
+            hover_color="#23436C",
+        )
+        self.playButton.grid(row=0, column=0, pady=(UI_INNER_PAD, 0), sticky="ew", columnspan=2)
         self.playButton_tt = CTkToolTip(self.playButton, message=_("Play/Pause"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
 
-        self.openButton = ctk.CTkButton(self.RFrame, text=_("Open"), font=("", 18), 
+        self.openButton = ctk.CTkButton(self.RFrame, text=_("Open"), font=("", SECONDARY_BUTTON_FONT_SIZE), 
                                         command=self.openFile, width=110)
-        self.openButton.grid(row=1, column=0, pady=(8, 0), sticky="ew")
+        self.openButton.configure(height=SECONDARY_BUTTON_HEIGHT)
+        self.openButton.grid(row=1, column=0, pady=(UI_INNER_PAD, 0), sticky="ew")
         self.openButton_tt = CTkToolTip(self.openButton, message=_("Open a file.\nRight-click to reopen a recent file"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
 
@@ -378,19 +385,35 @@ class App(_AppBase):
             size=(23, 16),
         )
 
-        self.YTBtn = ctk.CTkButton(self.RFrame, text="", width=20, font=("", 18),
+        self.YTBtn = ctk.CTkButton(self.RFrame, text="", width=ICON_BUTTON_WIDTH, font=("", SECONDARY_BUTTON_FONT_SIZE),
                                        image=YTIcon, command= lambda: self.openYouTubeDialog(None))
-        self.YTBtn.grid(row=1, column=1, sticky="e", pady=(8, 0), padx=(8, 0))
+        self.YTBtn.configure(height=ICON_BUTTON_HEIGHT)
+        self.YTBtn.grid(row=1, column=1, sticky="e", pady=(UI_INNER_PAD, 0), padx=(UI_INNER_PAD, 0))
         self.YTBtn_tt = CTkToolTip(self.YTBtn, message=_("Click to extract audio from a YouTube video"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
 
-        self.saveasButton = ctk.CTkButton(self.RFrame, text=_("Save as..."), font=("", 18), command=self.saveAs)
-        self.saveasButton.grid(row=2, column=0, pady=8, sticky="ew", columnspan=2)
+        self.saveasButton = ctk.CTkButton(
+            self.RFrame,
+            text=_("Save as..."),
+            font=("", SECONDARY_BUTTON_FONT_SIZE),
+            command=self.saveAs,
+            height=SECONDARY_BUTTON_HEIGHT,
+        )
+        self.saveasButton.grid(row=2, column=0, pady=UI_INNER_PAD, sticky="ew", columnspan=2)
         self.saveasButton_tt = CTkToolTip(self.saveasButton, message=_("Save the file with current speed/pitch settings as MP3 or WAV"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
 
-        self.aboutButton = ctk.CTkButton(self.RFrame, text=_("About"), font=("", 18), command=self.openAboutDialog)
-        self.aboutButton.grid(row=3, column=0, pady=(8, 8), sticky="sew", columnspan=2)
+        self.aboutButton = ctk.CTkButton(
+            self.RFrame,
+            text=_("About"),
+            font=("", AUX_BUTTON_FONT_SIZE),
+            command=self.openAboutDialog,
+            height=AUX_BUTTON_HEIGHT,
+            fg_color="transparent",
+            border_width=1,
+            border_color="#4A4D55",
+        )
+        self.aboutButton.grid(row=3, column=0, pady=(UI_INNER_PAD, UI_INNER_PAD), sticky="sew", columnspan=2)
         self.aboutButton_tt = CTkToolTip(self.aboutButton, message=_("Show info about this software"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
         
@@ -405,7 +428,7 @@ class App(_AppBase):
         self.dispSongTime(Force=True)
 
         self.update()
-        self.minsize(self.winfo_width(), self.winfo_height())
+        self.minsize(max(self.winfo_width(), MIN_WINDOW_WIDTH), max(self.winfo_height(), MIN_WINDOW_HEIGHT))
 
         # Check if the user asked to delete the recent file list
         if(args.delete_recent is not None and args.delete_recent == True):
@@ -914,15 +937,12 @@ class App(_AppBase):
     # Start Playing   
     def Play(self):
         self.player.Play()
-        self.playButton.configure(fg_color="green", hover_color="#085008", require_redraw=True)
+        self.playButton.configure(fg_color="#2E7D32", hover_color="#1E5A24", require_redraw=True)
     
     # Pause Playing
     def Pause(self):
-        btnColor = ctk.ThemeManager.theme["CTkButton"]["fg_color"][0 if ctk.get_appearance_mode() == "Light" else 1]
-        hovColor = ctk.ThemeManager.theme["CTkButton"]["hover_color"][0 if ctk.get_appearance_mode() == "Light" else 1]
         self.player.Pause()
-        self.playButton.configure()
-        self.playButton.configure(fg_color=btnColor, hover_color=hovColor, require_redraw=True)
+        self.playButton.configure(fg_color="#2F5D95", hover_color="#23436C", require_redraw=True)
 
     # Stop playing and rewind
     def stopPlaying(self):
