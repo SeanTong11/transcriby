@@ -6,13 +6,30 @@ Exports use soundfile + scipy (no rubberband).
 
 import math
 import os
+import shutil
+import sys
+
+from platform_utils import is_windows
+
+if is_windows():
+    # Ensure mpv DLLs can be found by python-mpv on Windows.
+    mpv_dir = os.environ.get("SLOWPLAY_MPV_DIR")
+    if not mpv_dir:
+        mpv_exe = shutil.which("mpv")
+        if mpv_exe:
+            mpv_dir = os.path.dirname(mpv_exe)
+    if mpv_dir and os.path.isdir(mpv_dir):
+        os.environ["PATH"] = mpv_dir + os.pathsep + os.environ.get("PATH", "")
+        if hasattr(os, "add_dll_directory"):
+            try:
+                os.add_dll_directory(mpv_dir)
+            except OSError:
+                pass
 
 import mpv
 import numpy as np
 import soundfile as sf
 from scipy import signal
-
-from platform_utils import is_windows
 
 import gettext
 _ = gettext.gettext

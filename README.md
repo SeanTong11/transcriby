@@ -100,6 +100,8 @@ If the last played song was extracted from a YouTube video, the app will not aut
 - **Fedora**: `sudo dnf install mpv`
 - **Arch**: `sudo pacman -S mpv`
 
+**Tip (Windows):** If `python-mpv` cannot find `libmpv-2.dll`, set `SLOWPLAY_MPV_DIR` to the folder containing `mpv.exe` and `libmpv-2.dll`.
+
 ### Quick Start with uv
 
 [uv](https://github.com/astral-sh/uv) is a fast Python package manager written in Rust. It's the recommended way to install and run SlowPlay.
