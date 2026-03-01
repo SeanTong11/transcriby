@@ -364,15 +364,43 @@ class App(_AppBase):
 
         self.loopCenterFrame = ctk.CTkFrame(self.loopControlsFrame, fg_color="transparent", bg_color="transparent")
         self.loopCenterFrame.grid(row=0, column=1, pady=8, sticky="nsew")
-        
-        self.swtLoopEnabled = ctk.CTkSwitch(self.loopCenterFrame, text=_("Enable loop"),
+
+        self.loopHeaderFrame = ctk.CTkFrame(self.loopCenterFrame, fg_color="transparent", bg_color="transparent")
+        self.loopHeaderFrame.pack(anchor="n")
+
+        self.swtLoopEnabled = ctk.CTkSwitch(self.loopHeaderFrame, text=_("Enable loop"),
                                             onvalue=True, offvalue=False, font=("", LBL_FONT_SIZE),
                                             command=self.loopToggle)
-        self.swtLoopEnabled.pack(anchor = "n")
+        self.swtLoopEnabled.grid(row=0, column=0, sticky="w")
         self.swtLoopEnabled_tt = CTkToolTip(
                                         self.swtLoopEnabled,
                                         message="Toggle loop playing\nShortcut: L\nTip: Right-click and drag on timeline/waveform to set A/B",
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
+        self.btnLoopHelp = ctk.CTkButton(
+            self.loopHeaderFrame,
+            width=24,
+            height=24,
+            text="?",
+            font=("", LBL_FONT_SIZE),
+            command=lambda: None,
+        )
+        self.btnLoopHelp.grid(row=0, column=1, padx=(8, 0), sticky="w")
+        self.btnLoopHelp_tt = CTkToolTip(
+            self.btnLoopHelp,
+            message="How to set loop A/B:\n- Press A to set loop start\n- Press B to set loop end\n- Or right-click and drag on timeline/waveform",
+            delay=0.8, alpha=0.5, justify="left", follow=False
+        )
+
+        self.lblLoopHint = ctk.CTkLabel(
+            self.loopCenterFrame,
+            text="",
+            font=("", max(10, LBL_FONT_SIZE - 1)),
+            text_color="#8FA1B8",
+            justify="center",
+            wraplength=280,
+        )
+        self.lblLoopHint.pack(anchor="n", pady=(6, 0))
+        self.updateLoopHint()
 
         # Widgets on right panel
         self.loopIcon = ctk.CTkImage(
@@ -815,6 +843,7 @@ class App(_AppBase):
             if(bForceDisable == False):
                 self.statusBarMessage(_("Loop disabled"), timeout=1000)
             self.swtLoopEnabled.deselect()
+        self.updateLoopHint()
 
     # Sets loop start point
     def setLoopStart(self, loopPoint = 0):
@@ -832,6 +861,7 @@ class App(_AppBase):
             secs = 0
         self.lblLoopStart.configure(text = f"{dt.timedelta(seconds=floor(secs))}.{utils.get_fractional(secs, 3):03d}")
         self.syncWaveformState()
+        self.updateLoopHint()
 
     # Sets loop end point
     def setLoopEnd(self, loopPoint = 0):
@@ -855,6 +885,7 @@ class App(_AppBase):
             secs = self.player.song_time(loopPoint)
             self.lblLoopEnd.configure(text = f"{dt.timedelta(seconds=floor(secs))}.{utils.get_fractional(secs, 3):03d}")
             self.syncWaveformState()
+            self.updateLoopHint()
             return(loopPoint)
 
     # Move the loop start by shift milliseconds
@@ -914,6 +945,18 @@ class App(_AppBase):
             self.player.startPoint >= 0 and
             self.player.endPoint > self.player.startPoint
         )
+
+    def updateLoopHint(self):
+        if(self.player.loopEnabled == False):
+            self.lblLoopHint.configure(text="Loop is off")
+            return
+
+        if(self.player.startPoint is not None and self.player.startPoint >= 0 and
+           self.player.endPoint is not None and self.player.endPoint > self.player.startPoint):
+            self.lblLoopHint.configure(text=f"A/B active: {self.lblLoopStart.cget('text')} -> {self.lblLoopEnd.cget('text')}")
+            return
+
+        self.lblLoopHint.configure(text="Loop is on. Set A/B: press A then B, or right-click drag on timeline/waveform")
 
     def restartLoopFromA(self):
         if(self.player.canPlay == False):
