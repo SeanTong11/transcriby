@@ -12,6 +12,7 @@ from tkinter import PhotoImage
 import datetime as dt
 import os
 import argparse
+import ctypes
 from PIL import Image
 import re
 import sys, pathlib
@@ -87,6 +88,18 @@ class App(_AppBase):
 
         # Sets the app icon
         self.wm_iconphoto(True, PhotoImage(file=os.path.join(resources_dir, "Icona-32.png")))
+        if is_windows():
+            icon_ico = os.path.join(resources_dir, "Icona.ico")
+            if os.path.exists(icon_ico):
+                try:
+                    self.iconbitmap(icon_ico)
+                except Exception:
+                    pass
+
+            try:
+                ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("SeanTong11.Transcriby")
+            except Exception:
+                pass
 
         # Initialize the audio player
         self.player = slowPlayer()
