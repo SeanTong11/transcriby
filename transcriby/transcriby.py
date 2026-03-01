@@ -38,6 +38,7 @@ from transcriby.appsettings import *
 from transcriby import recentdialog
 from transcriby import aboutdialog
 from transcriby import ytmanage
+from transcriby.waveform import WaveformWidget
 from transcriby.CTkRangeSlider import *
 
 # Lazy import tkinterdnd2 to avoid X11 threading issues on WSL
@@ -151,12 +152,15 @@ class App(_AppBase):
         self.scale = ctk.CTkSlider(self.LFrame, command=self.songSeek)
         self.scale.grid(row=2, column=0, padx=8, sticky="ew")
 
+        self.waveform = WaveformWidget(self.LFrame, on_seek=self.waveformSeek, height=120)
+        self.waveform.grid(row=3, column=0, padx=8, pady=(8, 0), sticky="ew")
+
         self.CTLFrame = ctk.CTkFrame(self.LFrame)
-        self.CTLFrame.grid(row=3, column=0, padx=8, pady=8, sticky="nsew")
+        self.CTLFrame.grid(row=4, column=0, padx=8, pady=8, sticky="nsew")
         self.PlaybackTab = self.CTLFrame
 
         self.LFrame.grid_columnconfigure(0, weight=1)
-        self.LFrame.grid_rowconfigure(3, weight=1)
+        self.LFrame.grid_rowconfigure(4, weight=1)
 
         # Widgets on Playback Tab
         #vint = (self.register(self.validate_int),'%d','%i','%P','%s','%S','%v','%V','%W')
@@ -455,6 +459,7 @@ class App(_AppBase):
         self.player.startPoint = -2
         self.player.endPoint = -1
         self.sldLoop.configure(from_ = 0, to = 100)
+        self.waveform.clear()
         self.loopToggle(bForceDisable = True)
         self.Pause()
         self.player.Rewind()
@@ -510,6 +515,7 @@ class App(_AppBase):
         # Actually load the media
         self.player.MediaLoad(self.mediaUri)
         self.player.update_position()
+        self.waveform.set_media(self.media)
 
         # Set the metadata only if it's not a Youtube downloaded file
         if(self.bYouTubeFile == False):
@@ -776,6 +782,7 @@ class App(_AppBase):
         if(secs is None):
             secs = 0
         self.lblLoopStart.configure(text = f"{dt.timedelta(seconds=floor(secs))}.{utils.get_fractional(secs, 3):03d}")
+        self.syncWaveformState()
 
     # Sets loop end point
     def setLoopEnd(self, loopPoint = 0):
@@ -799,6 +806,7 @@ class App(_AppBase):
             self.sldLoop.set((self.player.startPoint, loopPoint))
             secs = self.player.song_time(loopPoint)
             self.lblLoopEnd.configure(text = f"{dt.timedelta(seconds=floor(secs))}.{utils.get_fractional(secs, 3):03d}")
+            self.syncWaveformState()
             return(loopPoint)
 
     # Move the loop start by shift milliseconds
@@ -833,6 +841,23 @@ class App(_AppBase):
         self.setLoopEnd(self.player.endPoint + shiftPipeLineTime)
         return(True)
 
+    def syncWaveformState(self):
+        duration = self.player.query_duration()
+        if(duration is not None and duration > 0):
+            self.waveform.set_duration(self.player.song_time(duration))
+
+        loopStartSeconds = None
+        loopEndSeconds = None
+        if(self.player.startPoint is not None and self.player.startPoint >= 0):
+            loopStartSeconds = self.player.song_time(self.player.startPoint)
+        if(self.player.endPoint is not None and self.player.endPoint >= 0):
+            loopEndSeconds = self.player.song_time(self.player.endPoint)
+        self.waveform.set_loop(loopStartSeconds, loopEndSeconds)
+
+        position = self.player.query_position()
+        if(position is not None and position >= 0):
+            self.waveform.set_playhead(self.player.song_time(position))
+
     def hasValidLoopRange(self):
         return (
             self.player.loopEnabled and
@@ -854,6 +879,12 @@ class App(_AppBase):
         self.player.seek_absolute(self.player.startPoint)
         self.Play()
         self.statusBarMessage(_("Restart loop from A"), timeout=1000)
+
+    def waveformSeek(self, targetSeconds):
+        if(self.player.canPlay == False):
+            return
+        self.player.seek_absolute(self.player.pipeline_time(targetSeconds))
+        self.syncWaveformState()
 
     # Updates the save progress bars
     def saveProgress(self, value):
@@ -976,6 +1007,8 @@ class App(_AppBase):
         if(self.player.startPoint < 0):
             self.setLoopStart(0)
             self.sldLoop.configure(from_ = 0, require_redraw=True)
+
+        self.syncWaveformState()
 
     # Display the metadata on the statusbar
     def displaySongMetadata(self):
