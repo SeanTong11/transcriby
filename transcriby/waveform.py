@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import os
-import subprocess
 import threading
 import tkinter as tk
 
@@ -9,17 +8,25 @@ import customtkinter as ctk
 import numpy as np
 import soundfile as sf
 
+try:
+    import av
+except Exception:
+    av = None
+
 WAVE_BG_COLOR = "#101318"
 WAVE_LINE_COLOR = "#8DB8E6"
 LOOP_FILL_COLOR = "#2C4A63"
 LOOP_MARKER_COLOR = "#63D2FF"
 PLAYHEAD_COLOR = "#FF7B5C"
+SELECT_FILL_COLOR = "#B8893C"
+SELECT_MARKER_COLOR = "#FFD27D"
 
 
 class WaveformWidget(ctk.CTkFrame):
-    def __init__(self, master, on_seek=None, on_status=None, height=120, **kwargs):
+    def __init__(self, master, on_seek=None, on_loop_select=None, on_status=None, height=120, **kwargs):
         super().__init__(master, **kwargs)
         self.on_seek = on_seek
+        self.on_loop_select = on_loop_select
         self.on_status = on_status
         self.height = height
 
@@ -30,16 +37,25 @@ class WaveformWidget(ctk.CTkFrame):
         self._playhead = 0.0
         self._loop_start = None
         self._loop_end = None
+        self._select_start = None
+        self._select_end = None
+        self._select_anchor = None
 
         self.canvas = tk.Canvas(self, height=self.height, highlightthickness=0, bd=0)
         self.canvas.pack(fill="both", expand=True)
         self.canvas.bind("<Configure>", self._on_resize)
         self.canvas.bind("<Button-1>", self._on_click)
+        self.canvas.bind("<ButtonPress-3>", self._on_right_press)
+        self.canvas.bind("<B3-Motion>", self._on_right_drag)
+        self.canvas.bind("<ButtonRelease-3>", self._on_right_release)
 
         self._loop_rect_id = None
         self._loop_a_id = None
         self._loop_b_id = None
         self._playhead_id = None
+        self._select_rect_id = None
+        self._select_a_id = None
+        self._select_b_id = None
 
     def clear(self):
         self._load_token += 1
@@ -49,11 +65,17 @@ class WaveformWidget(ctk.CTkFrame):
         self._playhead = 0.0
         self._loop_start = None
         self._loop_end = None
+        self._select_start = None
+        self._select_end = None
+        self._select_anchor = None
         self.canvas.delete("all")
         self._loop_rect_id = None
         self._loop_a_id = None
         self._loop_b_id = None
         self._playhead_id = None
+        self._select_rect_id = None
+        self._select_a_id = None
+        self._select_b_id = None
 
     def set_media(self, media_path):
         self.clear()
@@ -86,11 +108,55 @@ class WaveformWidget(ctk.CTkFrame):
     def _on_click(self, event):
         if self._duration is None or self._duration <= 0:
             return
-        width = max(self.canvas.winfo_width(), 1)
-        target_seconds = max(0.0, min(self._duration, (event.x / width) * self._duration))
+        target_seconds = self._x_to_seconds(event.x)
         self.set_playhead(target_seconds)
         if self.on_seek:
             self.on_seek(target_seconds)
+
+    def _on_right_press(self, event):
+        if self._duration is None or self._duration <= 0:
+            return
+        self._select_anchor = self._x_to_seconds(event.x)
+        self._select_start = self._select_anchor
+        self._select_end = self._select_anchor
+        self._draw_overlays()
+
+    def _on_right_drag(self, event):
+        if self._select_anchor is None:
+            return
+        self._select_end = self._x_to_seconds(event.x)
+        self._draw_overlays()
+
+    def _on_right_release(self, event):
+        if self._select_anchor is None:
+            return
+        end_seconds = self._x_to_seconds(event.x)
+        start_seconds = min(self._select_anchor, end_seconds)
+        stop_seconds = max(self._select_anchor, end_seconds)
+        self.clear_selection_preview()
+
+        if stop_seconds - start_seconds < 0.01:
+            return
+        if self.on_loop_select:
+            self.on_loop_select(start_seconds, stop_seconds)
+
+    def _x_to_seconds(self, x):
+        if self._duration is None or self._duration <= 0:
+            return 0.0
+        width = max(self.canvas.winfo_width(), 1)
+        return max(0.0, min(self._duration, (x / width) * self._duration))
+
+    def set_selection_preview(self, start_seconds, end_seconds):
+        self._select_anchor = start_seconds
+        self._select_start = start_seconds
+        self._select_end = end_seconds
+        self._draw_overlays()
+
+    def clear_selection_preview(self):
+        self._select_anchor = None
+        self._select_start = None
+        self._select_end = None
+        self._draw_overlays()
 
     def _build_envelope_worker(self, media_path, token):
         message = None
@@ -103,49 +169,103 @@ class WaveformWidget(ctk.CTkFrame):
                 envelope = self._build_envelope(mono)
         except Exception:
             envelope = None
-            message = "Waveform decoder fallback: ffmpeg"
+            message = "Waveform decoder fallback: PyAV"
 
         if envelope is None:
-            mono = self._decode_with_ffmpeg(media_path)
+            mono = self._decode_with_pyav(media_path)
             if mono is not None:
                 envelope = self._build_envelope(mono)
                 message = None
 
         if envelope is None:
-            message = "Waveform unavailable for this media"
+            if av is None:
+                message = "Waveform unavailable: install PyAV (pip install av)"
+            else:
+                message = "Waveform unavailable for this media"
 
         self.after(0, self._apply_envelope, token, envelope, message)
 
-    def _decode_with_ffmpeg(self, media_path):
-        cmd = [
-            "ffmpeg",
-            "-v",
-            "error",
-            "-i",
-            media_path,
-            "-vn",
-            "-ac",
-            "1",
-            "-ar",
-            "12000",
-            "-f",
-            "f32le",
-            "-acodec",
-            "pcm_f32le",
-            "pipe:1",
-        ]
+    def _decode_with_pyav(self, media_path):
+        if av is None:
+            return None
+
+        container = None
         try:
-            result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+            container = av.open(media_path)
         except Exception:
             return None
 
-        if result.returncode != 0 or not result.stdout:
+        audio_stream = None
+        try:
+            for stream in container.streams:
+                if stream.type == "audio":
+                    audio_stream = stream
+                    break
+        except Exception:
+            audio_stream = None
+
+        if audio_stream is None:
+            if container is not None:
+                container.close()
             return None
 
-        mono = np.frombuffer(result.stdout, dtype=np.float32)
-        if mono.size == 0:
+        resampler = None
+        try:
+            resampler = av.audio.resampler.AudioResampler(format="fltp", layout="mono", rate=12000)
+        except Exception:
+            resampler = None
+
+        chunks = []
+        total_samples = 0
+        max_samples = 12_000_000
+        try:
+            for frame in container.decode(audio=audio_stream.index):
+                if frame is None:
+                    continue
+
+                frames = [frame]
+                if resampler is not None:
+                    try:
+                        res = resampler.resample(frame)
+                        if isinstance(res, list):
+                            frames = [f for f in res if f is not None]
+                        elif res is not None:
+                            frames = [res]
+                    except Exception:
+                        frames = [frame]
+
+                for out_frame in frames:
+                    arr = out_frame.to_ndarray()
+                    if arr.ndim == 2:
+                        if arr.shape[0] <= 8 and arr.shape[1] > arr.shape[0]:
+                            mono = np.mean(np.abs(arr), axis=0)
+                        else:
+                            mono = np.mean(np.abs(arr), axis=1)
+                    else:
+                        mono = np.abs(arr.reshape(-1))
+
+                    if mono.size == 0:
+                        continue
+
+                    mono = mono.astype(np.float32, copy=False)
+                    chunks.append(mono)
+                    total_samples += mono.size
+
+                    if total_samples > max_samples:
+                        chunks = [c[::2] for c in chunks]
+                        total_samples = sum(c.size for c in chunks)
+        except Exception:
+            if container is not None:
+                container.close()
             return None
-        return np.abs(mono)
+        finally:
+            if container is not None:
+                container.close()
+
+        if not chunks:
+            return None
+
+        return np.concatenate(chunks)
 
     def _build_envelope(self, mono):
         if mono is None or len(mono) == 0:
@@ -175,6 +295,9 @@ class WaveformWidget(ctk.CTkFrame):
         self._loop_a_id = None
         self._loop_b_id = None
         self._playhead_id = None
+        self._select_rect_id = None
+        self._select_a_id = None
+        self._select_b_id = None
 
         width = max(self.canvas.winfo_width(), 1)
         height = max(self.canvas.winfo_height(), 1)
@@ -236,6 +359,28 @@ class WaveformWidget(ctk.CTkFrame):
             self._loop_rect_id = None
             self._loop_a_id = None
             self._loop_b_id = None
+
+        s_a_x = self._seconds_to_x(self._select_start)
+        s_b_x = self._seconds_to_x(self._select_end)
+        if s_a_x is not None and s_b_x is not None and abs(s_b_x - s_a_x) > 1:
+            x1, x2 = (s_a_x, s_b_x) if s_a_x <= s_b_x else (s_b_x, s_a_x)
+            if self._select_rect_id is None:
+                self._select_rect_id = self.canvas.create_rectangle(
+                    x1, 0, x2, height, fill=SELECT_FILL_COLOR, outline="", stipple="gray25"
+                )
+                self._select_a_id = self.canvas.create_line(x1, 0, x1, height, fill=SELECT_MARKER_COLOR, width=2)
+                self._select_b_id = self.canvas.create_line(x2, 0, x2, height, fill=SELECT_MARKER_COLOR, width=2)
+            else:
+                self.canvas.coords(self._select_rect_id, x1, 0, x2, height)
+                self.canvas.coords(self._select_a_id, x1, 0, x1, height)
+                self.canvas.coords(self._select_b_id, x2, 0, x2, height)
+        elif self._select_rect_id is not None:
+            self.canvas.delete(self._select_rect_id)
+            self.canvas.delete(self._select_a_id)
+            self.canvas.delete(self._select_b_id)
+            self._select_rect_id = None
+            self._select_a_id = None
+            self._select_b_id = None
 
         playhead_x = self._seconds_to_x(self._playhead)
         if playhead_x is not None:

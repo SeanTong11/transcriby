@@ -372,6 +372,10 @@ msgstr ""
 msgid "Restart loop from A"
 msgstr ""
 
+#: slowplay.py:1003
+msgid "Loop range updated"
+msgstr ""
+
 #: slowplay.py:1278
 msgid "URI of the media to open"
 msgstr ""

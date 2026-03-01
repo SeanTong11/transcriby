@@ -140,6 +140,7 @@ class App(_AppBase):
         self.YouTubeUrl = ""                # Actual YouTube URL
 
         self.lastPlayingState = False       # Last status of the player
+        self._barLoopSelectStart = None     # Right-click A/B selection anchor on seek/progress
 
         # Build the 3 main frames: Left (shrinkable), Right (buttons)
         # and low (status ba
@@ -160,13 +161,20 @@ class App(_AppBase):
 
         self.progress = ctk.CTkProgressBar(self.LFrame, variable=self.songProgress, height=24)
         self.progress.grid(row=1, column=0, padx=UI_INNER_PAD, pady=UI_INNER_PAD, sticky="ew")
+        self.progress.bind("<ButtonPress-3>", self._bar_loop_select_start)
+        self.progress.bind("<B3-Motion>", self._bar_loop_select_drag)
+        self.progress.bind("<ButtonRelease-3>", self._bar_loop_select_end)
 
         self.scale = ctk.CTkSlider(self.LFrame, command=self.songSeek)
         self.scale.grid(row=2, column=0, padx=UI_INNER_PAD, sticky="ew")
+        self.scale.bind("<ButtonPress-3>", self._bar_loop_select_start)
+        self.scale.bind("<B3-Motion>", self._bar_loop_select_drag)
+        self.scale.bind("<ButtonRelease-3>", self._bar_loop_select_end)
 
         self.waveform = WaveformWidget(
             self.LFrame,
             on_seek=self.waveformSeek,
+            on_loop_select=self.waveformLoopSelect,
             on_status=self.waveformStatus,
             height=WAVEFORM_HEIGHT,
         )
@@ -919,9 +927,80 @@ class App(_AppBase):
         self.player.seek_absolute(self.player.pipeline_time(targetSeconds))
         self.syncWaveformState()
 
+    def waveformLoopSelect(self, startSeconds, endSeconds):
+        self._applyLoopRangeSeconds(startSeconds, endSeconds)
+
     def waveformStatus(self, message):
         if(message):
             self.statusBarMessage(message, timeout=1800)
+
+    def _seconds_from_widget_x(self, widget, x):
+        duration = self.player.query_duration()
+        if(duration is None or duration <= 0):
+            return None
+        durationSeconds = self.player.song_time(duration)
+        width = max(widget.winfo_width(), 1)
+        ratio = max(0.0, min(1.0, x / width))
+        return ratio * durationSeconds
+
+    def _bar_loop_select_start(self, event):
+        if(self.player.canPlay == False):
+            return
+        self._barLoopSelectStart = self._seconds_from_widget_x(event.widget, event.x)
+        if(self._barLoopSelectStart is not None):
+            self.waveform.set_selection_preview(self._barLoopSelectStart, self._barLoopSelectStart)
+
+    def _bar_loop_select_drag(self, event):
+        if(self._barLoopSelectStart is None):
+            return
+        curSeconds = self._seconds_from_widget_x(event.widget, event.x)
+        if(curSeconds is None):
+            return
+        self.waveform.set_selection_preview(self._barLoopSelectStart, curSeconds)
+
+    def _bar_loop_select_end(self, event):
+        if(self._barLoopSelectStart is None):
+            return
+        endSeconds = self._seconds_from_widget_x(event.widget, event.x)
+        startSeconds = self._barLoopSelectStart
+        self._barLoopSelectStart = None
+        self.waveform.clear_selection_preview()
+        if(endSeconds is None):
+            return
+        self._applyLoopRangeSeconds(startSeconds, endSeconds)
+
+    def _applyLoopRangeSeconds(self, startSeconds, endSeconds):
+        if(self.player.canPlay == False):
+            return
+        if(startSeconds is None or endSeconds is None):
+            return
+
+        lo = min(startSeconds, endSeconds)
+        hi = max(startSeconds, endSeconds)
+        duration = self.player.query_duration()
+        if(duration is None or duration <= 0):
+            return
+
+        durationSeconds = self.player.song_time(duration)
+        if(durationSeconds is None or durationSeconds <= 0):
+            return
+
+        lo = max(0.0, min(lo, durationSeconds))
+        hi = max(0.0, min(hi, durationSeconds))
+        if((hi - lo) < LOOP_MINIMUM_GAP):
+            hi = min(durationSeconds, lo + LOOP_MINIMUM_GAP)
+            if((hi - lo) < LOOP_MINIMUM_GAP):
+                lo = max(0.0, hi - LOOP_MINIMUM_GAP)
+
+        if((hi - lo) <= 0):
+            return
+
+        # Reset current points before applying a fresh range
+        self.player.startPoint = -2
+        self.player.endPoint = -1
+        self.setLoopStart(self.player.pipeline_time(lo))
+        self.setLoopEnd(self.player.pipeline_time(hi))
+        self.statusBarMessage(_("Loop range updated"), timeout=1000)
 
     # Updates the save progress bars
     def saveProgress(self, value):

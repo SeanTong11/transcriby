@@ -395,6 +395,10 @@ msgstr "Loop disabilitato"
 msgid "Restart loop from A"
 msgstr "Riavvia il loop da A"
 
+#: slowplay.py:1003
+msgid "Loop range updated"
+msgstr "Intervallo loop aggiornato"
+
 #: slowplay.py:1278
 msgid "URI of the media to open"
 msgstr "URI del file da aprire"
@@ -458,4 +462,3 @@ msgstr ""
 "Impossibile trovare l'immagine thumbnail.\n"
 "\n"
 "Uhmmmmm... Questo è piuttosto strano"
-

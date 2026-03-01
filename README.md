@@ -65,8 +65,9 @@ Transcriby now includes a waveform panel under the seek bar:
 - Click anywhere on the waveform to seek playback to that point
 - A/B loop boundaries are shown directly on the waveform
 - The playhead updates in real time while playing
+- Right-click drag on waveform or seek/progress area to set a loop range quickly
 
-For media containers like MP4, waveform extraction may use `ffmpeg` as a fallback decoder.
+For media containers like MP4, waveform extraction uses `PyAV` (Python package `av`), so no system ffmpeg installation is required.
 
 ### Export modified audio:
 
@@ -260,6 +261,7 @@ Audio export is performed with `soundfile + scipy` and does not require ffmpeg.
 - Rebuild from project root so `transcriby/resources/Icona.ico` is included
 - Unpin and re-pin the app from taskbar
 - If needed, restart Explorer (`explorer.exe`) to refresh Windows icon cache
+- Helper script: `powershell -ExecutionPolicy Bypass -File tools\\refresh_windows_icon_cache.ps1`
 
 ### "Module not found" error
 - Make sure you installed all requirements: `pip install -r requirements.txt`
