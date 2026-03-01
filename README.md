@@ -11,7 +11,7 @@
 
 ## About This Fork
 
-This project is modified from the original [SlowPlay](https://github.com/aFunkyBass/slowplay) by aFunkyBass.
+This project is modified from the original [SlowPlay](https://github.com/aFunkyBass/slowplay).
 Current maintained repository: [SeanTong11/transcriby](https://github.com/SeanTong11/transcriby).
 
 **Key changes in this fork:**
@@ -276,7 +276,7 @@ Audio export is performed with `soundfile + scipy` and does not require ffmpeg.
 
 ## Credits
 
-- Original [SlowPlay](https://github.com/aFunkyBass/slowplay) by aFunkyBass
+- Original [SlowPlay](https://github.com/aFunkyBass/slowplay)
 - Inspired by [Play It Slowly](https://github.com/jwagner/playitslowly) by Jonas Wagner
 
 ## License
