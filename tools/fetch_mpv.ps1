@@ -21,12 +21,38 @@ function Resolve-7z {
     return $cmd.Source
   }
 
+  function Find-7zPath {
+    $candidates = @()
+    if ($env:ProgramFiles) {
+      $candidates += Join-Path $env:ProgramFiles "7-Zip\7z.exe"
+    }
+    if ($env:ProgramFiles -and $env:ProgramFiles -match "Program Files") {
+      $pf86 = $env:ProgramFiles -replace "Program Files$", "Program Files (x86)"
+      $candidates += Join-Path $pf86 "7-Zip\7z.exe"
+    }
+    if ($env:ProgramFiles_x86) {
+      $candidates += Join-Path $env:ProgramFiles_x86 "7-Zip\7z.exe"
+    }
+
+    foreach ($p in $candidates) {
+      if (Test-Path $p) { return $p }
+    }
+
+    return $null
+  }
+
+  $path = Find-7zPath
+  if ($path) {
+    return $path
+  }
+
   $resp = Read-Host "7z not found. Install 7-Zip using winget? (y/N)"
   if ($resp -match '^(y|yes)$') {
     if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
       Write-Error "winget not found. Please install 7-Zip manually and ensure '7z' is on PATH."
     }
     winget install --id 7zip.7zip -e --accept-package-agreements --accept-source-agreements
+    Start-Sleep -Seconds 2
   } else {
     Write-Error "7z is required. Aborting."
   }
@@ -36,9 +62,9 @@ function Resolve-7z {
     return $cmd.Source
   }
 
-  $fallback = "C:\Program Files\7-Zip\7z.exe"
-  if (Test-Path $fallback) {
-    return $fallback
+  $path = Find-7zPath
+  if ($path) {
+    return $path
   }
 
   Write-Error "7z not found after install attempt. Ensure 7-Zip is installed and '7z' is on PATH."
