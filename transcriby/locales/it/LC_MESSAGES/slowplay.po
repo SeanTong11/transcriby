@@ -395,6 +395,14 @@ msgstr "Loop disabilitato"
 msgid "Restart loop from A"
 msgstr "Riavvia il loop da A"
 
+#: slowplay.py:430
+msgid "Set loop start here"
+msgstr "Imposta qui l'inizio loop"
+
+#: slowplay.py:431
+msgid "Set loop end here"
+msgstr "Imposta qui la fine loop"
+
 #: slowplay.py:1003
 msgid "Loop range updated"
 msgstr "Intervallo loop aggiornato"

@@ -23,10 +23,20 @@ SELECT_MARKER_COLOR = "#FFD27D"
 
 
 class WaveformWidget(ctk.CTkFrame):
-    def __init__(self, master, on_seek=None, on_loop_select=None, on_status=None, height=120, **kwargs):
+    def __init__(
+        self,
+        master,
+        on_seek=None,
+        on_loop_select=None,
+        on_context_request=None,
+        on_status=None,
+        height=120,
+        **kwargs,
+    ):
         super().__init__(master, **kwargs)
         self.on_seek = on_seek
         self.on_loop_select = on_loop_select
+        self.on_context_request = on_context_request
         self.on_status = on_status
         self.height = height
 
@@ -136,6 +146,8 @@ class WaveformWidget(ctk.CTkFrame):
         self.clear_selection_preview()
 
         if stop_seconds - start_seconds < 0.01:
+            if self.on_context_request:
+                self.on_context_request(end_seconds, event.x_root, event.y_root)
             return
         if self.on_loop_select:
             self.on_loop_select(start_seconds, stop_seconds)

@@ -372,6 +372,14 @@ msgstr ""
 msgid "Restart loop from A"
 msgstr ""
 
+#: slowplay.py:430
+msgid "Set loop start here"
+msgstr ""
+
+#: slowplay.py:431
+msgid "Set loop end here"
+msgstr ""
+
 #: slowplay.py:1003
 msgid "Loop range updated"
 msgstr ""

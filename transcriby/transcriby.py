@@ -3,7 +3,7 @@
 # https://tkinterexamples.com/
 # https://deepwiki.com/TomSchimansky/CustomTkinter/1-overview
 #
-#import tkinter as tk
+import tkinter as tk
 import customtkinter as ctk
 from CTkMessagebox import CTkMessagebox
 from CTkToolTip import *
@@ -141,6 +141,7 @@ class App(_AppBase):
 
         self.lastPlayingState = False       # Last status of the player
         self._barLoopSelectStart = None     # Right-click A/B selection anchor on seek/progress
+        self._loopContextSeconds = None     # Right-click context target in seconds
 
         # Build the 3 main frames: Left (shrinkable), Right (buttons)
         # and low (status ba
@@ -175,6 +176,7 @@ class App(_AppBase):
             self.LFrame,
             on_seek=self.waveformSeek,
             on_loop_select=self.waveformLoopSelect,
+            on_context_request=self.waveformContextRequest,
             on_status=self.waveformStatus,
             height=WAVEFORM_HEIGHT,
         )
@@ -445,6 +447,10 @@ class App(_AppBase):
         self.fileLabel = ctk.CTkLabel(self.BFrame, text="", font=("", LBL_FONT_SIZE))
         self.fileLabel.grid(row=0, column=0, padx=(8), sticky="w")
         self.BFrame.columnconfigure(0, weight=1)
+
+        self.loopContextMenu = tk.Menu(self, tearoff=0)
+        self.loopContextMenu.add_command(label=_("Set loop start here"), command=self._set_loop_start_from_context)
+        self.loopContextMenu.add_command(label=_("Set loop end here"), command=self._set_loop_end_from_context)
 
         self.dispSongTime(Force=True)
 
@@ -930,6 +936,9 @@ class App(_AppBase):
     def waveformLoopSelect(self, startSeconds, endSeconds):
         self._applyLoopRangeSeconds(startSeconds, endSeconds)
 
+    def waveformContextRequest(self, seconds, x_root, y_root):
+        self._showLoopContextMenu(seconds, x_root, y_root)
+
     def waveformStatus(self, message):
         if(message):
             self.statusBarMessage(message, timeout=1800)
@@ -967,7 +976,33 @@ class App(_AppBase):
         self.waveform.clear_selection_preview()
         if(endSeconds is None):
             return
+        if(abs(endSeconds - startSeconds) < 0.01):
+            self._showLoopContextMenu(endSeconds, event.x_root, event.y_root)
+            return
         self._applyLoopRangeSeconds(startSeconds, endSeconds)
+
+    def _showLoopContextMenu(self, seconds, x_root, y_root):
+        if(self.player.canPlay == False):
+            return
+        if(seconds is None):
+            return
+        self._loopContextSeconds = seconds
+        try:
+            self.loopContextMenu.tk_popup(x_root, y_root)
+        finally:
+            self.loopContextMenu.grab_release()
+
+    def _set_loop_start_from_context(self):
+        if(self._loopContextSeconds is None):
+            return
+        self.setLoopStart(self.player.pipeline_time(self._loopContextSeconds))
+        self.syncWaveformState()
+
+    def _set_loop_end_from_context(self):
+        if(self._loopContextSeconds is None):
+            return
+        self.setLoopEnd(self.player.pipeline_time(self._loopContextSeconds))
+        self.syncWaveformState()
 
     def _applyLoopRangeSeconds(self, startSeconds, endSeconds):
         if(self.player.canPlay == False):
