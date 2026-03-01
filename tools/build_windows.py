@@ -93,6 +93,14 @@ def build():
         "--hidden-import", "platform_utils",
     ])
     
+    # Bundle libmpv DLLs if present (third_party/mpv)
+    mpv_dir = os.path.join(os.getcwd(), "third_party", "mpv")
+    if os.path.isdir(mpv_dir):
+        for name in os.listdir(mpv_dir):
+            if name.lower().endswith(".dll"):
+                src = os.path.join(mpv_dir, name)
+                cmd.extend(["--add-binary", f"{src};."])
+
     # Add icon (if exists)
     icon_path = os.path.join("slowplay", "resources", "Icona.ico")
     if os.path.exists(icon_path):

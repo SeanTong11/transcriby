@@ -71,6 +71,7 @@ python sp-launch.py
 ### Prerequisites
 Same as Method 1, plus:
 - PyInstaller (`pip install pyinstaller`)
+ - 7-Zip (for fetching mpv dev package)
 
 ### Build Steps
 
@@ -79,9 +80,14 @@ Same as Method 1, plus:
    cd slowplay
    ```
 
-2. **Run the build script**
+2. **Fetch mpv dev package (libmpv DLLs)**
    ```cmd
-   python build_windows.py
+   powershell -ExecutionPolicy Bypass -File tools\\fetch_mpv.ps1
+   ```
+
+3. **Run the build script**
+   ```cmd
+   python tools\\build_windows.py
    ```
 
 3. **Find your executable**

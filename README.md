@@ -140,12 +140,31 @@ source .venv/bin/activate
 python sp-launch.py
 ```
 
+#### macOS
+
+```bash
+brew install mpv
+
+git clone https://github.com/yourusername/slowplay.git
+cd slowplay
+
+uv sync
+uv run python sp-launch.py
+```
+
 ### Development Setup
 
 To install with all development dependencies (pyinstaller, yt-dlp):
 
 ```bash
 uv sync --dev
+
+### Windows Build
+
+```cmd
+powershell -ExecutionPolicy Bypass -File tools\fetch_mpv.ps1
+python tools\build_windows.py
+```
 ```
 
 ### Legacy pip Setup (Not Recommended)
