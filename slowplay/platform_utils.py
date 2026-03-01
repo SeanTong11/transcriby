@@ -47,23 +47,23 @@ def is_wsl() -> bool:
 def get_config_dir() -> str:
     """Get the appropriate config directory for the current platform"""
     if is_windows():
-        # Windows: %APPDATA%\SlowPlay
+        # Windows: %APPDATA%\Transcriby
         appdata = os.environ.get("APPDATA", os.path.expanduser("~"))
-        return os.path.join(appdata, "SlowPlay")
+        return os.path.join(appdata, "Transcriby")
     else:
-        # Linux: ~/.config/slowplay
-        return os.path.join(os.path.expanduser("~"), ".config", "slowplay")
+        # Linux: ~/.config/transcriby
+        return os.path.join(os.path.expanduser("~"), ".config", "transcriby")
 
 
 def get_cache_dir() -> str:
     """Get the appropriate cache/temp directory for the current platform"""
     if is_windows():
-        # Windows: %LOCALAPPDATA%\Temp\SlowPlay or %TEMP%\SlowPlay
+        # Windows: %LOCALAPPDATA%\Temp\Transcriby or %TEMP%\Transcriby
         temp_dir = os.environ.get("TEMP", os.path.expanduser("~"))
-        return os.path.join(temp_dir, "SlowPlay")
+        return os.path.join(temp_dir, "Transcriby")
     else:
         # Linux: /tmp or TMPDIR
-        return os.path.join(tempfile.gettempdir(), "slowplay")
+        return os.path.join(tempfile.gettempdir(), "transcriby")
 
 
 def get_external_cmd(cmd: str) -> str:
@@ -95,6 +95,23 @@ def get_env_with_original_path():
             env.pop(lp_key, None)
     
     return env
+
+
+def _get_bundle_base_dir() -> str:
+    """Return base directory for bundled resources (PyInstaller) or source."""
+    if hasattr(sys, "_MEIPASS"):
+        return sys._MEIPASS  # type: ignore[attr-defined]
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+def get_resources_dir() -> str:
+    """Return resources directory for current execution context."""
+    return os.path.join(_get_bundle_base_dir(), "resources")
+
+
+def get_locales_dir() -> str:
+    """Return locales directory for current execution context."""
+    return os.path.join(_get_bundle_base_dir(), "locales")
 
 
 def check_cmd_exists(cmd: str) -> bool:

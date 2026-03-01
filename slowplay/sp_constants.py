@@ -1,8 +1,8 @@
 # Definitions
 
 APP_TITLE = "Transcriby"
-APP_NAME = "slowplay"
-APP_DESCRIPTION = "SlowPlay is a simple audio player with speed/pitch \
+APP_NAME = "transcriby"
+APP_DESCRIPTION = "Transcriby is a simple audio player with speed/pitch \
 change capabilities, using mpv (libmpv)."
 
 APP_VERSION = "0.3.2"

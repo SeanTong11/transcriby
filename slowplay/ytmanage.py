@@ -10,7 +10,7 @@ import os
 from slowplay import utils
 import json
 import hashlib
-from slowplay.platform_utils import get_external_cmd, check_cmd_exists
+from slowplay.platform_utils import get_external_cmd, check_cmd_exists, get_resources_dir
 
 from slowplay.sp_constants import *
 
@@ -38,8 +38,7 @@ class ytDialog(ctk.CTkToplevel):
         self.progText = ["|", "/", "-", "\\"]
 
         # Mark app directories
-        working_dir = os.path.dirname(__file__)
-        resources_dir = os.path.join(working_dir, "resources")
+        resources_dir = get_resources_dir()
         
         # Set the video found flag
         self.videoFound = False
@@ -71,8 +70,11 @@ class ytDialog(ctk.CTkToplevel):
         self.URL_entry = ctk.CTkEntry(self.TopFrame, placeholder_text=_("Paste a YouTube URL here..."))
         self.URL_entry.grid(row=0, column=1, sticky="ew", padx=8, pady=8)
 
-        YTIcon = ctk.CTkImage(light_image=Image.open(f"{resources_dir}/YT_ico.png"),
-                                 dark_image=Image.open(f"{resources_dir}//YT_ico.png"), size=(23, 16))
+        YTIcon = ctk.CTkImage(
+            light_image=Image.open(os.path.join(resources_dir, "YT_ico.png")),
+            dark_image=Image.open(os.path.join(resources_dir, "YT_ico.png")),
+            size=(23, 16),
+        )
 
         self.searchBtn = ctk.CTkButton(self.TopFrame, width=40, text="", font=("", 14), 
                                        image=YTIcon, command= lambda: self.searchVideo())

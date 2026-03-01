@@ -35,6 +35,11 @@ jobs:
         run: |
           choco install 7zip -y
 
+      - name: Fetch libmpv DLLs
+        shell: pwsh
+        run: |
+          powershell -ExecutionPolicy Bypass -File tools\fetch_mpv.ps1
+
       - name: Build and package
         shell: pwsh
         run: |

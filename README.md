@@ -1,8 +1,8 @@
-# SlowPlay
+# Transcriby
 
-**SlowPlay** is a simple audio player with speed/pitch change capabilities. It is meant to help music students/teachers transcribe music and play along with it.
+**Transcriby** is a simple audio player with speed/pitch change capabilities. It is meant to help music students/teachers transcribe music and play along with it.
 
-- **Cross-platform**: Works on both Windows and Linux
+- **Cross-platform**: Works on Windows, Linux, and macOS
 - **Lightweight**: Uses `mpv` (libmpv) for audio playback (no GStreamer required)
 
 **Made by a musician for musicians**
@@ -29,13 +29,13 @@ This project is modified from the original [SlowPlay](https://github.com/aFunkyB
 
 ### Speed and pitch change:
 
-**SlowPlay** can speed down/up songs or change their pitch independently "on the fly". You can import all the most common audio files format (mp3, wav, flac, aif...).
+**Transcriby** can speed down/up songs or change their pitch independently "on the fly". You can import all the most common audio files format (mp3, wav, flac, aif...).
 
-Speed change is made by moving the slider which will change it in 5% steps, or by entering the precise percentage value in the edit box (eg 87%).You can transpose your song up and down by semitones or fine adjust the pitch by cents, in case the song is not in tune with your instruments. For your convenience, SlowPlay offers several numeric keypad shortcuts. Please take a look at the [shortcut](#optimized-keyobard-shortcuts) list further on in this document.
+Speed change is made by moving the slider which will change it in 5% steps, or by entering the precise percentage value in the edit box (eg 87%).You can transpose your song up and down by semitones or fine adjust the pitch by cents, in case the song is not in tune with your instruments. For your convenience, Transcriby offers several numeric keypad shortcuts. Please take a look at the [shortcut](#optimized-keyobard-shortcuts) list further on in this document.
 
 ### YouTube audio extraction:
 
-**SlowPlay** can extract audio from YouTube videos and treat it like a regular audio file. Please follow these steps to operate on YouTube videos:
+**Transcriby** can extract audio from YouTube videos and treat it like a regular audio file. Please follow these steps to operate on YouTube videos:
 
 - Click on the YouTube button to open the YouTube dialog
 - Paste a valid YouTube URL in the upper box and click on the YouTube icon next to it
@@ -60,7 +60,7 @@ It is possible to export modified songs by using the "Save as..." button. You ca
 
 ### Optimized keyobard shortcuts:
 
-If you use SlowPlay for music practicing, you probably want access its functions without using the mouse or both hands, which is why most important shortcuts are assigned to the numeric keypads.
+If you use Transcriby for music practicing, you probably want access its functions without using the mouse or both hands, which is why most important shortcuts are assigned to the numeric keypads.
 
 - Numbers in the left column (1, 4, 7) move the song position back by 5, 10 and 15 seconds. Numbers on the right column (3, 6, 9) move it forward accordingly. You can reach the song position you want to reharse in a bit.
 
@@ -78,7 +78,7 @@ See the [shortcuts](#shortcuts) section for a more complete key reference.
 
 ### Other features:
 
-- **Recent files list**: To access the recent files list use the **Ctrl+R** shortcut, or right-click on the "Open" button. SlowPlay keeps track of the last 16 played files and all the playback parameters (speed, pitch, cents and volume), which are restored as you load the song again.
+- **Recent files list**: To access the recent files list use the **Ctrl+R** shortcut, or right-click on the "Open" button. Transcriby keeps track of the last 16 played files and all the playback parameters (speed, pitch, cents and volume), which are restored as you load the song again.
 If the software is launched without specifying any media in the command line, it attempts to reopen the last played track.
 If the last played song was extracted from a YouTube video, the app will not automatically open it to prevent unwanted downloads. You can dwonload it again by accessing the recent files dialog.
 
@@ -104,7 +104,7 @@ If the last played song was extracted from a YouTube video, the app will not aut
 
 ### Quick Start with uv
 
-[uv](https://github.com/astral-sh/uv) is a fast Python package manager written in Rust. It's the recommended way to install and run SlowPlay.
+[uv](https://github.com/astral-sh/uv) is a fast Python package manager written in Rust. It's the recommended way to install and run Transcriby.
 
 #### Windows
 
@@ -182,7 +182,7 @@ python sp-launch.py
 
 ## Shortcuts
 
-SlowPlay offers the following shortcuts:
+Transcriby offers the following shortcuts:
 
 #### General operations:
 - **Ctrl+O**: Open a file

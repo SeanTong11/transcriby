@@ -1,5 +1,5 @@
 [project]
-name = "slowplay"
+name = "transcriby"
 version = "0.3.2"
 description = "A simple audio player with speed/pitch change capabilities"
 readme = "README.md"
@@ -48,7 +48,7 @@ dev = [
 ]
 
 [project.scripts]
-slowplay = "slowplay.slowplay:main"
+transcriby = "slowplay.slowplay:main"
 
 [project.urls]
 Homepage = "https://github.com/aFunkyBass/slowplay"

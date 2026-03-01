@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Windows build script for SlowPlay
+Windows build script for Transcriby
 Uses PyInstaller to create a standalone executable
 """
 
@@ -56,7 +56,7 @@ def check_requirements():
 
 def build():
     """Build the executable using PyInstaller"""
-    print("\nBuilding SlowPlay for Windows...")
+    print("\nBuilding Transcriby for Windows...")
     
     # Clean previous builds
     for folder in ['build', 'dist']:
@@ -67,7 +67,7 @@ def build():
     # Build PyInstaller command
     cmd = [
         sys.executable, "-m", "PyInstaller",
-        "--name=SlowPlay",
+        "--name=Transcriby",
         "--windowed",
         "--onefile",
         "--clean",
@@ -130,17 +130,17 @@ def build():
         return False
     
     print("\nBuild successful!")
-    print(f"  Executable: dist/SlowPlay.exe")
+    print(f"  Executable: dist/Transcriby.exe")
     
     # Create distribution folder
-    dist_folder = "SlowPlay-Windows"
+    dist_folder = "Transcriby-Windows"
     if os.path.exists(dist_folder):
         shutil.rmtree(dist_folder)
     
     os.makedirs(dist_folder)
     
     # Copy executable
-    shutil.copy("dist/SlowPlay.exe", dist_folder)
+    shutil.copy("dist/Transcriby.exe", dist_folder)
     
     # Copy README
     if os.path.exists("README.md"):
@@ -150,7 +150,7 @@ def build():
         shutil.copy("INSTALL_WINDOWS.md", dist_folder)
     
     # Estimate size
-    exe_size = os.path.getsize(os.path.join(dist_folder, "SlowPlay.exe"))
+    exe_size = os.path.getsize(os.path.join(dist_folder, "Transcriby.exe"))
     print(f"\n  Distribution folder: {dist_folder}/")
     print(f"  Executable size: {exe_size / (1024*1024):.1f} MB")
     
@@ -159,7 +159,7 @@ def build():
 
 def main():
     print("=" * 60)
-    print("SlowPlay Windows Build Script")
+    print("Transcriby Windows Build Script")
     print("=" * 60)
     
     if not check_requirements():
@@ -173,7 +173,7 @@ def main():
     print("\n" + "=" * 60)
     print("Build completed successfully!")
     print("=" * 60)
-    print(f"\nThe executable is in: SlowPlay-Windows/SlowPlay.exe")
+    print(f"\nThe executable is in: Transcriby-Windows/Transcriby.exe")
     print("\nYou can zip this folder and distribute it to users.")
     print("No additional installation is required!")
 

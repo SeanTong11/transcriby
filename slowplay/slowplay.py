@@ -23,7 +23,14 @@ _ = gettext.gettext
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 
 from slowplay.sp_constants import *
-from slowplay.platform_utils import uri_from_path, is_valid_absolute_path, is_windows, is_wsl
+from slowplay.platform_utils import (
+    uri_from_path,
+    is_valid_absolute_path,
+    is_windows,
+    is_wsl,
+    get_resources_dir,
+    get_locales_dir,
+)
 from slowplay import utils
 from slowplay.player import slowPlayer
 from slowplay import filedialogs
@@ -67,11 +74,10 @@ class App(_AppBase):
         self.settings.loadSettings()
 
         # Mark app directories
-        working_dir = os.path.dirname(__file__)
-        resources_dir = "".join([working_dir, "/resources"])
+        resources_dir = get_resources_dir()
 
         # Localizations
-        gettext.bindtextdomain('slowplay', "".join([working_dir, "/locales"]))
+        gettext.bindtextdomain('slowplay', get_locales_dir())
         gettext.textdomain('slowplay')
 
         # Sets app title and window size
@@ -79,7 +85,7 @@ class App(_AppBase):
         self.title(APP_TITLE)
 
         # Sets the app icon
-        self.wm_iconphoto(True, PhotoImage(file=f"{resources_dir}/Icona-32.png"))
+        self.wm_iconphoto(True, PhotoImage(file=os.path.join(resources_dir, "Icona-32.png")))
 
         # Initialize the audio player
         self.player = slowPlayer()
@@ -89,8 +95,11 @@ class App(_AppBase):
         ctk.set_appearance_mode("Dark")
 
         # Loads the reset buttons icon
-        resetIcon = ctk.CTkImage(light_image=Image.open(f"{resources_dir}/Reset Icon.png"),
-                                 dark_image=Image.open(f"{resources_dir}/Reset Icon.png"), size=(16, 16))
+        resetIcon = ctk.CTkImage(
+            light_image=Image.open(os.path.join(resources_dir, "Reset Icon.png")),
+            dark_image=Image.open(os.path.join(resources_dir, "Reset Icon.png")),
+            size=(16, 16),
+        )
 
         # tkInter auto-variables
         self.songTime = ctk.StringVar(self)                 # Holds the song time clock
@@ -337,8 +346,11 @@ class App(_AppBase):
         self.LoopTab.columnconfigure(1, weight=1)
 
         # Widgets on right panel
-        self.loopIcon = ctk.CTkImage(light_image=Image.open(f"{resources_dir}/Loop Icon.png"),
-                                 dark_image=Image.open(f"{resources_dir}/Loop Icon.png"), size=(26, 16))
+        self.loopIcon = ctk.CTkImage(
+            light_image=Image.open(os.path.join(resources_dir, "Loop Icon.png")),
+            dark_image=Image.open(os.path.join(resources_dir, "Loop Icon.png")),
+            size=(26, 16),
+        )
 
         self.playButton = ctk.CTkButton(self.RFrame, text=_("Play"), font=("", 18), 
                                         image=None, compound="right", command=self.togglePlay)
@@ -355,8 +367,11 @@ class App(_AppBase):
         # Activate the recent file list with right-click
         self.openButton.bind("<Button-3>", self.openRecentFileDialog)
 
-        YTIcon = ctk.CTkImage(light_image=Image.open(f"{resources_dir}/YT_ico.png"),
-                                 dark_image=Image.open(f"{resources_dir}//YT_ico.png"), size=(23, 16))
+        YTIcon = ctk.CTkImage(
+            light_image=Image.open(os.path.join(resources_dir, "YT_ico.png")),
+            dark_image=Image.open(os.path.join(resources_dir, "YT_ico.png")),
+            size=(23, 16),
+        )
 
         self.YTBtn = ctk.CTkButton(self.RFrame, text="", width=20, font=("", 18),
                                        image=YTIcon, command= lambda: self.openYouTubeDialog(None))

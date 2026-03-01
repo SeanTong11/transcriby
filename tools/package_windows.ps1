@@ -5,15 +5,15 @@ if (-not (Test-Path $mpvDir)) {
   Write-Error "Missing libmpv DLLs. Place mpv dev DLLs under: $mpvDir"
 }
 
-Write-Host "== Building SlowPlay =="
+Write-Host "== Building Transcriby =="
 python $PSScriptRoot\build_windows.py
 
-$distDir = Join-Path (Get-Location) "SlowPlay-Windows"
+$distDir = Join-Path (Get-Location) "Transcriby-Windows"
 if (-not (Test-Path $distDir)) {
   Write-Error "Build output not found: $distDir"
 }
 
-$zipPath = Join-Path (Get-Location) "SlowPlay-Windows.zip"
+$zipPath = Join-Path (Get-Location) "Transcriby-Windows.zip"
 if (Test-Path $zipPath) {
   Remove-Item -Force $zipPath
 }

@@ -4,6 +4,7 @@ import os
 import webbrowser
 
 from slowplay.sp_constants import *
+from slowplay.platform_utils import get_resources_dir
 
 import gettext
 _ = gettext.gettext
@@ -17,8 +18,7 @@ class imgDialog(ctk.CTkToplevel):
 
         self.master = master
 
-        working_dir = os.path.dirname(__file__)
-        resources_dir = os.path.join(working_dir, "resources")
+        resources_dir = get_resources_dir()
 
         self.wm_title(_("Numeric Keypad Map"))
         
@@ -67,8 +67,7 @@ class aboutDialog(ctk.CTkToplevel):
         HEIGHT = 300
 
         # Mark app directories
-        working_dir = os.path.dirname(__file__)
-        resources_dir = os.path.join(working_dir, "resources")
+        resources_dir = get_resources_dir()
                 
         self.wm_title(_("About"))
         

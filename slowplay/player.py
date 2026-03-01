@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-SlowPlay audio player using mpv (libmpv) for playback.
+Transcriby audio player using mpv (libmpv) for playback.
 Exports use soundfile + scipy (no rubberband).
 """
 

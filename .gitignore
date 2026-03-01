@@ -18,3 +18,9 @@ binaries/
 *:Zone.Identifier
 .DS_Store
 third_party/
+build/
+dist/
+Transcriby-Windows/
+Transcriby-Windows.zip
+SHA256SUMS.txt
+*.spec
