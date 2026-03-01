@@ -102,7 +102,7 @@ class aboutDialog(ctk.CTkToplevel):
                                       compound="center", font=("", 20))
         self.versLabel.grid(row=1, column=0, pady=(8, 0), sticky="n")
 
-        self.authLabel = ctk.CTkLabel(tab1, text=_("Created by") + " Guido Pietrella", justify="center", anchor="center", 
+        self.authLabel = ctk.CTkLabel(tab1, text="Maintained by Sean Tong (fork) · Original SlowPlay by Guido Pietrella", justify="center", anchor="center",
                                       compound="center", font=("", LBL_FONT_SIZE))
         self.authLabel.grid(row=2, column=0, sticky="n")
 
