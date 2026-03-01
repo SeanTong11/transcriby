@@ -51,8 +51,8 @@ dev = [
 transcriby = "transcriby.slowplay:main"
 
 [project.urls]
-Homepage = "https://github.com/aFunkyBass/slowplay"
-Repository = "https://github.com/aFunkyBass/slowplay"
+Homepage = "https://github.com/SeanTong11/transcriby"
+Repository = "https://github.com/SeanTong11/transcriby"
 
 [build-system]
 requires = ["hatchling"]
