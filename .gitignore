@@ -16,3 +16,5 @@ binaries/
 
 # Windows WSL metadata files
 *:Zone.Identifier
+.DS_Store
+third_party/

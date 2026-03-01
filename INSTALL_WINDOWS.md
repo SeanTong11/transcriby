@@ -71,7 +71,6 @@ python sp-launch.py
 ### Prerequisites
 Same as Method 1, plus:
 - PyInstaller (`pip install pyinstaller`)
- - 7-Zip (for fetching mpv dev package)
 
 ### Build Steps
 
@@ -80,11 +79,13 @@ Same as Method 1, plus:
    cd slowplay
    ```
 
-2. **Build and package (downloads libmpv DLLs automatically)**
+2. **Place libmpv DLLs**
+   - Download the mpv **libmpv dev** package and extract DLLs into `third_party\\mpv\\`
+
+3. **Build and package**
    ```cmd
    powershell -ExecutionPolicy Bypass -File tools\\package_windows.ps1
    ```
-   - If 7-Zip is missing, the script will prompt and install it via `winget`.
 
 3. **Find your executable**
    - The built executable will be in `dist/SlowPlay.exe`

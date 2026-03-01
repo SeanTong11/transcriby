@@ -1,12 +1,9 @@
-Param(
-  [string]$Version = "v3-20260301-git-05fac7f",
-  [string]$Arch = "x86_64"
-)
-
 $ErrorActionPreference = "Stop"
 
-Write-Host "== Fetching mpv dev package =="
-& $PSScriptRoot\fetch_mpv.ps1 -Version $Version -Arch $Arch
+$mpvDir = Join-Path (Get-Location) "third_party\mpv"
+if (-not (Test-Path $mpvDir)) {
+  Write-Error "Missing libmpv DLLs. Place mpv dev DLLs under: $mpvDir"
+}
 
 Write-Host "== Building SlowPlay =="
 python $PSScriptRoot\build_windows.py

@@ -161,11 +161,12 @@ uv sync --dev
 
 ### Windows Build
 
+1. Download the mpv **libmpv dev** package and extract DLLs into `third_party/mpv/`
+2. Run:
+
 ```cmd
-powershell -ExecutionPolicy Bypass -File tools\fetch_mpv.ps1
 powershell -ExecutionPolicy Bypass -File tools\package_windows.ps1
 ```
-If 7-Zip is missing, the script will prompt and install it via `winget`.
 ```
 
 ### Legacy pip Setup (Not Recommended)
@@ -248,17 +249,7 @@ Audio export is performed with `soundfile + scipy` and does not require ffmpeg.
 - Or download from https://github.com/yt-dlp/yt-dlp/releases
 
 ### "PortAudio library not found" (Linux/WSL)
-- Install the PortAudio system library:
-  ```bash
-  # Ubuntu/Debian/WSL
-  sudo apt-get install libportaudio2
-  
-  # Fedora
-  sudo dnf install portaudio
-  
-  # Arch
-  sudo pacman -S portaudio
-  ```
+- This project no longer uses PortAudio. If you see this error, you are running an old build.
 
 ## Credits
 
