@@ -25,6 +25,7 @@ Current maintained repository: [SeanTong11/transcriby](https://github.com/SeanTo
 - [Video playback in a synced external window](#speed-and-pitch-change)
 - [YouTube audio extraction from URL](#youtube-audio-extraction)
 - [Loop a range of the song, with fine adjustment of boundaries](#loop-ab)
+- [Waveform view with click-to-seek](#waveform-view)
 - [Modified audio export in MP3 or WAV audio format](#export-modified-audio)
 - [No nonsense keyboard shortcuts](#optimized-keyobard-shortcuts)
 - [...and more!](#other-features)
@@ -51,11 +52,19 @@ Audio extracted from YouTube are marked with a leading "(YT)" on the title.
 
 ### Loop A/B:
 
-This function allows you to loop playback a section of the song. Click on the "Loop control" tab to access all the loop related controls.
+This function allows you to loop playback a section of the song. Loop controls are available directly in the main playback panel.
 
 Use the "Set loop start" (shortcut "A" or num keypad divide) and "Set loop end" (shortcut "B" or num keypad multiply) buttons while playing to mark the loop boundaries. Toggle the "Enable loop" switch (shortcut "L") to engage/disengage loop playing. You can reset the A/B point using the reset buttons or pressing "Ctrl+A" and "Ctrl+B" on your keyboard.
 
 To achieve maximum execution precision, you can fine adjust the loop points by moving them left and right by 10 or 100 milliseconds using the associated buttons. *NOTE: Please keep in mind that there can be very short silence gap when restarting the loop. This is normal and it can't be avoided*
+
+### Waveform view:
+
+Transcriby now includes a waveform panel under the seek bar:
+
+- Click anywhere on the waveform to seek playback to that point
+- A/B loop boundaries are shown directly on the waveform
+- The playhead updates in real time while playing
 
 ### Export modified audio:
 
@@ -74,6 +83,7 @@ If you use Transcriby for music practicing, you probably want access its functio
 - Loop start and loop end can be set using the Divide and the Multiply keys respectively
 
 - Number 0 start and pause the playback while the Dot stop and rewind.
+- Spacebar restarts playback from loop start (A) when loop is enabled, otherwise it toggles play/pause.
 
 I highly recommend taking some time to familiarize yourself with these keyboard shortucts, as they will save you a lot of time in the long run! Personally, I've been using this key combination for my music classes for a while now, and I can't think of anything better.
 
@@ -196,7 +206,8 @@ Transcriby offers the following shortcuts:
 #### Playback controls:
 The following commands are all assigned to the numeric keypad. Refer to the drawing below for visual help.
 
-- **0** or **spacebar**: Toggle Play/Pause
+- **0** *(numeric keypad)*: Toggle Play/Pause
+- **spacebar**: Restart from loop start (A) when loop is enabled, otherwise Toggle Play/Pause
 - **.** *(numeric pad dot)*: Stop and Rewind
 
 - **HOME**: Rewind to the start of song, or to the start of loop when engaged
