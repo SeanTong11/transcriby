@@ -80,14 +80,9 @@ Same as Method 1, plus:
    cd slowplay
    ```
 
-2. **Fetch mpv dev package (libmpv DLLs)**
+2. **Build and package (downloads libmpv DLLs automatically)**
    ```cmd
-   powershell -ExecutionPolicy Bypass -File tools\\fetch_mpv.ps1
-   ```
-
-3. **Run the build script**
-   ```cmd
-   python tools\\build_windows.py
+   powershell -ExecutionPolicy Bypass -File tools\\package_windows.ps1
    ```
 
 3. **Find your executable**

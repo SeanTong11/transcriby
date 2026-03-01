@@ -163,7 +163,7 @@ uv sync --dev
 
 ```cmd
 powershell -ExecutionPolicy Bypass -File tools\fetch_mpv.ps1
-python tools\build_windows.py
+powershell -ExecutionPolicy Bypass -File tools\package_windows.ps1
 ```
 ```
 

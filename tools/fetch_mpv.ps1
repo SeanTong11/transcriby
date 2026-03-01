@@ -10,6 +10,9 @@ $zipName = "mpv-dev-$Arch-$Version.7z"
 $downloadUrl = "$baseUrl$zipName/download"
 
 $destRoot = Join-Path $PSScriptRoot "..\third_party\mpv"
+if (-not (Test-Path $destRoot)) {
+  New-Item -ItemType Directory -Path $destRoot | Out-Null
+}
 $destRoot = (Resolve-Path $destRoot).Path
 
 if (-not (Get-Command 7z -ErrorAction SilentlyContinue)) {
