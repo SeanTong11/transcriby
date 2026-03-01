@@ -48,9 +48,9 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: slowplay-windows
+          name: transcriby-windows
           path: |
-            SlowPlay-Windows.zip
+            Transcriby-Windows.zip
             SHA256SUMS.txt
 
       - name: Create GitHub Release
@@ -58,5 +58,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            SlowPlay-Windows.zip
+            Transcriby-Windows.zip
             SHA256SUMS.txt

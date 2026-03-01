@@ -76,8 +76,8 @@ def build():
     
     # Add data files
     cmd.extend([
-        "--add-data", "slowplay/resources;resources",
-        "--add-data", "slowplay/locales;locales",
+        "--add-data", "transcriby/resources;resources",
+        "--add-data", "transcriby/locales;locales",
     ])
     
     # Hidden imports for audio libraries
@@ -102,12 +102,12 @@ def build():
                 cmd.extend(["--add-binary", f"{src};."])
 
     # Add icon (if exists)
-    icon_path = os.path.join("slowplay", "resources", "Icona.ico")
+    icon_path = os.path.join("transcriby", "resources", "Icona.ico")
     if os.path.exists(icon_path):
         cmd.extend(["--icon", icon_path])
     else:
         # Try to convert PNG to ICO
-        png_path = os.path.join("slowplay", "resources", "Icona-256.png")
+        png_path = os.path.join("transcriby", "resources", "Icona-256.png")
         if os.path.exists(png_path):
             try:
                 from PIL import Image

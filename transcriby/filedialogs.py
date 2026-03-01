@@ -1,7 +1,7 @@
 import subprocess
 import os
-from slowplay import utils
-from slowplay.platform_utils import is_windows
+from transcriby import utils
+from transcriby.platform_utils import is_windows
 
 import gettext
 _ = gettext.gettext

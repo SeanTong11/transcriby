@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Platform abstraction module for SlowPlay
+Platform abstraction module for Transcriby
 Handles differences between Linux and Windows
 """
 

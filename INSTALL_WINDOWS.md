@@ -21,7 +21,7 @@ Transcriby for Windows uses `mpv` (libmpv) for lightweight audio playback (no GS
 3. **mpv** runtime (for audio playback)
    - Download from https://mpv.io/installation/
    - Ensure `mpv.exe` and `libmpv-2.dll` are on PATH or placed next to `Transcriby.exe`
-   - If `python-mpv` cannot find the DLL, set `SLOWPLAY_MPV_DIR` to the folder containing `libmpv-2.dll` (often the same folder as `mpv.exe`)
+   - If `python-mpv` cannot find the DLL, set `TRANSCRIBY_MPV_DIR` to the folder containing `libmpv-2.dll` (often the same folder as `mpv.exe`)
 
 4. **FFmpeg** (optional, for YouTube support)
    - Download from https://ffmpeg.org/download.html
@@ -31,8 +31,8 @@ Transcriby for Windows uses `mpv` (libmpv) for lightweight audio playback (no GS
 
 1. **Clone or download the repository**
    ```cmd
-   git clone https://github.com/yourusername/slowplay.git
-   cd slowplay
+   git clone https://github.com/yourusername/transcriby.git
+   cd transcriby
    ```
 
 2. **Install dependencies with uv**
@@ -76,7 +76,7 @@ Same as Method 1, plus:
 
 1. **Navigate to the project folder**
    ```cmd
-   cd slowplay
+   cd transcriby
    ```
 
 2. **Place libmpv DLLs**
@@ -126,7 +126,7 @@ Audio export uses `soundfile + scipy` and does not require ffmpeg.
 ## File Locations
 
 ### Configuration
-Windows: `%APPDATA%\Transcriby\slowplaycfg.json`
+Windows: `%APPDATA%\Transcriby\transcribycfg.json`
 
 ### Cache/Temp Files
 Windows: `%TEMP%\Transcriby\`

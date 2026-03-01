@@ -1,10 +1,10 @@
 import os
 import json
-from slowplay.platform_utils import get_config_dir
+from transcriby.platform_utils import get_config_dir
 
 USER_HOME_DIR = os.path.expanduser("~")
 APP_CFG_DIR = get_config_dir()
-APP_CFG_FILENAME = os.path.join(APP_CFG_DIR, "slowplaycfg.json")
+APP_CFG_FILENAME = os.path.join(APP_CFG_DIR, "transcribycfg.json")
 
 MAX_RECENTFILE_LIST = 16
 

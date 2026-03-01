@@ -18,7 +18,7 @@ if is_windows():
     def _find_mpv_dll_dir():
         candidates = []
 
-        env_dir = os.environ.get("SLOWPLAY_MPV_DIR")
+        env_dir = os.environ.get("TRANSCRIBY_MPV_DIR") or os.environ.get("SLOWPLAY_MPV_DIR")
         if env_dir:
             candidates.append(env_dir)
 

@@ -22,8 +22,8 @@ _ = gettext.gettext
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 
-from slowplay.sp_constants import *
-from slowplay.platform_utils import (
+from transcriby.sp_constants import *
+from transcriby.platform_utils import (
     uri_from_path,
     is_valid_absolute_path,
     is_windows,
@@ -31,14 +31,14 @@ from slowplay.platform_utils import (
     get_resources_dir,
     get_locales_dir,
 )
-from slowplay import utils
-from slowplay.player import slowPlayer
-from slowplay import filedialogs
-from slowplay.appsettings import *
-from slowplay import recentdialog
-from slowplay import aboutdialog
-from slowplay import ytmanage
-from slowplay.CTkRangeSlider import *
+from transcriby import utils
+from transcriby.player import slowPlayer
+from transcriby import filedialogs
+from transcriby.appsettings import *
+from transcriby import recentdialog
+from transcriby import aboutdialog
+from transcriby import ytmanage
+from transcriby.CTkRangeSlider import *
 
 # Lazy import tkinterdnd2 to avoid X11 threading issues on WSL
 # 

@@ -7,12 +7,12 @@ from CTkMessagebox import CTkMessagebox
 from CTkToolTip import *
 import subprocess
 import os
-from slowplay import utils
+from transcriby import utils
 import json
 import hashlib
-from slowplay.platform_utils import get_external_cmd, check_cmd_exists, get_resources_dir
+from transcriby.platform_utils import get_external_cmd, check_cmd_exists, get_resources_dir
 
-from slowplay.sp_constants import *
+from transcriby.sp_constants import *
 
 import gettext
 _ = gettext.gettext

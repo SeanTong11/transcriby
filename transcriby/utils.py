@@ -6,7 +6,7 @@ import subprocess
 import io
 import sys
 from datetime import datetime
-from slowplay.platform_utils import get_env_with_original_path, is_windows
+from transcriby.platform_utils import get_env_with_original_path, is_windows
 
 
 # Function to restore the original LD_LIBRARY_PATH/PATH environment

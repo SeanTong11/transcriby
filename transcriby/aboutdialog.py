@@ -3,8 +3,8 @@ from PIL import Image, ImageTk
 import os
 import webbrowser
 
-from slowplay.sp_constants import *
-from slowplay.platform_utils import get_resources_dir
+from transcriby.sp_constants import *
+from transcriby.platform_utils import get_resources_dir
 
 import gettext
 _ = gettext.gettext

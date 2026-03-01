@@ -7,7 +7,7 @@
 
 **Made by a musician for musicians**
 
-![Screenshot](slowplay/resources/Screenshot.png)
+![Screenshot](transcriby/resources/Screenshot.png)
 
 ## About This Fork
 
@@ -100,7 +100,7 @@ If the last played song was extracted from a YouTube video, the app will not aut
 - **Fedora**: `sudo dnf install mpv`
 - **Arch**: `sudo pacman -S mpv`
 
-**Tip (Windows):** If `python-mpv` cannot find `libmpv-2.dll`, set `SLOWPLAY_MPV_DIR` to the folder containing the DLL (for example the same folder as `mpv.exe`).
+**Tip (Windows):** If `python-mpv` cannot find `libmpv-2.dll`, set `TRANSCRIBY_MPV_DIR` to the folder containing the DLL (for example the same folder as `mpv.exe`).
 
 ### Quick Start with uv
 
@@ -109,8 +109,8 @@ If the last played song was extracted from a YouTube video, the app will not aut
 #### Windows
 
 ```cmd
-git clone https://github.com/yourusername/slowplay.git
-cd slowplay
+git clone https://github.com/yourusername/transcriby.git
+cd transcriby
 
 # Create venv and install dependencies
 uv sync
@@ -126,8 +126,8 @@ python sp-launch.py
 #### Linux / WSL
 
 ```bash
-git clone https://github.com/yourusername/slowplay.git
-cd slowplay
+git clone https://github.com/yourusername/transcriby.git
+cd transcriby
 
 # Create venv and install dependencies
 uv sync
@@ -145,8 +145,8 @@ python sp-launch.py
 ```bash
 brew install mpv
 
-git clone https://github.com/yourusername/slowplay.git
-cd slowplay
+git clone https://github.com/yourusername/transcriby.git
+cd transcriby
 
 uv sync
 uv run python sp-launch.py
@@ -222,7 +222,7 @@ The following commands are all assigned to the numeric keypad. Refer to the draw
 - **B** or **Keypad Multiply**: Sets the end loop point to the current playing position
 - **Ctrl+B**: Resets the end loop point to the end of the song
 
-![Keypad shortcuts](slowplay/resources/Keypad.png)
+![Keypad shortcuts](transcriby/resources/Keypad.png)
 
 *(please make sure none of the input boxes have the focus. Click on an empty area of the app to take the focus back from an input box)*
 
