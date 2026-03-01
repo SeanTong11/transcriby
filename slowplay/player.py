@@ -13,13 +13,44 @@ from platform_utils import is_windows
 
 if is_windows():
     # Ensure mpv DLLs can be found by python-mpv on Windows.
-    mpv_dir = os.environ.get("SLOWPLAY_MPV_DIR")
-    if not mpv_dir:
+    dll_names = ["libmpv-2.dll", "mpv-2.dll", "mpv-1.dll"]
+
+    def _find_mpv_dll_dir():
+        candidates = []
+
+        env_dir = os.environ.get("SLOWPLAY_MPV_DIR")
+        if env_dir:
+            candidates.append(env_dir)
+
         mpv_exe = shutil.which("mpv")
         if mpv_exe:
             mpv_dir = os.path.dirname(mpv_exe)
-    if mpv_dir and os.path.isdir(mpv_dir):
+            candidates.append(mpv_dir)
+            # Common layouts
+            candidates.append(os.path.join(mpv_dir, "bin"))
+            candidates.append(os.path.join(mpv_dir, "lib"))
+            candidates.append(os.path.abspath(os.path.join(mpv_dir, "..", "bin")))
+            candidates.append(os.path.abspath(os.path.join(mpv_dir, "..", "lib")))
+
+        # Fallbacks: current working dir and script dir
+        candidates.append(os.getcwd())
+        candidates.append(os.path.dirname(os.path.abspath(__file__)))
+
+        seen = set()
+        for base in candidates:
+            if not base or base in seen or not os.path.isdir(base):
+                continue
+            seen.add(base)
+            for name in dll_names:
+                if os.path.isfile(os.path.join(base, name)):
+                    return base, os.path.join(base, name)
+        return None, None
+
+    mpv_dir, mpv_dll = _find_mpv_dll_dir()
+    if mpv_dir:
         os.environ["PATH"] = mpv_dir + os.pathsep + os.environ.get("PATH", "")
+        if mpv_dll:
+            os.environ.setdefault("MPV_LIBRARY", mpv_dll)
         if hasattr(os, "add_dll_directory"):
             try:
                 os.add_dll_directory(mpv_dir)

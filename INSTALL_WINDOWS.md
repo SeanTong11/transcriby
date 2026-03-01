@@ -21,7 +21,7 @@ SlowPlay for Windows uses `mpv` (libmpv) for lightweight audio playback (no GStr
 3. **mpv** runtime (for audio playback)
    - Download from https://mpv.io/installation/
    - Ensure `mpv.exe` and `libmpv-2.dll` are on PATH or placed next to `SlowPlay.exe`
-   - If `python-mpv` cannot find the DLL, set `SLOWPLAY_MPV_DIR` to the folder containing `mpv.exe`
+   - If `python-mpv` cannot find the DLL, set `SLOWPLAY_MPV_DIR` to the folder containing `libmpv-2.dll` (often the same folder as `mpv.exe`)
 
 4. **FFmpeg** (optional, for YouTube support)
    - Download from https://ffmpeg.org/download.html
