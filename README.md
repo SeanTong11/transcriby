@@ -165,6 +165,7 @@ uv sync --dev
 powershell -ExecutionPolicy Bypass -File tools\fetch_mpv.ps1
 powershell -ExecutionPolicy Bypass -File tools\package_windows.ps1
 ```
+If 7-Zip is missing, the script will prompt and install it via `winget`.
 ```
 
 ### Legacy pip Setup (Not Recommended)

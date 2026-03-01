@@ -15,9 +15,36 @@ if (-not (Test-Path $destRoot)) {
 }
 $destRoot = (Resolve-Path $destRoot).Path
 
-if (-not (Get-Command 7z -ErrorAction SilentlyContinue)) {
-  Write-Error "7z not found. Install 7-Zip and ensure '7z' is on PATH."
+function Resolve-7z {
+  $cmd = Get-Command 7z -ErrorAction SilentlyContinue
+  if ($cmd) {
+    return $cmd.Source
+  }
+
+  $resp = Read-Host "7z not found. Install 7-Zip using winget? (y/N)"
+  if ($resp -match '^(y|yes)$') {
+    if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
+      Write-Error "winget not found. Please install 7-Zip manually and ensure '7z' is on PATH."
+    }
+    winget install --id 7zip.7zip -e --accept-package-agreements --accept-source-agreements
+  } else {
+    Write-Error "7z is required. Aborting."
+  }
+
+  $cmd = Get-Command 7z -ErrorAction SilentlyContinue
+  if ($cmd) {
+    return $cmd.Source
+  }
+
+  $fallback = "C:\Program Files\7-Zip\7z.exe"
+  if (Test-Path $fallback) {
+    return $fallback
+  }
+
+  Write-Error "7z not found after install attempt. Ensure 7-Zip is installed and '7z' is on PATH."
 }
+
+$sevenZip = Resolve-7z
 
 Write-Host "Downloading $zipName ..."
 $zipPath = Join-Path $env:TEMP $zipName
@@ -29,6 +56,6 @@ if (Test-Path $destRoot) {
 New-Item -ItemType Directory -Path $destRoot | Out-Null
 
 Write-Host "Extracting to $destRoot ..."
-& 7z x $zipPath -o$destRoot | Out-Null
+& $sevenZip x $zipPath -o$destRoot | Out-Null
 
 Write-Host "Done. DLLs are in $destRoot"

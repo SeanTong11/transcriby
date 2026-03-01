@@ -84,6 +84,7 @@ Same as Method 1, plus:
    ```cmd
    powershell -ExecutionPolicy Bypass -File tools\\package_windows.ps1
    ```
+   - If 7-Zip is missing, the script will prompt and install it via `winget`.
 
 3. **Find your executable**
    - The built executable will be in `dist/SlowPlay.exe`
