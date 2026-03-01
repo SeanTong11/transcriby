@@ -67,7 +67,7 @@ Transcriby now includes a waveform panel under the seek bar:
 - The playhead updates in real time while playing
 - Right-click drag on waveform or seek/progress area to set a loop range quickly
 
-For media containers like MP4, waveform extraction uses `PyAV` (Python package `av`), so no system ffmpeg installation is required.
+For media containers like MP4, waveform extraction first tries `soundfile` and falls back to `ffmpeg` if available on your system.
 
 ### Export modified audio:
 

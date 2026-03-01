@@ -34,7 +34,6 @@ def check_requirements():
     # Check core dependencies
     required = [
         ('mpv', 'python-mpv'),
-        ('av', 'av'),
         ('soundfile', 'soundfile'),
         ('scipy', 'scipy'),
         ('numpy', 'numpy'),
@@ -89,7 +88,6 @@ def build():
     # Hidden imports for audio libraries
     cmd.extend([
         "--hidden-import", "mpv",
-        "--hidden-import", "av",
         "--hidden-import", "soundfile",
         "--hidden-import", "scipy",
         "--hidden-import", "numpy",
@@ -98,7 +96,6 @@ def build():
         "--hidden-import", "CTkToolTip",
         "--hidden-import", "tkinterdnd2",
         "--hidden-import", "platform_utils",
-        "--collect-submodules", "av",
     ])
     
     # Bundle libmpv DLLs if present (third_party/mpv)

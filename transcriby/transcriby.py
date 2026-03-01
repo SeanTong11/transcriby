@@ -177,7 +177,6 @@ class App(_AppBase):
             on_seek=self.waveformSeek,
             on_loop_select=self.waveformLoopSelect,
             on_context_request=self.waveformContextRequest,
-            on_status=self.waveformStatus,
             height=WAVEFORM_HEIGHT,
         )
         self.waveform.grid(row=3, column=0, padx=UI_INNER_PAD, pady=(UI_INNER_PAD, 0), sticky="ew")
@@ -195,18 +194,18 @@ class App(_AppBase):
         self.varSpeed = ctk.IntVar(self, value=DEFAULT_SPEED)
         self.varSpeed.trace_add("write", self.speedChanged)
         self.lblSpeed = ctk.CTkLabel(self.PlaybackTab, text=_("Speed:"), font=("", LBL_FONT_SIZE))
-        self.lblSpeed.grid(row=0, column=0, pady=(UI_CONTROL_PAD_Y, 0), sticky="w")
+        self.lblSpeed.grid(row=2, column=0, pady=(UI_CONTROL_PAD_Y, 0), sticky="w")
         self.sldSpeed = ctk.CTkSlider(self.PlaybackTab, from_=MIN_SPEED_PERCENT,
                                       to=MAX_SPEED_PERCENT, number_of_steps=20, variable=self.varSpeed)
-        self.sldSpeed.grid(row=0, column=1, padx=UI_INNER_PAD, sticky="ew")
+        self.sldSpeed.grid(row=2, column=1, padx=UI_INNER_PAD, sticky="ew")
         self.entSpeed = ctk.CTkEntry(self.PlaybackTab, width=56, justify="center",
                                      validate='key', validatecommand=vint)
-        self.entSpeed.grid(row=0, column=2, padx=UI_INNER_PAD, pady=UI_CONTROL_PAD_Y, sticky="w")
+        self.entSpeed.grid(row=2, column=2, padx=UI_INNER_PAD, pady=UI_CONTROL_PAD_Y, sticky="w")
         self.lblSpeedEntry = ctk.CTkLabel(self.PlaybackTab, text="%", font=("", LBL_FONT_SIZE))
-        self.lblSpeedEntry.grid(row=0, column=3, padx=(0, UI_INNER_PAD), pady=UI_CONTROL_PAD_Y, sticky="w")
+        self.lblSpeedEntry.grid(row=2, column=3, padx=(0, UI_INNER_PAD), pady=UI_CONTROL_PAD_Y, sticky="w")
         self.btnResetSpeed = ctk.CTkButton(self.PlaybackTab, width=42, image=resetIcon,
                                            text=None, command= lambda: self.resetDefaultVar(self.varSpeed))
-        self.btnResetSpeed.grid(row=0, column=4, padx=(0, UI_INNER_PAD), pady=UI_CONTROL_PAD_Y, sticky="w")
+        self.btnResetSpeed.grid(row=2, column=4, padx=(0, UI_INNER_PAD), pady=UI_CONTROL_PAD_Y, sticky="w")
         self.btnResetSpeed_tt = CTkToolTip(self.btnResetSpeed, message=_("Reset speed"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
         self.entSpeed.bind('<Return>', self.checkSpeed)
@@ -218,18 +217,18 @@ class App(_AppBase):
         self.varPitchST = ctk.IntVar(self, value=DEFAULT_SEMITONES)
         self.varPitchST.trace_add("write", self.semitonesChanged)
         self.lblPitchST = ctk.CTkLabel(self.PlaybackTab, text=_("Transpose:"), font=("", LBL_FONT_SIZE))
-        self.lblPitchST.grid(row=1, column=0, pady=(UI_CONTROL_PAD_Y, 0), sticky="w")
+        self.lblPitchST.grid(row=3, column=0, pady=(UI_CONTROL_PAD_Y, 0), sticky="w")
         self.sldPitchST = ctk.CTkSlider(self.PlaybackTab,from_= MIN_PITCH_SEMITONES,
                                         to = MAX_PITCH_SEMITONES, variable=self.varPitchST)
-        self.sldPitchST.grid(row=1, column=1, padx=UI_INNER_PAD, sticky="ew")
+        self.sldPitchST.grid(row=3, column=1, padx=UI_INNER_PAD, sticky="ew")
         self.entPitchST = ctk.CTkEntry(self.PlaybackTab, width=56, justify="center",
                                        validate='all', validatecommand=vnegint)
-        self.entPitchST.grid(row=1, column=2, padx=UI_INNER_PAD, pady=UI_CONTROL_PAD_Y, sticky="w")
+        self.entPitchST.grid(row=3, column=2, padx=UI_INNER_PAD, pady=UI_CONTROL_PAD_Y, sticky="w")
         self.lblPitchSTEntry = ctk.CTkLabel(self.PlaybackTab, text="s/t", font=("", LBL_FONT_SIZE))
-        self.lblPitchSTEntry.grid(row=1, column=3, padx=(0, UI_INNER_PAD), pady=UI_CONTROL_PAD_Y, sticky="w")
+        self.lblPitchSTEntry.grid(row=3, column=3, padx=(0, UI_INNER_PAD), pady=UI_CONTROL_PAD_Y, sticky="w")
         self.btnResetPitchST = ctk.CTkButton(self.PlaybackTab, width=42, image=resetIcon,
                                              text=None, command= lambda: self.resetDefaultVar(self.varPitchST))
-        self.btnResetPitchST.grid(row=1, column=4, padx=(0, UI_INNER_PAD), pady=UI_CONTROL_PAD_Y, sticky="w")
+        self.btnResetPitchST.grid(row=3, column=4, padx=(0, UI_INNER_PAD), pady=UI_CONTROL_PAD_Y, sticky="w")
         self.btnResetPitchST_tt = CTkToolTip(self.btnResetPitchST, message=_("Reset transpose"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
         self.entPitchST.bind('<Return>', self.checkSemitones)
@@ -239,20 +238,20 @@ class App(_AppBase):
         self.varPitchCents = ctk.IntVar(self, value=DEFAULT_CENTS)
         self.varPitchCents.trace_add("write", self.centsChanged)
         self.lblPitchCents = ctk.CTkLabel(self.PlaybackTab, text=_("Pitch (cents):"), font=("", LBL_FONT_SIZE))
-        self.lblPitchCents.grid(row=2, column=0, pady=(UI_CONTROL_PAD_Y, 0), sticky="w")
+        self.lblPitchCents.grid(row=4, column=0, pady=(UI_CONTROL_PAD_Y, 0), sticky="w")
         self.sldPitchCents = ctk.CTkSlider(self.PlaybackTab,from_= MIN_PITCH_CENTS,
                                            to = MAX_PITCH_CENTS, variable=self.varPitchCents)
-        self.sldPitchCents.grid(row=2, column=1, padx=UI_INNER_PAD, sticky="ew")
+        self.sldPitchCents.grid(row=4, column=1, padx=UI_INNER_PAD, sticky="ew")
         self.entPitchCents = ctk.CTkEntry(self.PlaybackTab, width=56, justify="center",
                                           validate='all', validatecommand=vnegint)
-        self.entPitchCents.grid(row=2, column=2, padx=UI_INNER_PAD, pady=UI_CONTROL_PAD_Y, sticky="w")
+        self.entPitchCents.grid(row=4, column=2, padx=UI_INNER_PAD, pady=UI_CONTROL_PAD_Y, sticky="w")
         self.lblPitchCentsEntry = ctk.CTkLabel(self.PlaybackTab, text="c.", font=("", LBL_FONT_SIZE))
-        self.lblPitchCentsEntry.grid(row=2, column=3, padx=(0, UI_INNER_PAD), pady=UI_CONTROL_PAD_Y, sticky="w")
+        self.lblPitchCentsEntry.grid(row=4, column=3, padx=(0, UI_INNER_PAD), pady=UI_CONTROL_PAD_Y, sticky="w")
         self.btnResetPitchCents = ctk.CTkButton(self.PlaybackTab, width=42, image=resetIcon, text=None,
                                                 command= lambda: self.resetDefaultVar(self.varPitchCents))
         self.btnResetPitchST_tt = CTkToolTip(self.btnResetPitchCents, message=_("Reset pitch"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
-        self.btnResetPitchCents.grid(row=2, column=4, padx=(0, UI_INNER_PAD), pady=UI_CONTROL_PAD_Y, sticky="w")
+        self.btnResetPitchCents.grid(row=4, column=4, padx=(0, UI_INNER_PAD), pady=UI_CONTROL_PAD_Y, sticky="w")
         self.entPitchCents.bind('<Return>', self.checkCents)
         self.entPitchCents.bind('<KP_Enter>', self.checkCents)
         self.entPitchCents.bind('<FocusOut>', self.checkCents)
@@ -260,13 +259,13 @@ class App(_AppBase):
         self.varVolume = ctk.IntVar(self, value=DEFAULT_VOLUME)
         self.varVolume.trace_add("write", self.volumeChanged)
         self.lblVolume = ctk.CTkLabel(self.PlaybackTab, text=_("Volume:"), font=("", LBL_FONT_SIZE))
-        self.lblVolume.grid(row=3, column=0, pady=(UI_CONTROL_PAD_Y, 0), sticky="w")
+        self.lblVolume.grid(row=5, column=0, pady=(UI_CONTROL_PAD_Y, 0), sticky="w")
         self.sldVolume = ctk.CTkSlider(self.PlaybackTab,from_= MIN_VOLUME,
                                            to = MAX_VOLUME, variable=self.varVolume)
-        self.sldVolume.grid(row=3, column=1, padx=UI_INNER_PAD, sticky="ew")
+        self.sldVolume.grid(row=5, column=1, padx=UI_INNER_PAD, sticky="ew")
         self.entVolume = ctk.CTkEntry(self.PlaybackTab, width=56, justify="center",
                                           validate='all', validatecommand=vint)
-        self.entVolume.grid(row=3, column=2, padx=UI_INNER_PAD, pady=UI_CONTROL_PAD_Y, sticky="w")
+        self.entVolume.grid(row=5, column=2, padx=UI_INNER_PAD, pady=UI_CONTROL_PAD_Y, sticky="w")
         self.entVolume.bind('<Return>', self.checkVolume)
         self.entVolume.bind('<KP_Enter>', self.checkVolume)
         self.entVolume.bind('<FocusOut>', self.checkVolume)
@@ -279,10 +278,10 @@ class App(_AppBase):
 
         # Inline loop controls
         self.lblLoopControls = ctk.CTkLabel(self.PlaybackTab, text=_("Loop control"), font=("", LBL_FONT_SIZE))
-        self.lblLoopControls.grid(row=4, column=0, pady=(UI_INNER_PAD + 2, 0), sticky="w")
+        self.lblLoopControls.grid(row=0, column=0, pady=(UI_INNER_PAD + 2, 0), sticky="w")
 
         self.loopControlsFrame = ctk.CTkFrame(self.PlaybackTab, fg_color="transparent")
-        self.loopControlsFrame.grid(row=5, column=0, columnspan=5, pady=(0, UI_INNER_PAD), sticky="ew")
+        self.loopControlsFrame.grid(row=1, column=0, columnspan=5, pady=(0, UI_INNER_PAD), sticky="ew")
         self.loopControlsFrame.grid_columnconfigure(1, weight=1)
 
         self.loopAFrame = ctk.CTkFrame(self.loopControlsFrame, fg_color="transparent")
@@ -370,7 +369,9 @@ class App(_AppBase):
                                             onvalue=True, offvalue=False, font=("", LBL_FONT_SIZE),
                                             command=self.loopToggle)
         self.swtLoopEnabled.pack(anchor = "n")
-        self.swtLoopEnabled_tt = CTkToolTip(self.swtLoopEnabled, message=_("Toggle loop playing\nShortcut: L"),
+        self.swtLoopEnabled_tt = CTkToolTip(
+                                        self.swtLoopEnabled,
+                                        message="Toggle loop playing\nShortcut: L\nTip: Right-click and drag on timeline/waveform to set A/B",
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
 
         # Widgets on right panel
@@ -938,10 +939,6 @@ class App(_AppBase):
 
     def waveformContextRequest(self, seconds, x_root, y_root):
         self._showLoopContextMenu(seconds, x_root, y_root)
-
-    def waveformStatus(self, message):
-        if(message):
-            self.statusBarMessage(message, timeout=1800)
 
     def _seconds_from_widget_x(self, widget, x):
         duration = self.player.query_duration()

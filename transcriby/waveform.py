@@ -1,17 +1,13 @@
 #!/usr/bin/env python3
 
 import os
+import subprocess
 import threading
 import tkinter as tk
 
 import customtkinter as ctk
 import numpy as np
 import soundfile as sf
-
-try:
-    import av
-except Exception:
-    av = None
 
 WAVE_BG_COLOR = "#101318"
 WAVE_LINE_COLOR = "#8DB8E6"
@@ -29,7 +25,6 @@ class WaveformWidget(ctk.CTkFrame):
         on_seek=None,
         on_loop_select=None,
         on_context_request=None,
-        on_status=None,
         height=120,
         **kwargs,
     ):
@@ -37,13 +32,11 @@ class WaveformWidget(ctk.CTkFrame):
         self.on_seek = on_seek
         self.on_loop_select = on_loop_select
         self.on_context_request = on_context_request
-        self.on_status = on_status
         self.height = height
 
         self._load_token = 0
         self._envelope = None
         self._duration = None
-        self._message = "Open a file to show waveform"
         self._playhead = 0.0
         self._loop_start = None
         self._loop_end = None
@@ -71,7 +64,6 @@ class WaveformWidget(ctk.CTkFrame):
         self._load_token += 1
         self._envelope = None
         self._duration = None
-        self._message = "Open a file to show waveform"
         self._playhead = 0.0
         self._loop_start = None
         self._loop_end = None
@@ -92,8 +84,6 @@ class WaveformWidget(ctk.CTkFrame):
         if not media_path or not os.path.isfile(media_path):
             return
 
-        self._message = "Loading waveform..."
-        self._redraw_waveform()
         self._load_token += 1
         token = self._load_token
         worker = threading.Thread(target=self._build_envelope_worker, args=(media_path, token), daemon=True)
@@ -171,7 +161,6 @@ class WaveformWidget(ctk.CTkFrame):
         self._draw_overlays()
 
     def _build_envelope_worker(self, media_path, token):
-        message = None
         try:
             data, _sr = sf.read(media_path, dtype="float32", always_2d=True)
             if data.size == 0:
@@ -181,103 +170,44 @@ class WaveformWidget(ctk.CTkFrame):
                 envelope = self._build_envelope(mono)
         except Exception:
             envelope = None
-            message = "Waveform decoder fallback: PyAV"
 
         if envelope is None:
-            mono = self._decode_with_pyav(media_path)
+            mono = self._decode_with_ffmpeg(media_path)
             if mono is not None:
                 envelope = self._build_envelope(mono)
-                message = None
 
-        if envelope is None:
-            if av is None:
-                message = "Waveform unavailable: install PyAV (pip install av)"
-            else:
-                message = "Waveform unavailable for this media"
+        self.after(0, self._apply_envelope, token, envelope)
 
-        self.after(0, self._apply_envelope, token, envelope, message)
-
-    def _decode_with_pyav(self, media_path):
-        if av is None:
-            return None
-
-        container = None
+    def _decode_with_ffmpeg(self, media_path):
+        cmd = [
+            "ffmpeg",
+            "-v",
+            "error",
+            "-i",
+            media_path,
+            "-vn",
+            "-ac",
+            "1",
+            "-ar",
+            "12000",
+            "-f",
+            "f32le",
+            "-acodec",
+            "pcm_f32le",
+            "pipe:1",
+        ]
         try:
-            container = av.open(media_path)
+            result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
         except Exception:
             return None
 
-        audio_stream = None
-        try:
-            for stream in container.streams:
-                if stream.type == "audio":
-                    audio_stream = stream
-                    break
-        except Exception:
-            audio_stream = None
-
-        if audio_stream is None:
-            if container is not None:
-                container.close()
+        if result.returncode != 0 or not result.stdout:
             return None
 
-        resampler = None
-        try:
-            resampler = av.audio.resampler.AudioResampler(format="fltp", layout="mono", rate=12000)
-        except Exception:
-            resampler = None
-
-        chunks = []
-        total_samples = 0
-        max_samples = 12_000_000
-        try:
-            for frame in container.decode(audio=audio_stream.index):
-                if frame is None:
-                    continue
-
-                frames = [frame]
-                if resampler is not None:
-                    try:
-                        res = resampler.resample(frame)
-                        if isinstance(res, list):
-                            frames = [f for f in res if f is not None]
-                        elif res is not None:
-                            frames = [res]
-                    except Exception:
-                        frames = [frame]
-
-                for out_frame in frames:
-                    arr = out_frame.to_ndarray()
-                    if arr.ndim == 2:
-                        if arr.shape[0] <= 8 and arr.shape[1] > arr.shape[0]:
-                            mono = np.mean(np.abs(arr), axis=0)
-                        else:
-                            mono = np.mean(np.abs(arr), axis=1)
-                    else:
-                        mono = np.abs(arr.reshape(-1))
-
-                    if mono.size == 0:
-                        continue
-
-                    mono = mono.astype(np.float32, copy=False)
-                    chunks.append(mono)
-                    total_samples += mono.size
-
-                    if total_samples > max_samples:
-                        chunks = [c[::2] for c in chunks]
-                        total_samples = sum(c.size for c in chunks)
-        except Exception:
-            if container is not None:
-                container.close()
+        mono = np.frombuffer(result.stdout, dtype=np.float32)
+        if mono.size == 0:
             return None
-        finally:
-            if container is not None:
-                container.close()
-
-        if not chunks:
-            return None
-
-        return np.concatenate(chunks)
+        return np.abs(mono)
 
     def _build_envelope(self, mono):
         if mono is None or len(mono) == 0:
@@ -292,13 +222,10 @@ class WaveformWidget(ctk.CTkFrame):
         max_value = float(np.max(mono)) if mono.size else 0.0
         return (mono / max_value) if max_value > 0 else mono
 
-    def _apply_envelope(self, token, envelope, message):
+    def _apply_envelope(self, token, envelope):
         if token != self._load_token:
             return
         self._envelope = envelope
-        self._message = message
-        if message and self.on_status:
-            self.on_status(message)
         self._redraw_waveform()
 
     def _redraw_waveform(self):
@@ -317,14 +244,6 @@ class WaveformWidget(ctk.CTkFrame):
         self.canvas.create_rectangle(0, 0, width, height, fill=WAVE_BG_COLOR, outline="")
 
         if self._envelope is None or len(self._envelope) == 0:
-            if self._message:
-                self.canvas.create_text(
-                    width / 2,
-                    height / 2,
-                    text=self._message,
-                    fill="#BBC2CE",
-                    font=("Segoe UI", 11),
-                )
             self._draw_overlays()
             return
 
