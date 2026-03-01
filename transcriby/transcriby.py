@@ -151,13 +151,9 @@ class App(_AppBase):
         self.scale = ctk.CTkSlider(self.LFrame, command=self.songSeek)
         self.scale.grid(row=2, column=0, padx=8, sticky="ew")
 
-        #self.CTLFrame = ctk.CTkFrame(self.LFrame)
-        self.CTLFrame = ctk.CTkTabview(self.LFrame)
+        self.CTLFrame = ctk.CTkFrame(self.LFrame)
         self.CTLFrame.grid(row=3, column=0, padx=8, pady=8, sticky="nsew")
-        self.CTLFrame._segmented_button.configure( font=("", LBL_FONT_SIZE))
-
-        self.PlaybackTab = self.CTLFrame.add(_("Playback control"))
-        self.LoopTab = self.CTLFrame.add(_("Loop control"))
+        self.PlaybackTab = self.CTLFrame
 
         self.LFrame.grid_columnconfigure(0, weight=1)
         self.LFrame.grid_rowconfigure(3, weight=1)
@@ -250,13 +246,20 @@ class App(_AppBase):
         self.centsChanged(None, None, None)
         self.volumeChanged(None, None, None)
 
-        # Widgets on Loop Tab
-        self.sldLoop = CTkRangeSlider(self.LoopTab, from_=-2, to=-1, 
-                                      command=(self.setLoopStart, self.setLoopEnd))
-        self.sldLoop.grid(row=0, column=0, columnspan=3, padx=8, pady=8, sticky="ew")
+        # Inline loop controls
+        self.lblLoopControls = ctk.CTkLabel(self.PlaybackTab, text=_("Loop control"), font=("", LBL_FONT_SIZE))
+        self.lblLoopControls.grid(row=4, column=0, pady=(12, 0), sticky="w")
 
-        self.loopAFrame = ctk.CTkFrame(self.LoopTab)
-        self.loopAFrame.grid(row=1, column=0, pady=8, sticky="w")
+        self.sldLoop = CTkRangeSlider(self.PlaybackTab, from_=-2, to=-1, 
+                                      command=(self.setLoopStart, self.setLoopEnd))
+        self.sldLoop.grid(row=5, column=0, columnspan=5, padx=8, pady=8, sticky="ew")
+
+        self.loopControlsFrame = ctk.CTkFrame(self.PlaybackTab, fg_color="transparent")
+        self.loopControlsFrame.grid(row=6, column=0, columnspan=5, pady=(0, 8), sticky="ew")
+        self.loopControlsFrame.grid_columnconfigure(1, weight=1)
+
+        self.loopAFrame = ctk.CTkFrame(self.loopControlsFrame)
+        self.loopAFrame.grid(row=0, column=0, pady=8, sticky="w")
 
         self.lblLoopStart = ctk.CTkLabel(self.loopAFrame, anchor="w", width=80, font=("", LBL_FONT_SIZE),
                                          text="---")
@@ -294,8 +297,8 @@ class App(_AppBase):
         self.btnLoopAFwd1.grid(row = 1, column = 2, padx=(4, 0), pady = (8, 0))
         self.btnLoopAFwd2.grid(row = 1, column = 3, padx=(4, 0), pady = (8, 0))
 
-        self.loopBFrame = ctk.CTkFrame(self.LoopTab)
-        self.loopBFrame.grid(row=1, column=2, pady=8, sticky="e")
+        self.loopBFrame = ctk.CTkFrame(self.loopControlsFrame)
+        self.loopBFrame.grid(row=0, column=2, pady=8, sticky="e")
 
         self.lblLoopEnd = ctk.CTkLabel(self.loopBFrame, anchor="e", width=80, font=("", LBL_FONT_SIZE),
                                        text="---")
@@ -333,8 +336,8 @@ class App(_AppBase):
         self.btnLoopBFwd1.grid(row = 1, column = 2, padx=(4, 0), pady = (8, 0))
         self.btnLoopBFwd2.grid(row = 1, column = 3, padx=(4, 0), pady = (8, 0))
 
-        self.loopCenterFrame = ctk.CTkFrame(self.LoopTab,bg_color="transparent")
-        self.loopCenterFrame.grid(row=1, column=1, pady=8, sticky="nsew")
+        self.loopCenterFrame = ctk.CTkFrame(self.loopControlsFrame,bg_color="transparent")
+        self.loopCenterFrame.grid(row=0, column=1, pady=8, sticky="nsew")
         
         self.swtLoopEnabled = ctk.CTkSwitch(self.loopCenterFrame, text=_("Enable loop"),
                                             onvalue=True, offvalue=False, font=("", LBL_FONT_SIZE),
@@ -342,8 +345,6 @@ class App(_AppBase):
         self.swtLoopEnabled.pack(anchor = "n")
         self.swtLoopEnabled_tt = CTkToolTip(self.swtLoopEnabled, message=_("Toggle loop playing\nShortcut: L"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
-
-        self.LoopTab.columnconfigure(1, weight=1)
 
         # Widgets on right panel
         self.loopIcon = ctk.CTkImage(
@@ -832,6 +833,28 @@ class App(_AppBase):
         self.setLoopEnd(self.player.endPoint + shiftPipeLineTime)
         return(True)
 
+    def hasValidLoopRange(self):
+        return (
+            self.player.loopEnabled and
+            self.player.startPoint is not None and
+            self.player.endPoint is not None and
+            self.player.startPoint >= 0 and
+            self.player.endPoint > self.player.startPoint
+        )
+
+    def restartLoopFromA(self):
+        if(self.player.canPlay == False):
+            self.statusBarMessage(_("Please open a file..."))
+            return
+
+        if(self.hasValidLoopRange() == False):
+            self.togglePlay()
+            return
+
+        self.player.seek_absolute(self.player.startPoint)
+        self.Play()
+        self.statusBarMessage(_("Restart loop from A"), timeout=1000)
+
     # Updates the save progress bars
     def saveProgress(self, value):
         self.save_prg_var.set(value)
@@ -1216,8 +1239,10 @@ class App(_AppBase):
         elif(key == 'KP_2'):
             accel = -STEPS_SPEED
 
-        # Play / Pause
-        elif(key == 'space' or key == 'KP_0'):
+        # Play / Pause (space restarts active loop from A)
+        elif(key == 'space'):
+            self.restartLoopFromA()
+        elif(key == 'KP_0'):
             self.togglePlay()
         # Stop
         elif(key == 'KP_Decimal'):
