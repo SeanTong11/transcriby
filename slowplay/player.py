@@ -227,6 +227,8 @@ class slowPlayer():
 
     def Rewind(self):
         """Rewind to start or loop point"""
+        if not self.canPlay or not self.media:
+            return
         if self.loopEnabled and self.startPoint >= 0:
             self.seek_absolute(self.startPoint)
         else:
@@ -234,12 +236,17 @@ class slowPlayer():
 
     def seek_absolute(self, newPos):
         """Seek to absolute position (newPos in nanoseconds, pipeline time)"""
+        if not self.canPlay or not self.media:
+            return
         if newPos is None:
             return
         song_seconds = self.song_time(newPos)
         if song_seconds is None:
             return
-        self._player.command("seek", str(song_seconds), "absolute", "exact")
+        try:
+            self._player.command("seek", str(song_seconds), "absolute", "exact")
+        except Exception:
+            return
         self.songPosition = song_seconds
 
     def seek_relative(self, newPos):
