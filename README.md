@@ -30,6 +30,7 @@ This project is modified from the original [SlowPlay](https://github.com/aFunkyB
 ### Speed and pitch change:
 
 **Transcriby** can speed down/up songs or change their pitch independently "on the fly". You can import all the most common audio files format (mp3, wav, flac, aif...).
+It also supports video files like mp4/m4v/mkv, which will open in a separate mpv window while the audio controls stay in Transcriby.
 
 Speed change is made by moving the slider which will change it in 5% steps, or by entering the precise percentage value in the edit box (eg 87%).You can transpose your song up and down by semitones or fine adjust the pitch by cents, in case the song is not in tune with your instruments. For your convenience, Transcriby offers several numeric keypad shortcuts. Please take a look at the [shortcut](#optimized-keyobard-shortcuts) list further on in this document.
 

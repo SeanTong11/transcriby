@@ -98,8 +98,8 @@ def _split_atempo(factor: float) -> list[float]:
 class slowPlayer():
     def __init__(self):
         """Initialize the audio player"""
-        # mpv player (audio only)
-        self._player = mpv.MPV(ytdl=False, vid="no", audio_display="no")
+        # mpv player (audio/video)
+        self._player = mpv.MPV(ytdl=False, vid="auto")
         self._player.pause = True
 
         # Playback parameters

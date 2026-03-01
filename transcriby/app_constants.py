@@ -52,7 +52,10 @@ OPEN_EXTENSIONS_FILTER = (
     'aac',
     'alac',
     'wma',
-    'm4a'
+    'm4a',
+    'mp4',
+    'm4v',
+    'mkv'
 )
 
 # Allowed audio files extensions (save)
