@@ -7,7 +7,7 @@ change capabilities, using mpv (libmpv)."
 
 APP_VERSION = "0.3.2"
 
-APP_URL = "https://github.com/aFunkyBass/slowplay"
+APP_URL = "https://github.com/SeanTong11/transcriby"
 
 INITIAL_GEOMETRY = "800x400"
 

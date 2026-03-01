@@ -12,6 +12,7 @@
 ## About This Fork
 
 This project is modified from the original [SlowPlay](https://github.com/aFunkyBass/slowplay) by aFunkyBass.
+Current maintained repository: [SeanTong11/transcriby](https://github.com/SeanTong11/transcriby).
 
 **Key changes in this fork:**
 - ✅ **Removed GStreamer dependency** - Now uses `mpv` (libmpv) on all platforms
@@ -21,6 +22,7 @@ This project is modified from the original [SlowPlay](https://github.com/aFunkyB
 ## Features
 
 - [Speed and pitch change on the fly](#speed-and-pitch-change)
+- [Video playback in a synced external window](#speed-and-pitch-change)
 - [YouTube audio extraction from URL](#youtube-audio-extraction)
 - [Loop a range of the song, with fine adjustment of boundaries](#loop-ab)
 - [Modified audio export in MP3 or WAV audio format](#export-modified-audio)
@@ -110,7 +112,7 @@ If the last played song was extracted from a YouTube video, the app will not aut
 #### Windows
 
 ```cmd
-git clone https://github.com/yourusername/transcriby.git
+git clone https://github.com/SeanTong11/transcriby.git
 cd transcriby
 
 # Create venv and install dependencies
@@ -127,7 +129,7 @@ python transcriby-launch.py
 #### Linux / WSL
 
 ```bash
-git clone https://github.com/yourusername/transcriby.git
+git clone https://github.com/SeanTong11/transcriby.git
 cd transcriby
 
 # Create venv and install dependencies
@@ -146,7 +148,7 @@ python transcriby-launch.py
 ```bash
 brew install mpv
 
-git clone https://github.com/yourusername/transcriby.git
+git clone https://github.com/SeanTong11/transcriby.git
 cd transcriby
 
 uv sync

@@ -31,7 +31,7 @@ Transcriby for Windows uses `mpv` (libmpv) for lightweight audio playback (no GS
 
 1. **Clone or download the repository**
    ```cmd
-   git clone https://github.com/yourusername/transcriby.git
+   git clone https://github.com/SeanTong11/transcriby.git
    cd transcriby
    ```
 
@@ -157,9 +157,10 @@ Stored in the config file above
 1. **Drag and drop**: May require running as administrator in some cases
 2. **File associations**: Not automatically set up; use "Open with" to associate audio files
 3. **High DPI displays**: May need to adjust Windows scaling settings
+4. **Video window behavior**: For mp4/m4v/mkv files, video is rendered in a separate mpv window and stays synced with Transcriby playback controls
 
 ---
 
 ## Support
 
-For issues specific to this version, please report on GitHub.
+For issues specific to this version, please report on GitHub: https://github.com/SeanTong11/transcriby/issues
