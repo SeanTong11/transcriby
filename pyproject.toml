@@ -48,7 +48,7 @@ dev = [
 ]
 
 [project.scripts]
-transcriby = "transcriby.slowplay:main"
+transcriby = "transcriby.transcriby:main"
 
 [project.urls]
 Homepage = "https://github.com/SeanTong11/transcriby"

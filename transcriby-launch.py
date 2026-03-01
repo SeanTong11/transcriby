@@ -6,7 +6,7 @@ import os
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from transcriby import slowplay
+from transcriby import transcriby
 
 if __name__ == "__main__":
-    slowplay.main()
+    transcriby.main()
