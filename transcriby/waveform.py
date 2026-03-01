@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import subprocess
 import threading
 import tkinter as tk
 
@@ -16,14 +17,16 @@ PLAYHEAD_COLOR = "#FF7B5C"
 
 
 class WaveformWidget(ctk.CTkFrame):
-    def __init__(self, master, on_seek=None, height=120, **kwargs):
+    def __init__(self, master, on_seek=None, on_status=None, height=120, **kwargs):
         super().__init__(master, **kwargs)
         self.on_seek = on_seek
+        self.on_status = on_status
         self.height = height
 
         self._load_token = 0
         self._envelope = None
         self._duration = None
+        self._message = "Open a file to show waveform"
         self._playhead = 0.0
         self._loop_start = None
         self._loop_end = None
@@ -42,6 +45,7 @@ class WaveformWidget(ctk.CTkFrame):
         self._load_token += 1
         self._envelope = None
         self._duration = None
+        self._message = "Open a file to show waveform"
         self._playhead = 0.0
         self._loop_start = None
         self._loop_end = None
@@ -56,6 +60,8 @@ class WaveformWidget(ctk.CTkFrame):
         if not media_path or not os.path.isfile(media_path):
             return
 
+        self._message = "Loading waveform..."
+        self._redraw_waveform()
         self._load_token += 1
         token = self._load_token
         worker = threading.Thread(target=self._build_envelope_worker, args=(media_path, token), daemon=True)
@@ -87,30 +93,80 @@ class WaveformWidget(ctk.CTkFrame):
             self.on_seek(target_seconds)
 
     def _build_envelope_worker(self, media_path, token):
+        message = None
         try:
             data, _sr = sf.read(media_path, dtype="float32", always_2d=True)
             if data.size == 0:
                 envelope = None
             else:
                 mono = np.mean(np.abs(data), axis=1)
-                max_points = 5000
-                if len(mono) > max_points:
-                    block_size = int(np.ceil(len(mono) / max_points))
-                    pad = (-len(mono)) % block_size
-                    if pad:
-                        mono = np.pad(mono, (0, pad), mode="constant")
-                    mono = mono.reshape(-1, block_size).max(axis=1)
-                max_value = float(np.max(mono)) if mono.size else 0.0
-                envelope = (mono / max_value) if max_value > 0 else mono
+                envelope = self._build_envelope(mono)
         except Exception:
             envelope = None
+            message = "Waveform decoder fallback: ffmpeg"
 
-        self.after(0, self._apply_envelope, token, envelope)
+        if envelope is None:
+            mono = self._decode_with_ffmpeg(media_path)
+            if mono is not None:
+                envelope = self._build_envelope(mono)
+                message = None
 
-    def _apply_envelope(self, token, envelope):
+        if envelope is None:
+            message = "Waveform unavailable for this media"
+
+        self.after(0, self._apply_envelope, token, envelope, message)
+
+    def _decode_with_ffmpeg(self, media_path):
+        cmd = [
+            "ffmpeg",
+            "-v",
+            "error",
+            "-i",
+            media_path,
+            "-vn",
+            "-ac",
+            "1",
+            "-ar",
+            "12000",
+            "-f",
+            "f32le",
+            "-acodec",
+            "pcm_f32le",
+            "pipe:1",
+        ]
+        try:
+            result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+        except Exception:
+            return None
+
+        if result.returncode != 0 or not result.stdout:
+            return None
+
+        mono = np.frombuffer(result.stdout, dtype=np.float32)
+        if mono.size == 0:
+            return None
+        return np.abs(mono)
+
+    def _build_envelope(self, mono):
+        if mono is None or len(mono) == 0:
+            return None
+        max_points = 5000
+        if len(mono) > max_points:
+            block_size = int(np.ceil(len(mono) / max_points))
+            pad = (-len(mono)) % block_size
+            if pad:
+                mono = np.pad(mono, (0, pad), mode="constant")
+            mono = mono.reshape(-1, block_size).max(axis=1)
+        max_value = float(np.max(mono)) if mono.size else 0.0
+        return (mono / max_value) if max_value > 0 else mono
+
+    def _apply_envelope(self, token, envelope, message):
         if token != self._load_token:
             return
         self._envelope = envelope
+        self._message = message
+        if message and self.on_status:
+            self.on_status(message)
         self._redraw_waveform()
 
     def _redraw_waveform(self):
@@ -126,6 +182,14 @@ class WaveformWidget(ctk.CTkFrame):
         self.canvas.create_rectangle(0, 0, width, height, fill=WAVE_BG_COLOR, outline="")
 
         if self._envelope is None or len(self._envelope) == 0:
+            if self._message:
+                self.canvas.create_text(
+                    width / 2,
+                    height / 2,
+                    text=self._message,
+                    fill="#BBC2CE",
+                    font=("Segoe UI", 11),
+                )
             self._draw_overlays()
             return
 

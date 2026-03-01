@@ -40,7 +40,6 @@ from transcriby import recentdialog
 from transcriby import aboutdialog
 from transcriby import ytmanage
 from transcriby.waveform import WaveformWidget
-from transcriby.CTkRangeSlider import *
 
 # Lazy import tkinterdnd2 to avoid X11 threading issues on WSL
 # 
@@ -165,7 +164,12 @@ class App(_AppBase):
         self.scale = ctk.CTkSlider(self.LFrame, command=self.songSeek)
         self.scale.grid(row=2, column=0, padx=UI_INNER_PAD, sticky="ew")
 
-        self.waveform = WaveformWidget(self.LFrame, on_seek=self.waveformSeek, height=WAVEFORM_HEIGHT)
+        self.waveform = WaveformWidget(
+            self.LFrame,
+            on_seek=self.waveformSeek,
+            on_status=self.waveformStatus,
+            height=WAVEFORM_HEIGHT,
+        )
         self.waveform.grid(row=3, column=0, padx=UI_INNER_PAD, pady=(UI_INNER_PAD, 0), sticky="ew")
 
         self.CTLFrame = ctk.CTkFrame(self.LFrame)
@@ -267,12 +271,8 @@ class App(_AppBase):
         self.lblLoopControls = ctk.CTkLabel(self.PlaybackTab, text=_("Loop control"), font=("", LBL_FONT_SIZE))
         self.lblLoopControls.grid(row=4, column=0, pady=(UI_INNER_PAD + 2, 0), sticky="w")
 
-        self.sldLoop = CTkRangeSlider(self.PlaybackTab, from_=-2, to=-1, 
-                                      command=(self.setLoopStart, self.setLoopEnd))
-        self.sldLoop.grid(row=5, column=0, columnspan=5, padx=UI_INNER_PAD, pady=UI_INNER_PAD, sticky="ew")
-
         self.loopControlsFrame = ctk.CTkFrame(self.PlaybackTab, fg_color="transparent")
-        self.loopControlsFrame.grid(row=6, column=0, columnspan=5, pady=(0, UI_INNER_PAD), sticky="ew")
+        self.loopControlsFrame.grid(row=5, column=0, columnspan=5, pady=(0, UI_INNER_PAD), sticky="ew")
         self.loopControlsFrame.grid_columnconfigure(1, weight=1)
 
         self.loopAFrame = ctk.CTkFrame(self.loopControlsFrame, fg_color="transparent")
@@ -494,7 +494,6 @@ class App(_AppBase):
     def resetValues(self):
         self.player.startPoint = -2
         self.player.endPoint = -1
-        self.sldLoop.configure(from_ = 0, to = 100)
         self.waveform.clear()
         self.loopToggle(bForceDisable = True)
         self.Pause()
@@ -813,7 +812,6 @@ class App(_AppBase):
 
         # set the start point
         self.player.startPoint = loopPoint
-        self.sldLoop.set((loopPoint, self.player.endPoint))
         secs = self.player.song_time(loopPoint)
         if(secs is None):
             secs = 0
@@ -839,7 +837,6 @@ class App(_AppBase):
                 loopPoint = maxEndpoint
 
             self.player.endPoint = loopPoint
-            self.sldLoop.set((self.player.startPoint, loopPoint))
             secs = self.player.song_time(loopPoint)
             self.lblLoopEnd.configure(text = f"{dt.timedelta(seconds=floor(secs))}.{utils.get_fractional(secs, 3):03d}")
             self.syncWaveformState()
@@ -921,6 +918,10 @@ class App(_AppBase):
             return
         self.player.seek_absolute(self.player.pipeline_time(targetSeconds))
         self.syncWaveformState()
+
+    def waveformStatus(self, message):
+        if(message):
+            self.statusBarMessage(message, timeout=1800)
 
     # Updates the save progress bars
     def saveProgress(self, value):
@@ -1032,14 +1033,11 @@ class App(_AppBase):
         if(self.player.endPoint != None and self.player.endPoint <= 0):
             duration = self.player.query_duration()
             if(duration != None and duration > 0):
-                actualEndloop = self.setLoopEnd(duration)
-                self.sldLoop.configure(to = actualEndloop, require_redraw=True)
+                self.setLoopEnd(duration)
 
         # Sets loop start point to 0 if it is not set
-        #if(self.player.startPoint != None and self.sldLoop._from_ != 0):
         if(self.player.startPoint < 0):
             self.setLoopStart(0)
-            self.sldLoop.configure(from_ = 0, require_redraw=True)
 
         self.syncWaveformState()
 
@@ -1108,10 +1106,7 @@ class App(_AppBase):
             self.player.startPoint = newLoopStart
             self.player.endPoint = newLoopEnd
 
-            duration = self.player.query_duration()
-            if(duration is not None):
-                self.sldLoop.configure(to = duration)
-                self.sldLoop.set((self.player.startPoint, self.player.endPoint))
+            self.syncWaveformState()
         finally:
             self.bValuesChanging = False
 

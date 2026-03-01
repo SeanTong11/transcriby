@@ -66,6 +66,8 @@ Transcriby now includes a waveform panel under the seek bar:
 - A/B loop boundaries are shown directly on the waveform
 - The playhead updates in real time while playing
 
+For media containers like MP4, waveform extraction may use `ffmpeg` as a fallback decoder.
+
 ### Export modified audio:
 
 It is possible to export modified songs by using the "Save as..." button. You can save your files either in mp3 or wav format, based on the extension of file to be saved. Currently saved audio files are in the format of 44.1K 16bit stereo. Mp3 are saved as constant bitrate 192k. Volume setting and metadata are ignored in the export operation.
@@ -253,6 +255,11 @@ Audio export is performed with `soundfile + scipy` and does not require ffmpeg.
 ### Audio sounds choppy or distorted
 - Close other applications using audio
 - Try increasing the buffer size (edit `player.py` and change `DEFAULT_BLOCK_SIZE`)
+
+### Windows exe icon does not look updated
+- Rebuild from project root so `transcriby/resources/Icona.ico` is included
+- Unpin and re-pin the app from taskbar
+- If needed, restart Explorer (`explorer.exe`) to refresh Windows icon cache
 
 ### "Module not found" error
 - Make sure you installed all requirements: `pip install -r requirements.txt`

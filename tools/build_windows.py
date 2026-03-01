@@ -8,6 +8,9 @@ import os
 import sys
 import shutil
 import subprocess
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 def check_requirements():
@@ -57,12 +60,14 @@ def check_requirements():
 def build():
     """Build the executable using PyInstaller"""
     print("\nBuilding Transcriby for Windows...")
+    print(f"  Project root: {PROJECT_ROOT}")
     
     # Clean previous builds
     for folder in ['build', 'dist']:
-        if os.path.exists(folder):
+        folder_path = PROJECT_ROOT / folder
+        if folder_path.exists():
             print(f"  Cleaning {folder}/...")
-            shutil.rmtree(folder)
+            shutil.rmtree(folder_path)
     
     # Build PyInstaller command
     cmd = [
@@ -76,8 +81,8 @@ def build():
     
     # Add data files
     cmd.extend([
-        "--add-data", "transcriby/resources;resources",
-        "--add-data", "transcriby/locales;locales",
+        "--add-data", f"{PROJECT_ROOT / 'transcriby' / 'resources'};resources",
+        "--add-data", f"{PROJECT_ROOT / 'transcriby' / 'locales'};locales",
     ])
     
     # Hidden imports for audio libraries
@@ -94,63 +99,64 @@ def build():
     ])
     
     # Bundle libmpv DLLs if present (third_party/mpv)
-    mpv_dir = os.path.join(os.getcwd(), "third_party", "mpv")
-    if os.path.isdir(mpv_dir):
+    mpv_dir = PROJECT_ROOT / "third_party" / "mpv"
+    if mpv_dir.is_dir():
         for name in os.listdir(mpv_dir):
             if name.lower().endswith(".dll"):
-                src = os.path.join(mpv_dir, name)
+                src = mpv_dir / name
                 cmd.extend(["--add-binary", f"{src};."])
 
     # Add icon (if exists)
-    icon_path = os.path.join("transcriby", "resources", "Icona.ico")
-    if os.path.exists(icon_path):
-        cmd.extend(["--icon", icon_path])
+    icon_path = PROJECT_ROOT / "transcriby" / "resources" / "Icona.ico"
+    if icon_path.exists():
+        cmd.extend(["--icon", str(icon_path)])
+        print(f"  Using icon: {icon_path}")
     else:
         # Try to convert PNG to ICO
-        png_path = os.path.join("transcriby", "resources", "Icona-256.png")
-        if os.path.exists(png_path):
+        png_path = PROJECT_ROOT / "transcriby" / "resources" / "Icona-256.png"
+        if png_path.exists():
             try:
                 from PIL import Image
-                img = Image.open(png_path)
+                img = Image.open(str(png_path))
                 img.save(icon_path, format='ICO', sizes=[(256,256), (128,128), (64,64), (32,32), (16,16)])
-                cmd.extend(["--icon", icon_path])
+                cmd.extend(["--icon", str(icon_path)])
                 print(f"  Created icon from PNG")
             except Exception as e:
                 print(f"  Warning: Could not create icon: {e}")
     
     # Main script
-    cmd.append("transcriby-launch.py")
+    cmd.append(str(PROJECT_ROOT / "transcriby-launch.py"))
     
     # Run PyInstaller
     print(f"\n  Running PyInstaller...\n")
-    result = subprocess.run(cmd)
+    result = subprocess.run(cmd, cwd=PROJECT_ROOT)
     
     if result.returncode != 0:
         print("\nBuild failed!")
         return False
     
     print("\nBuild successful!")
-    print(f"  Executable: dist/Transcriby.exe")
+    print(f"  Executable: {PROJECT_ROOT / 'dist' / 'Transcriby.exe'}")
     
     # Create distribution folder
-    dist_folder = "Transcriby-Windows"
-    if os.path.exists(dist_folder):
+    dist_folder = PROJECT_ROOT / "Transcriby-Windows"
+    if dist_folder.exists():
         shutil.rmtree(dist_folder)
     
-    os.makedirs(dist_folder)
+    dist_folder.mkdir(parents=True, exist_ok=True)
     
     # Copy executable
-    shutil.copy("dist/Transcriby.exe", dist_folder)
+    shutil.copy(PROJECT_ROOT / "dist" / "Transcriby.exe", dist_folder)
     
     # Copy README
-    if os.path.exists("README.md"):
-        shutil.copy("README.md", dist_folder)
+    if (PROJECT_ROOT / "README.md").exists():
+        shutil.copy(PROJECT_ROOT / "README.md", dist_folder)
     
-    if os.path.exists("INSTALL_WINDOWS.md"):
-        shutil.copy("INSTALL_WINDOWS.md", dist_folder)
+    if (PROJECT_ROOT / "INSTALL_WINDOWS.md").exists():
+        shutil.copy(PROJECT_ROOT / "INSTALL_WINDOWS.md", dist_folder)
     
     # Estimate size
-    exe_size = os.path.getsize(os.path.join(dist_folder, "Transcriby.exe"))
+    exe_size = (dist_folder / "Transcriby.exe").stat().st_size
     print(f"\n  Distribution folder: {dist_folder}/")
     print(f"  Executable size: {exe_size / (1024*1024):.1f} MB")
     
