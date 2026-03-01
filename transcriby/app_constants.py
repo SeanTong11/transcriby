@@ -69,7 +69,7 @@ YTDLP_CMD = "yt-dlp"                   # Command to execute for video managing
 YT_AUDIO_FORMAT_PRESET = "aac"         # default audio extraction format 
 YT_AUDIO_FORMAT_EXTENSION = "m4a"      # default extracted audio extension
 YT_THUMB_FORMAT_EXTENSION = "png"      # default thumbnail extraction format
-YT_AUDIO_FILE_PREFIX = "spYT_"
+YT_AUDIO_FILE_PREFIX = "trYT_"
 
 
 # Defines the minimum gap for loop, which is the gap between loop start and loop end

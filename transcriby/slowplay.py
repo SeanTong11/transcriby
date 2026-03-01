@@ -22,7 +22,7 @@ _ = gettext.gettext
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 
-from transcriby.sp_constants import *
+from transcriby.app_constants import *
 from transcriby.platform_utils import (
     uri_from_path,
     is_valid_absolute_path,

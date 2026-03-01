@@ -12,7 +12,7 @@ import json
 import hashlib
 from transcriby.platform_utils import get_external_cmd, check_cmd_exists, get_resources_dir
 
-from transcriby.sp_constants import *
+from transcriby.app_constants import *
 
 import gettext
 _ = gettext.gettext

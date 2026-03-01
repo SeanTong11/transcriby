@@ -116,11 +116,11 @@ cd transcriby
 uv sync
 
 # Run the application
-uv run python sp-launch.py
+uv run python transcriby-launch.py
 
 # Or activate the environment and run normally
 .venv\Scripts\activate
-python sp-launch.py
+python transcriby-launch.py
 ```
 
 #### Linux / WSL
@@ -133,11 +133,11 @@ cd transcriby
 uv sync
 
 # Run the application
-uv run python sp-launch.py
+uv run python transcriby-launch.py
 
 # Or activate the environment and run normally
 source .venv/bin/activate
-python sp-launch.py
+python transcriby-launch.py
 ```
 
 #### macOS
@@ -149,7 +149,7 @@ git clone https://github.com/yourusername/transcriby.git
 cd transcriby
 
 uv sync
-uv run python sp-launch.py
+uv run python transcriby-launch.py
 ```
 
 ### Development Setup
@@ -177,7 +177,7 @@ If you prefer not to use uv:
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-python sp-launch.py
+python transcriby-launch.py
 ```
 
 ## Shortcuts

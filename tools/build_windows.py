@@ -119,7 +119,7 @@ def build():
                 print(f"  Warning: Could not create icon: {e}")
     
     # Main script
-    cmd.append("sp-launch.py")
+    cmd.append("transcriby-launch.py")
     
     # Run PyInstaller
     print(f"\n  Running PyInstaller...\n")

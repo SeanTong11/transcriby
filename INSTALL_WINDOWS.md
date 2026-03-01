@@ -42,13 +42,13 @@ Transcriby for Windows uses `mpv` (libmpv) for lightweight audio playback (no GS
 
 3. **Run the application**
    ```cmd
-   uv run python sp-launch.py
+   uv run python transcriby-launch.py
    ```
 
    Or activate the environment and run:
    ```cmd
    .venv\Scripts\activate
-   python sp-launch.py
+   python transcriby-launch.py
    ```
 
 ---
@@ -61,7 +61,7 @@ If you prefer not to use uv:
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
-python sp-launch.py
+python transcriby-launch.py
 ```
 
 ---

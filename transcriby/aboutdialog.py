@@ -3,7 +3,7 @@ from PIL import Image, ImageTk
 import os
 import webbrowser
 
-from transcriby.sp_constants import *
+from transcriby.app_constants import *
 from transcriby.platform_utils import get_resources_dir
 
 import gettext
