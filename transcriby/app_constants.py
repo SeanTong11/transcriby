@@ -51,10 +51,10 @@ UI_DANGER_HOVER = "#8A2E38"
 UI_CARD_RADIUS = 14
 UI_INPUT_RADIUS = 8
 
-DEFAULT_SPEED = 100         # Default speed (percent)
-MIN_SPEED_PERCENT = 50      # Minimum speed (percent)
-MAX_SPEED_PERCENT = 150     # Maximum speed (percent)
-STEPS_SPEED = 5             # Speed incr/decr steps (percent)
+DEFAULT_SPEED = 1.0         # Default speed (x)
+MIN_SPEED_PERCENT = 0.1     # Minimum speed (x)
+MAX_SPEED_PERCENT = 2.0     # Maximum speed (x)
+STEPS_SPEED = 0.1           # Speed incr/decr steps (x)
 
 DEFAULT_SEMITONES = 0       # Default semitone transpose (0 = no transpose)
 MIN_PITCH_SEMITONES = -12   # Maximum semitones transpose down

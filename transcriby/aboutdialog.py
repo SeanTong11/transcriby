@@ -13,8 +13,8 @@ class aboutDialog(ctk.CTkToplevel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        WIDTH = 840
-        HEIGHT = 620
+        WIDTH = 980
+        HEIGHT = 760
 
         # Mark app directories
         resources_dir = get_resources_dir()
@@ -80,11 +80,11 @@ class aboutDialog(ctk.CTkToplevel):
             ("N. Keypad 6", _("Forward 10 seconds")),
             ("N. Keypad 9", _("Forward 15 seconds")),
             ("Home", _("Rewind")),
-            ("N. Keypad 8", _("Playback speed +5%")),
-            ("N. Keypad 2", _("Playback speed -5%")),
-            ("C", _("Playback speed +5%")),
-            ("X", _("Playback speed -5%")),
-            ("N. Keypad 5", _("Reset playback speed to 100%")),
+            ("N. Keypad 8", _("Playback speed +0.1x")),
+            ("N. Keypad 2", _("Playback speed -0.1x")),
+            ("C", _("Playback speed +0.1x")),
+            ("X", _("Playback speed -0.1x")),
+            ("N. Keypad 5", _("Reset playback speed to 1.0x")),
             ("N. Keypad +", _("Transpose +1 semitone")),
             ("N. Keypad -", _("Transpose -1 semitone")),
             ("Enter", _("Play/Pause")),
@@ -101,8 +101,11 @@ class aboutDialog(ctk.CTkToplevel):
             ("CTRL+B", _("Reset loop end")),
         ]
 
-        self.shortcutsFrame = ctk.CTkFrame(tab2, fg_color="transparent")
-        self.shortcutsFrame.grid(row = 0, column = 0, padx = 14, pady = 12, sticky="nsew")
+        self.scrollFrame = ctk.CTkScrollableFrame(tab2)
+        self.scrollFrame.grid(row = 0, column = 0, padx = 8, pady = 8, sticky="nsew")
+
+        self.shortcutsFrame = ctk.CTkFrame(self.scrollFrame, fg_color="transparent")
+        self.shortcutsFrame.grid(row = 0, column = 0, padx = 10, pady = 10, sticky="nsew")
         
         scLabels = []
         i = 0
@@ -120,6 +123,16 @@ class aboutDialog(ctk.CTkToplevel):
                 i = i + 2
 
         self.shortcutsFrame.grid_columnconfigure(1, weight=1)
+
+        # Keep wheel scrolling enabled for dense shortcut lists.
+        self.scrollFrame.bind("<Button-4>", self.onScroll)
+        self.scrollFrame.bind("<Button-5>", self.onScroll)
+        for wid in self.scrollFrame.children.values():
+            wid.bind("<Button-4>", self.onScroll)
+            wid.bind("<Button-5>", self.onScroll)
+        for wid in self.shortcutsFrame.children.values():
+            wid.bind("<Button-4>", self.onScroll)
+            wid.bind("<Button-5>", self.onScroll)
 
         
         tab1.grid_columnconfigure(0, weight=1)
@@ -149,3 +162,6 @@ class aboutDialog(ctk.CTkToplevel):
 
         if(key == "Escape" or key == "KP_Enter" or key == "Return"):
             self.destroy()
+
+    def onScroll(self, event = None):
+        self.scrollFrame._parent_canvas.yview_scroll(1 if event.num == 5 else -1, "units")

@@ -192,17 +192,18 @@ class App(_AppBase):
         # Widgets on Playback Tab
         #vint = (self.register(self.validate_int),'%d','%i','%P','%s','%S','%v','%V','%W')
         vint = (self.register(self.validate_int),'%S')
-        self.varSpeed = ctk.IntVar(self, value=DEFAULT_SPEED)
+        vspeed = (self.register(self.validate_speed), '%S', '%P')
+        self.varSpeed = ctk.DoubleVar(self, value=DEFAULT_SPEED)
         self.varSpeed.trace_add("write", self.speedChanged)
         self.lblSpeed = ctk.CTkLabel(self.PlaybackTab, text=_("Speed:"), font=("", LBL_FONT_SIZE))
         self.lblSpeed.grid(row=4, column=0, pady=(UI_CONTROL_PAD_Y, 0), sticky="w")
         self.sldSpeed = ctk.CTkSlider(self.PlaybackTab, from_=MIN_SPEED_PERCENT,
-                                      to=MAX_SPEED_PERCENT, number_of_steps=20, variable=self.varSpeed)
+                                      to=MAX_SPEED_PERCENT, number_of_steps=19, variable=self.varSpeed)
         self.sldSpeed.grid(row=4, column=1, padx=UI_INNER_PAD, sticky="ew")
         self.entSpeed = ctk.CTkEntry(self.PlaybackTab, width=56, justify="center",
-                                     validate='key', validatecommand=vint)
+                                     validate='all', validatecommand=vspeed)
         self.entSpeed.grid(row=4, column=2, padx=UI_INNER_PAD, pady=UI_CONTROL_PAD_Y, sticky="w")
-        self.lblSpeedEntry = ctk.CTkLabel(self.PlaybackTab, text="%", font=("", LBL_FONT_SIZE))
+        self.lblSpeedEntry = ctk.CTkLabel(self.PlaybackTab, text="x", font=("", LBL_FONT_SIZE))
         self.lblSpeedEntry.grid(row=4, column=3, padx=(0, UI_INNER_PAD), pady=UI_CONTROL_PAD_Y, sticky="w")
         self.btnResetSpeed = ctk.CTkButton(self.PlaybackTab, width=42, image=resetIcon,
                                            text=None, command= lambda: self.resetDefaultVar(self.varSpeed))
@@ -283,6 +284,16 @@ class App(_AppBase):
 
         self.playbackControlsFrame = ctk.CTkFrame(self.PlaybackTab, fg_color="transparent")
         self.playbackControlsFrame.grid(row=1, column=0, columnspan=5, pady=(0, UI_INNER_PAD), sticky="ew")
+        self.playbackControlsFrame.grid_columnconfigure(0, weight=1)
+
+        self.lblPlaybackHint = ctk.CTkLabel(
+            self.playbackControlsFrame,
+            text="Fine seek: , / .   |   Coarse seek: [ / ]",
+            font=("", max(10, LBL_FONT_SIZE - 1)),
+            text_color=UI_TEXT_MUTED,
+            justify="center",
+        )
+        self.lblPlaybackHint.grid(row=0, column=0, columnspan=4, pady=(8, 2), sticky="ew")
 
         self.btnSeekBack1 = ctk.CTkButton(self.playbackControlsFrame, width=70, text="-1s", font=("", LBL_FONT_SIZE),
                                           command=lambda: self.movePlayback(-1.0))
@@ -292,10 +303,10 @@ class App(_AppBase):
                                           command=lambda: self.movePlayback(0.1))
         self.btnSeekFwd1 = ctk.CTkButton(self.playbackControlsFrame, width=70, text="+1s", font=("", LBL_FONT_SIZE),
                                          command=lambda: self.movePlayback(1.0))
-        self.btnSeekBack1.grid(row=0, column=0, padx=(0, 4), pady=8, sticky="w")
-        self.btnSeekBack01.grid(row=0, column=1, padx=4, pady=8, sticky="w")
-        self.btnSeekFwd01.grid(row=0, column=2, padx=4, pady=8, sticky="w")
-        self.btnSeekFwd1.grid(row=0, column=3, padx=(4, 0), pady=8, sticky="w")
+        self.btnSeekBack1.grid(row=1, column=0, padx=(0, 4), pady=(4, 8), sticky="w")
+        self.btnSeekBack01.grid(row=1, column=1, padx=4, pady=(4, 8), sticky="w")
+        self.btnSeekFwd01.grid(row=1, column=2, padx=4, pady=(4, 8), sticky="w")
+        self.btnSeekFwd1.grid(row=1, column=3, padx=(4, 0), pady=(4, 8), sticky="w")
 
         self.btnSeekBack1_tt = CTkToolTip(self.btnSeekBack1, message="Seek backward 1 second\nShortcut: [",
                                           delay=0.8, alpha=0.5, justify="left", follow=False)
@@ -626,6 +637,7 @@ class App(_AppBase):
             self.lblPitchCentsEntry,
             self.lblVolume,
             self.lblPlaybackControls,
+            self.lblPlaybackHint,
             self.lblLoopControls,
         ]
         for label in dim_labels:
@@ -816,8 +828,20 @@ class App(_AppBase):
             try:
                 self.resetValues()
                 
-                if(filePlabackOptions[PBO_DEF_SPEED] in range(MIN_SPEED_PERCENT, MAX_SPEED_PERCENT + 1)):
-                    self.varSpeed.set(filePlabackOptions[PBO_DEF_SPEED])
+                savedSpeed = filePlabackOptions.get(PBO_DEF_SPEED, DEFAULT_SPEED)
+                try:
+                    savedSpeed = float(savedSpeed)
+                    # Backward compatibility: old config stored 50..150 percent integers.
+                    if(savedSpeed > 10):
+                        savedSpeed = savedSpeed * 0.01
+                except Exception:
+                    savedSpeed = DEFAULT_SPEED
+
+                if(savedSpeed < MIN_SPEED_PERCENT):
+                    savedSpeed = MIN_SPEED_PERCENT
+                elif(savedSpeed > MAX_SPEED_PERCENT):
+                    savedSpeed = MAX_SPEED_PERCENT
+                self.varSpeed.set(savedSpeed)
 
                 if(filePlabackOptions[PBO_DEF_SEMITONES] in range(MIN_PITCH_SEMITONES, MAX_PITCH_SEMITONES + 1)):
                     self.varPitchST.set(filePlabackOptions[PBO_DEF_SEMITONES])
@@ -1430,6 +1454,12 @@ class App(_AppBase):
         else:
             return True
 
+    def validate_speed(self, S, P):
+        regex = re.compile(r"^[0-9]*([.][0-9]?)?$")
+        if(regex.match(P) == None):
+            return False
+        return True
+
     def validate_neg_int(self, S, P):
         #print("d=", d, " i=", i, " P=",P," s=", s," S=", S, " v=",v," V=", V, " W=",W)
 
@@ -1441,12 +1471,11 @@ class App(_AppBase):
             return True
 
     def speedChanged(self, a, b, c):
+        speedValue = round(float(self.varSpeed.get()), 1)
         self.entSpeed.delete(0, 'end')
-        self.entSpeed.insert(0, str(self.varSpeed.get()))
+        self.entSpeed.insert(0, f"{speedValue:.1f}")
 
-        # percentage conversion to 1x
-        # eg: 80% = 0.8
-        newtempo = self.varSpeed.get() * 0.01
+        newtempo = speedValue
         oldtempo = self.player.tempo
         
         # Nothing to do here
@@ -1477,18 +1506,18 @@ class App(_AppBase):
 
     def checkSpeed(self, event):
         try:
-            value = int(self.entSpeed.get())
+            value = round(float(self.entSpeed.get()), 1)
             if value < MIN_SPEED_PERCENT:
                 value = MIN_SPEED_PERCENT
             elif value > MAX_SPEED_PERCENT:
                 value = MAX_SPEED_PERCENT
 
             self.entSpeed.delete(0, 'end')
-            self.entSpeed.insert(0, str(value))
+            self.entSpeed.insert(0, f"{value:.1f}")
             self.varSpeed.set(value)
         except:
             self.entSpeed.delete(0, 'end')
-            self.entSpeed.insert(0, str(self.varSpeed.get()))
+            self.entSpeed.insert(0, f"{float(self.varSpeed.get()):.1f}")
 
     def semitonesChanged(self, a, b, c):
         value = str(self.varPitchST.get())
@@ -1734,7 +1763,7 @@ class App(_AppBase):
                 self.bValuesChanging = False
 
         if(accel != 0):
-            val = self.varSpeed.get() + accel
+            val = round(float(self.varSpeed.get()) + accel, 1)
             if(val >= MIN_SPEED_PERCENT and val <= MAX_SPEED_PERCENT):
                 self.varSpeed.set(val)
 
