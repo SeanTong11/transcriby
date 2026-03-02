@@ -284,37 +284,26 @@ class App(_AppBase):
 
         self.playbackControlsFrame = ctk.CTkFrame(self.PlaybackTab, fg_color="transparent")
         self.playbackControlsFrame.grid(row=1, column=0, columnspan=5, pady=(0, UI_INNER_PAD), sticky="ew")
-        self.playbackControlsFrame.grid_columnconfigure(0, weight=1)
-
-        self.lblPlaybackHint = ctk.CTkLabel(
-            self.playbackControlsFrame,
-            text="Fine seek: , / .   |   Coarse seek: [ / ]",
-            font=("", max(10, LBL_FONT_SIZE - 1)),
-            text_color=UI_TEXT_MUTED,
-            justify="center",
-        )
-        self.lblPlaybackHint.grid(row=0, column=0, columnspan=4, pady=(8, 2), sticky="ew")
-
-        self.btnSeekBack1 = ctk.CTkButton(self.playbackControlsFrame, width=70, text="-1s", font=("", LBL_FONT_SIZE),
+        self.btnSeekBack1 = ctk.CTkButton(self.playbackControlsFrame, width=42, text="<<", font=("", LBL_FONT_SIZE),
                                           command=lambda: self.movePlayback(-1.0))
-        self.btnSeekBack01 = ctk.CTkButton(self.playbackControlsFrame, width=70, text="-0.1s", font=("", LBL_FONT_SIZE),
+        self.btnSeekBack01 = ctk.CTkButton(self.playbackControlsFrame, width=42, text="<", font=("", LBL_FONT_SIZE),
                                            command=lambda: self.movePlayback(-0.1))
-        self.btnSeekFwd01 = ctk.CTkButton(self.playbackControlsFrame, width=70, text="+0.1s", font=("", LBL_FONT_SIZE),
+        self.btnSeekFwd01 = ctk.CTkButton(self.playbackControlsFrame, width=42, text=">", font=("", LBL_FONT_SIZE),
                                           command=lambda: self.movePlayback(0.1))
-        self.btnSeekFwd1 = ctk.CTkButton(self.playbackControlsFrame, width=70, text="+1s", font=("", LBL_FONT_SIZE),
+        self.btnSeekFwd1 = ctk.CTkButton(self.playbackControlsFrame, width=42, text=">>", font=("", LBL_FONT_SIZE),
                                          command=lambda: self.movePlayback(1.0))
-        self.btnSeekBack1.grid(row=1, column=0, padx=(0, 4), pady=(4, 8), sticky="w")
-        self.btnSeekBack01.grid(row=1, column=1, padx=4, pady=(4, 8), sticky="w")
-        self.btnSeekFwd01.grid(row=1, column=2, padx=4, pady=(4, 8), sticky="w")
-        self.btnSeekFwd1.grid(row=1, column=3, padx=(4, 0), pady=(4, 8), sticky="w")
+        self.btnSeekBack1.grid(row=0, column=0, padx=(0, 4), pady=8, sticky="w")
+        self.btnSeekBack01.grid(row=0, column=1, padx=4, pady=8, sticky="w")
+        self.btnSeekFwd01.grid(row=0, column=2, padx=4, pady=8, sticky="w")
+        self.btnSeekFwd1.grid(row=0, column=3, padx=(4, 0), pady=8, sticky="w")
 
-        self.btnSeekBack1_tt = CTkToolTip(self.btnSeekBack1, message="Seek backward 1 second\nShortcut: [",
+        self.btnSeekBack1_tt = CTkToolTip(self.btnSeekBack1, message="Seek backward (coarse): 1.0s\nShortcut: [",
                                           delay=0.8, alpha=0.5, justify="left", follow=False)
-        self.btnSeekBack01_tt = CTkToolTip(self.btnSeekBack01, message="Seek backward 0.1 second\nShortcut: ,",
+        self.btnSeekBack01_tt = CTkToolTip(self.btnSeekBack01, message="Seek backward (fine): 0.1s\nShortcut: ,",
                                            delay=0.8, alpha=0.5, justify="left", follow=False)
-        self.btnSeekFwd01_tt = CTkToolTip(self.btnSeekFwd01, message="Seek forward 0.1 second\nShortcut: .",
+        self.btnSeekFwd01_tt = CTkToolTip(self.btnSeekFwd01, message="Seek forward (fine): 0.1s\nShortcut: .",
                                           delay=0.8, alpha=0.5, justify="left", follow=False)
-        self.btnSeekFwd1_tt = CTkToolTip(self.btnSeekFwd1, message="Seek forward 1 second\nShortcut: ]",
+        self.btnSeekFwd1_tt = CTkToolTip(self.btnSeekFwd1, message="Seek forward (coarse): 1.0s\nShortcut: ]",
                                          delay=0.8, alpha=0.5, justify="left", follow=False)
 
         # Inline loop controls
@@ -637,7 +626,6 @@ class App(_AppBase):
             self.lblPitchCentsEntry,
             self.lblVolume,
             self.lblPlaybackControls,
-            self.lblPlaybackHint,
             self.lblLoopControls,
         ]
         for label in dim_labels:
