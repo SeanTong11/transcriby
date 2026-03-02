@@ -39,6 +39,7 @@ from transcriby.appsettings import *
 from transcriby import recentdialog
 from transcriby import aboutdialog
 from transcriby import ytmanage
+from transcriby import sessionfile
 from transcriby.waveform import WaveformWidget
 
 # Lazy import tkinterdnd2 to avoid X11 threading issues on WSL
@@ -143,6 +144,18 @@ class App(_AppBase):
         self.lastPlayingState = False       # Last status of the player
         self._barLoopSelectStart = None     # Right-click A/B selection anchor on seek/progress
         self._loopContextSeconds = None     # Right-click context target in seconds
+        self.favorites = []                 # Favorite timestamps for current media
+        self.selectedFavoriteIndex = None
+        self.favoritePalette = [
+            "#FF6B6B",
+            "#FFD166",
+            "#06D6A0",
+            "#4CC9F0",
+            "#F4A261",
+            "#E76F51",
+            "#C77DFF",
+            "#9EF01A",
+        ]
 
         # Build the 3 main frames: Left (shrinkable), Right (buttons)
         # and low (status ba
@@ -432,6 +445,77 @@ class App(_AppBase):
         self.lblLoopHint.pack(anchor="n", pady=(6, 0))
         self.updateLoopHint()
 
+        # Favorites controls
+        self.lblFavorites = ctk.CTkLabel(self.PlaybackTab, text=_("Favorites"), font=("", LBL_FONT_SIZE))
+        self.lblFavorites.grid(row=8, column=0, pady=(UI_INNER_PAD + 2, 0), sticky="w")
+
+        self.favoritesFrame = ctk.CTkFrame(self.PlaybackTab, fg_color="transparent")
+        self.favoritesFrame.grid(row=9, column=0, columnspan=5, pady=(0, UI_INNER_PAD), sticky="ew")
+        self.favoritesFrame.grid_columnconfigure(4, weight=1)
+
+        self.btnFavoriteAdd = ctk.CTkButton(
+            self.favoritesFrame, width=42, text="+", font=("", LBL_FONT_SIZE), command=self.addFavoriteAtCurrent
+        )
+        self.btnFavoriteAdd.grid(row=0, column=0, padx=(0, 6), pady=(8, 8), sticky="w")
+        self.btnFavoriteAdd_tt = CTkToolTip(
+            self.btnFavoriteAdd,
+            message="Add favorite at current position\nShortcut: M",
+            delay=0.8,
+            alpha=0.5,
+            justify="left",
+            follow=False,
+        )
+
+        self.btnFavoriteDel = ctk.CTkButton(
+            self.favoritesFrame, width=42, text="-", font=("", LBL_FONT_SIZE), command=self.deleteFavorite
+        )
+        self.btnFavoriteDel.grid(row=0, column=1, padx=(0, 6), pady=(8, 8), sticky="w")
+        self.btnFavoriteDel_tt = CTkToolTip(
+            self.btnFavoriteDel,
+            message="Delete selected favorite, or the latest one\nShortcut: Shift+M",
+            delay=0.8,
+            alpha=0.5,
+            justify="left",
+            follow=False,
+        )
+
+        self.btnFavoritePrev = ctk.CTkButton(
+            self.favoritesFrame, width=42, text="<", font=("", LBL_FONT_SIZE), command=self.jumpToPreviousFavorite
+        )
+        self.btnFavoritePrev.grid(row=0, column=2, padx=(0, 6), pady=(8, 8), sticky="w")
+        self.btnFavoritePrev_tt = CTkToolTip(
+            self.btnFavoritePrev,
+            message="Jump to previous favorite\nShortcut: Ctrl+[",
+            delay=0.8,
+            alpha=0.5,
+            justify="left",
+            follow=False,
+        )
+
+        self.btnFavoriteNext = ctk.CTkButton(
+            self.favoritesFrame, width=42, text=">", font=("", LBL_FONT_SIZE), command=self.jumpToNextFavorite
+        )
+        self.btnFavoriteNext.grid(row=0, column=3, padx=(0, 6), pady=(8, 8), sticky="w")
+        self.btnFavoriteNext_tt = CTkToolTip(
+            self.btnFavoriteNext,
+            message="Jump to next favorite\nShortcut: Ctrl+]",
+            delay=0.8,
+            alpha=0.5,
+            justify="left",
+            follow=False,
+        )
+
+        self.favoriteList = tk.Listbox(
+            self.favoritesFrame,
+            height=4,
+            activestyle="none",
+            highlightthickness=0,
+            borderwidth=0,
+            selectmode=tk.SINGLE,
+        )
+        self.favoriteList.grid(row=1, column=0, columnspan=5, sticky="ew", padx=(0, 4), pady=(0, 4))
+        self.favoriteList.bind("<<ListboxSelect>>", self.onFavoriteListSelect)
+
         # Widgets on right panel
         self.lblActionsTitle = ctk.CTkLabel(
             self.RFrame,
@@ -493,6 +577,40 @@ class App(_AppBase):
         self.saveasButton_tt = CTkToolTip(self.saveasButton, message=_("Save the file with current speed/pitch settings as MP3 or WAV"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
 
+        self.openTbyButton = ctk.CTkButton(
+            self.RFrame,
+            text=_("Open .tby"),
+            font=("", SECONDARY_BUTTON_FONT_SIZE),
+            command=self.openTbySession,
+            height=SECONDARY_BUTTON_HEIGHT,
+        )
+        self.openTbyButton.grid(row=4, column=0, pady=(0, UI_INNER_PAD), sticky="ew", columnspan=2)
+        self.openTbyButton_tt = CTkToolTip(
+            self.openTbyButton,
+            message=_("Open a .tby session file and restore media + loop + favorites"),
+            delay=0.8,
+            alpha=0.5,
+            justify="left",
+            follow=False,
+        )
+
+        self.exportTbyButton = ctk.CTkButton(
+            self.RFrame,
+            text=_("Export .tby"),
+            font=("", SECONDARY_BUTTON_FONT_SIZE),
+            command=self.exportTbySession,
+            height=SECONDARY_BUTTON_HEIGHT,
+        )
+        self.exportTbyButton.grid(row=5, column=0, pady=(0, UI_INNER_PAD), sticky="ew", columnspan=2)
+        self.exportTbyButton_tt = CTkToolTip(
+            self.exportTbyButton,
+            message=_("Export current media session as .tby"),
+            delay=0.8,
+            alpha=0.5,
+            justify="left",
+            follow=False,
+        )
+
         self.aboutButton = ctk.CTkButton(
             self.RFrame,
             text=_("About"),
@@ -503,11 +621,11 @@ class App(_AppBase):
             border_width=1,
             border_color=UI_BORDER_COLOR,
         )
-        self.aboutButton.grid(row=4, column=0, pady=(UI_INNER_PAD, UI_INNER_PAD), sticky="sew", columnspan=2)
+        self.aboutButton.grid(row=6, column=0, pady=(UI_INNER_PAD, UI_INNER_PAD), sticky="sew", columnspan=2)
         self.aboutButton_tt = CTkToolTip(self.aboutButton, message=_("Show info about this software"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
         
-        self.RFrame.rowconfigure(4, weight=1)
+        self.RFrame.rowconfigure(6, weight=1)
         self.RFrame.columnconfigure(0, weight=1)
 
         # Widget on status bar
@@ -520,6 +638,7 @@ class App(_AppBase):
         self.loopContextMenu.add_command(label=_("Set loop end here"), command=self._set_loop_end_from_context)
 
         self._apply_ui_styles()
+        self.refreshFavoritesUI()
 
         self.dispSongTime(Force=True)
 
@@ -584,6 +703,12 @@ class App(_AppBase):
         self.loopAFrame.configure(fg_color=UI_BG_CARD_ALT, corner_radius=UI_INPUT_RADIUS)
         self.loopBFrame.configure(fg_color=UI_BG_CARD_ALT, corner_radius=UI_INPUT_RADIUS)
         self.loopCenterFrame.configure(fg_color=UI_BG_CARD_ALT, corner_radius=UI_INPUT_RADIUS)
+        self.favoritesFrame.configure(
+            fg_color=UI_BG_CARD,
+            corner_radius=UI_INPUT_RADIUS,
+            border_width=1,
+            border_color=UI_BORDER_COLOR,
+        )
 
         self.dispPosition.configure(text_color=UI_TEXT_PRIMARY, font=("", TITLE_FONT_SIZE, "bold"))
         self.fileLabel.configure(text_color=UI_TEXT_MUTED)
@@ -627,6 +752,7 @@ class App(_AppBase):
             self.lblVolume,
             self.lblPlaybackControls,
             self.lblLoopControls,
+            self.lblFavorites,
         ]
         for label in dim_labels:
             label.configure(text_color=UI_TEXT_MUTED)
@@ -663,6 +789,10 @@ class App(_AppBase):
             self.btnSeekBack01,
             self.btnSeekFwd01,
             self.btnSeekFwd1,
+            self.btnFavoriteAdd,
+            self.btnFavoriteDel,
+            self.btnFavoritePrev,
+            self.btnFavoriteNext,
         ]
         for button in neutral_buttons:
             button.configure(
@@ -698,6 +828,20 @@ class App(_AppBase):
             border_color=UI_BORDER_COLOR,
             text_color=UI_TEXT_PRIMARY,
         )
+        self.openTbyButton.configure(
+            fg_color=UI_BG_CARD_ALT,
+            hover_color=UI_BG_INPUT,
+            border_width=1,
+            border_color=UI_BORDER_COLOR,
+            text_color=UI_TEXT_PRIMARY,
+        )
+        self.exportTbyButton.configure(
+            fg_color=UI_BG_CARD_ALT,
+            hover_color=UI_BG_INPUT,
+            border_width=1,
+            border_color=UI_BORDER_COLOR,
+            text_color=UI_TEXT_PRIMARY,
+        )
         self.aboutButton.configure(
             fg_color="transparent",
             hover_color=UI_BG_INPUT,
@@ -705,6 +849,426 @@ class App(_AppBase):
             border_color=UI_BORDER_COLOR,
             text_color=UI_TEXT_MUTED,
         )
+        self.favoriteList.configure(
+            bg=UI_BG_INPUT,
+            fg=UI_TEXT_PRIMARY,
+            selectbackground=UI_BG_CARD_ALT,
+            selectforeground=UI_TEXT_PRIMARY,
+        )
+
+    def _formatSecondsText(self, seconds):
+        if(seconds is None):
+            return("---")
+        seconds = max(0.0, float(seconds))
+        return(f"{dt.timedelta(seconds=floor(seconds))}.{utils.get_fractional(seconds, 3):03d}")
+
+    def _favoriteColor(self, index):
+        if(len(self.favoritePalette) <= 0):
+            return(UI_TEXT_PRIMARY)
+        return(self.favoritePalette[index % len(self.favoritePalette)])
+
+    def _buildWaveformMarkers(self):
+        markers = []
+        for idx, favorite in enumerate(self.favorites):
+            if(not isinstance(favorite, dict)):
+                continue
+            seconds = favorite.get("time_seconds")
+            if(seconds is None):
+                continue
+            markers.append({
+                "time_seconds": seconds,
+                "label": str(idx + 1),
+                "color": self._favoriteColor(idx),
+            })
+        return(markers)
+
+    def refreshFavoritesUI(self):
+        self.favoriteList.delete(0, tk.END)
+        for idx, favorite in enumerate(self.favorites):
+            seconds = favorite.get("time_seconds")
+            text = f"{idx + 1}. {self._formatSecondsText(seconds)}"
+            self.favoriteList.insert(tk.END, text)
+            self.favoriteList.itemconfig(idx, foreground=self._favoriteColor(idx))
+
+        if(self.selectedFavoriteIndex is not None and
+           self.selectedFavoriteIndex >= 0 and
+           self.selectedFavoriteIndex < len(self.favorites)):
+            self.favoriteList.selection_clear(0, tk.END)
+            self.favoriteList.selection_set(self.selectedFavoriteIndex)
+        else:
+            self.selectedFavoriteIndex = None
+            self.favoriteList.selection_clear(0, tk.END)
+
+        self.waveform.set_markers(self._buildWaveformMarkers())
+
+    def _loadFavorites(self, rawFavorites):
+        loaded = []
+        if(isinstance(rawFavorites, list)):
+            for favorite in rawFavorites:
+                if(isinstance(favorite, dict)):
+                    seconds = favorite.get("time_seconds")
+                else:
+                    seconds = favorite
+                try:
+                    seconds = float(seconds)
+                except Exception:
+                    continue
+                if(seconds < 0):
+                    continue
+                loaded.append({"time_seconds": seconds})
+        self.favorites = loaded
+        self.selectedFavoriteIndex = None
+        self.refreshFavoritesUI()
+
+    def _currentPositionSeconds(self):
+        curPos = self.player.query_position()
+        if(curPos is None or curPos < 0):
+            return(None)
+        return(self.player.song_time(curPos))
+
+    def _seekToSeconds(self, seconds):
+        if(self.player.canPlay == False or seconds is None):
+            return(False)
+        self.player.seek_absolute(self.player.pipeline_time(seconds))
+        self.syncWaveformState()
+        return(True)
+
+    def onFavoriteListSelect(self, _event):
+        selection = self.favoriteList.curselection()
+        if(len(selection) <= 0):
+            self.selectedFavoriteIndex = None
+            return
+
+        index = int(selection[0])
+        if(index < 0 or index >= len(self.favorites)):
+            self.selectedFavoriteIndex = None
+            return
+
+        self.selectedFavoriteIndex = index
+        self._seekToSeconds(self.favorites[index].get("time_seconds"))
+        self.statusBarMessage(_("Jump to favorite #{}").format(index + 1), timeout=1000)
+
+    def addFavoriteAtCurrent(self):
+        if(self.player.canPlay == False):
+            self.statusBarMessage(_("Please open a file..."))
+            return
+
+        seconds = self._currentPositionSeconds()
+        if(seconds is None):
+            return
+        self.addFavorite(seconds)
+
+    def addFavorite(self, seconds):
+        if(seconds is None):
+            return(False)
+        self.favorites.append({"time_seconds": max(0.0, float(seconds))})
+        self.selectedFavoriteIndex = len(self.favorites) - 1
+        self.refreshFavoritesUI()
+        self.setRecentFilePBOptions()
+        self.statusBarMessage(_("Favorite #{} added").format(self.selectedFavoriteIndex + 1), timeout=1000)
+        return(True)
+
+    def deleteFavorite(self):
+        if(len(self.favorites) <= 0):
+            return(False)
+
+        if(self.selectedFavoriteIndex is not None and
+           self.selectedFavoriteIndex >= 0 and
+           self.selectedFavoriteIndex < len(self.favorites)):
+            index = self.selectedFavoriteIndex
+        else:
+            index = len(self.favorites) - 1
+
+        del(self.favorites[index])
+        if(len(self.favorites) <= 0):
+            self.selectedFavoriteIndex = None
+        else:
+            self.selectedFavoriteIndex = min(index, len(self.favorites) - 1)
+        self.refreshFavoritesUI()
+        self.setRecentFilePBOptions()
+        self.statusBarMessage(_("Favorite deleted"), timeout=1000)
+        return(True)
+
+    def _jumpFavoriteByDirection(self, direction=1):
+        if(self.player.canPlay == False or len(self.favorites) <= 0):
+            return(False)
+
+        curSeconds = self._currentPositionSeconds()
+        if(curSeconds is None):
+            curSeconds = 0.0
+
+        indexedFavorites = sorted(
+            [(f.get("time_seconds"), idx) for idx, f in enumerate(self.favorites)],
+            key=lambda item: item[0],
+        )
+        targetIndex = None
+        eps = 1e-4
+        if(direction >= 0):
+            for favSeconds, idx in indexedFavorites:
+                if(favSeconds > (curSeconds + eps)):
+                    targetIndex = idx
+                    break
+            if(targetIndex is None):
+                targetIndex = indexedFavorites[0][1]
+        else:
+            for favSeconds, idx in reversed(indexedFavorites):
+                if(favSeconds < (curSeconds - eps)):
+                    targetIndex = idx
+                    break
+            if(targetIndex is None):
+                targetIndex = indexedFavorites[-1][1]
+
+        self.selectedFavoriteIndex = targetIndex
+        self.refreshFavoritesUI()
+        self._seekToSeconds(self.favorites[targetIndex].get("time_seconds"))
+        self.statusBarMessage(_("Jump to favorite #{}").format(targetIndex + 1), timeout=1000)
+        return(True)
+
+    def jumpToNextFavorite(self):
+        return(self._jumpFavoriteByDirection(direction=1))
+
+    def jumpToPreviousFavorite(self):
+        return(self._jumpFavoriteByDirection(direction=-1))
+
+    def _setLoopEnabledUI(self, enabled, showStatus=True):
+        self.player.loopEnabled = bool(enabled)
+        if(self.player.loopEnabled):
+            self.playButton.configure(image = self.loopIcon, require_redraw=True)
+            if(showStatus):
+                self.statusBarMessage(_("Loop enabled"), timeout=1000)
+            self.swtLoopEnabled.select()
+        else:
+            self.playButton.configure(image = None, require_redraw=True)
+            if(showStatus):
+                self.statusBarMessage(_("Loop disabled"), timeout=1000)
+            self.swtLoopEnabled.deselect()
+        self.updateLoopHint()
+        self.setRecentFilePBOptions()
+
+    def _buildLoopData(self):
+        loopData = {"enabled": bool(self.player.loopEnabled)}
+        if(self.player.startPoint is not None and self.player.startPoint >= 0):
+            loopData["start_seconds"] = self.player.song_time(self.player.startPoint)
+        if(self.player.endPoint is not None and self.player.endPoint >= 0):
+            loopData["end_seconds"] = self.player.song_time(self.player.endPoint)
+        return(loopData)
+
+    def _buildPlaybackOptions(self):
+        durationSeconds = None
+        duration = self.player.query_duration()
+        if(duration is not None and duration > 0):
+            durationSeconds = self.player.song_time(duration)
+
+        return {
+            PBO_DEF_METADATA: self.songMetadata,
+            PBO_DEF_YOUTUBE: self.bYouTubeFile,
+            PBO_DEF_SPEED: self.varSpeed.get(),
+            PBO_DEF_SEMITONES: self.varPitchST.get(),
+            PBO_DEF_CENTS: self.varPitchCents.get(),
+            PBO_DEF_VOLUME: self.varVolume.get(),
+            PBO_DEF_DURATION_SECONDS: durationSeconds,
+            PBO_DEF_LOOP: self._buildLoopData(),
+            PBO_DEF_FAVORITES: [{"time_seconds": f.get("time_seconds")} for f in self.favorites],
+        }
+
+    def _applyLoopData(self, loopData):
+        self.player.startPoint = -2
+        self.player.endPoint = -1
+        self.setLoopStart(0)
+
+        startSeconds = None
+        endSeconds = None
+        enableLoop = False
+        if(isinstance(loopData, dict)):
+            try:
+                startSeconds = float(loopData.get("start_seconds"))
+            except Exception:
+                startSeconds = None
+            try:
+                endSeconds = float(loopData.get("end_seconds"))
+            except Exception:
+                endSeconds = None
+            enableLoop = bool(loopData.get("enabled", False))
+
+        duration = self.player.query_duration()
+        durationSeconds = self.player.song_time(duration) if(duration is not None and duration > 0) else None
+        if(durationSeconds is not None):
+            if(startSeconds is not None):
+                startSeconds = max(0.0, min(startSeconds, durationSeconds))
+            if(endSeconds is not None):
+                endSeconds = max(0.0, min(endSeconds, durationSeconds))
+
+        if(startSeconds is not None):
+            self.setLoopStart(self.player.pipeline_time(startSeconds))
+        if(endSeconds is not None):
+            self.setLoopEnd(self.player.pipeline_time(endSeconds))
+        if(startSeconds is None and endSeconds is None and duration is not None and duration > 0):
+            self.setLoopEnd(duration)
+
+        self._setLoopEnabledUI(enableLoop, showStatus=False)
+        self.syncWaveformState()
+
+    def _applyPlaybackOptions(self, playbackOptions):
+        if(not isinstance(playbackOptions, dict)):
+            return
+
+        self.settings.bUpdateForbidden = True
+        try:
+            self.resetValues()
+
+            savedSpeed = playbackOptions.get(PBO_DEF_SPEED, DEFAULT_SPEED)
+            try:
+                savedSpeed = float(savedSpeed)
+                # Backward compatibility: old config stored 50..150 percent integers.
+                if(savedSpeed > 10):
+                    savedSpeed = savedSpeed * 0.01
+            except Exception:
+                savedSpeed = DEFAULT_SPEED
+
+            if(savedSpeed < MIN_SPEED_PERCENT):
+                savedSpeed = MIN_SPEED_PERCENT
+            elif(savedSpeed > MAX_SPEED_PERCENT):
+                savedSpeed = MAX_SPEED_PERCENT
+            self.varSpeed.set(savedSpeed)
+
+            savedSemitones = playbackOptions.get(PBO_DEF_SEMITONES)
+            if(savedSemitones in range(MIN_PITCH_SEMITONES, MAX_PITCH_SEMITONES + 1)):
+                self.varPitchST.set(savedSemitones)
+
+            savedCents = playbackOptions.get(PBO_DEF_CENTS)
+            if(savedCents in range(MIN_PITCH_CENTS, MAX_PITCH_CENTS + 1)):
+                self.varPitchCents.set(savedCents)
+
+            savedVolume = playbackOptions.get(PBO_DEF_VOLUME)
+            if(savedVolume in range(MIN_VOLUME, MAX_VOLUME + 1)):
+                self.varVolume.set(savedVolume)
+        finally:
+            self.settings.bUpdateForbidden = False
+
+        self._loadFavorites(playbackOptions.get(PBO_DEF_FAVORITES, []))
+        self._applyLoopData(playbackOptions.get(PBO_DEF_LOOP, {}))
+
+    def _buildTbyData(self):
+        sessionMedia = {
+            "path": self.media,
+            "is_youtube": bool(self.bYouTubeFile),
+            "youtube_url": self.YouTubeUrl if self.bYouTubeFile else "",
+            "metadata": self.songMetadata,
+        }
+        return {
+            "media": sessionMedia,
+            "playback_options": self._buildPlaybackOptions(),
+        }
+
+    def selectTbyToOpen(self) -> str:
+        self.unbind_all('<KeyPress>')
+        self.unbind_all('<1>')
+        try:
+            filename = filedialogs.openFileDialog(
+                title = _('Open a .tby file'),
+                initialdir = self.settings.getVal(CFG_APP_SECTION, "LastOpenDir", os.path.expanduser("~")),
+                filter = ("tby",),
+            )
+        finally:
+            self.bind_all('<1>', self._click_manager_)
+            self.bind_all('<KeyPress>', self._hotkey_manager_)
+        return(filename)
+
+    def selectTbyToSave(self) -> str:
+        self.unbind_all('<KeyPress>')
+        self.unbind_all('<1>')
+        try:
+            filename = filedialogs.saveFileDialog(
+                title = _('Export .tby'),
+                initialfile = (self.mediaFileName or "session") + ".tby",
+                initialdir = self.settings.getVal(CFG_APP_SECTION, "LastSaveDir", os.path.expanduser("~")),
+                filter = ("tby",),
+                overwrite = False,
+            )
+        finally:
+            self.bind_all('<1>', self._click_manager_)
+            self.bind_all('<KeyPress>', self._hotkey_manager_)
+        return(filename)
+
+    def openTbySession(self):
+        tbyFile = self.selectTbyToOpen()
+        if(tbyFile is None or str(tbyFile) == ""):
+            return(False)
+
+        try:
+            sessionData = sessionfile.load_tby(tbyFile)
+        except Exception as ex:
+            CTkMessagebox(
+                master=self,
+                title=_("Error"),
+                message=_("Unable to open .tby file: {}").format(ex),
+                icon="cancel",
+                font=("", LBL_FONT_SIZE),
+            )
+            return(False)
+
+        mediaData = sessionData.get("media", {})
+        playbackOptions = sessionData.get("playback_options", {})
+        mediaPath = ""
+        if(isinstance(mediaData, dict)):
+            mediaPath = mediaData.get("path", "")
+        if(not mediaPath):
+            CTkMessagebox(
+                master=self,
+                title=_("Error"),
+                message=_("Invalid .tby file: missing media path"),
+                icon="cancel",
+                font=("", LBL_FONT_SIZE),
+            )
+            return(False)
+
+        if(not os.path.isabs(mediaPath)):
+            mediaPath = os.path.realpath(os.path.join(os.path.dirname(tbyFile), mediaPath))
+        if(not os.path.isfile(mediaPath)):
+            CTkMessagebox(
+                master=self,
+                title=_("Error: file not found"),
+                message=_("Unable to open file: {}").format(mediaPath),
+                icon="cancel",
+                font=("", LBL_FONT_SIZE),
+            )
+            return(False)
+
+        self.bYouTubeFile = False
+        self.YouTubeUrl = ""
+        self.setFile(mediaPath)
+        self._applyPlaybackOptions(playbackOptions)
+        self.settings.setVal(CFG_APP_SECTION, "LastOpenDir", os.path.dirname(mediaPath))
+        self.statusBarMessage(_("Loaded .tby session"), timeout=1200)
+        return(True)
+
+    def exportTbySession(self):
+        if(self.player.canPlay == False):
+            self.statusBarMessage(_("Please open a file..."))
+            return(False)
+
+        filename = self.selectTbyToSave()
+        if(filename is None or str(filename) == ""):
+            return(False)
+
+        if(filename.lower().endswith(".tby") == False):
+            filename += ".tby"
+
+        try:
+            sessionfile.save_tby(filename, self._buildTbyData())
+        except Exception as ex:
+            CTkMessagebox(
+                master=self,
+                title=_("Error"),
+                message=_("Unable to export .tby file: {}").format(ex),
+                icon="cancel",
+                font=("", LBL_FONT_SIZE),
+            )
+            return(False)
+
+        self.settings.setVal(CFG_APP_SECTION, "LastSaveDir", os.path.dirname(filename))
+        self.statusBarMessage(_("Exported .tby: {}").format(filename), timeout=1500)
+        return(True)
 
     # Open file selection and sets it for playback
     def openFile(self):
@@ -734,8 +1298,10 @@ class App(_AppBase):
     def resetValues(self):
         self.player.startPoint = -2
         self.player.endPoint = -1
+        self.favorites = []
+        self.selectedFavoriteIndex = None
         self.waveform.clear()
-        self.loopToggle(bForceDisable = True)
+        self._setLoopEnabledUI(False, showStatus=False)
         self.Pause()
         self.player.Rewind()
         self.varSpeed.set(DEFAULT_SPEED)
@@ -745,6 +1311,7 @@ class App(_AppBase):
         self.songTime.set(dt.timedelta(seconds = 0))
         self.scale.set(0)
         self.bStatusBarTags = False
+        self.refreshFavoritesUI()
 
     def filename2Uri(self, fname):
         # Compose a valid uri
@@ -811,36 +1378,7 @@ class App(_AppBase):
 
         if(filePlabackOptions is not None and isinstance(filePlabackOptions, dict)):
             self.settings.moveToLastPosition(recentFileKey)
-            
-            self.settings.bUpdateForbidden = True
-            try:
-                self.resetValues()
-                
-                savedSpeed = filePlabackOptions.get(PBO_DEF_SPEED, DEFAULT_SPEED)
-                try:
-                    savedSpeed = float(savedSpeed)
-                    # Backward compatibility: old config stored 50..150 percent integers.
-                    if(savedSpeed > 10):
-                        savedSpeed = savedSpeed * 0.01
-                except Exception:
-                    savedSpeed = DEFAULT_SPEED
-
-                if(savedSpeed < MIN_SPEED_PERCENT):
-                    savedSpeed = MIN_SPEED_PERCENT
-                elif(savedSpeed > MAX_SPEED_PERCENT):
-                    savedSpeed = MAX_SPEED_PERCENT
-                self.varSpeed.set(savedSpeed)
-
-                if(filePlabackOptions[PBO_DEF_SEMITONES] in range(MIN_PITCH_SEMITONES, MAX_PITCH_SEMITONES + 1)):
-                    self.varPitchST.set(filePlabackOptions[PBO_DEF_SEMITONES])
-
-                if(filePlabackOptions[PBO_DEF_CENTS] in range(MIN_PITCH_CENTS, MAX_PITCH_CENTS + 1)):
-                    self.varPitchCents.set(filePlabackOptions[PBO_DEF_CENTS])
-
-                if(filePlabackOptions[PBO_DEF_VOLUME] in range(MIN_VOLUME, MAX_VOLUME + 1)):
-                    self.varVolume.set(filePlabackOptions[PBO_DEF_VOLUME])
-            finally:
-                self.settings.bUpdateForbidden = False
+            self._applyPlaybackOptions(filePlabackOptions)
         else:
             self.resetValues()
             self.setRecentFilePBOptions()
@@ -855,14 +1393,7 @@ class App(_AppBase):
         else:
             fname = self.media
 
-        filePlabackOptions = {
-                PBO_DEF_METADATA: self.songMetadata,
-                PBO_DEF_YOUTUBE: self.bYouTubeFile,
-                PBO_DEF_SPEED: self.varSpeed.get(),
-                PBO_DEF_SEMITONES: self.varPitchST.get(),
-                PBO_DEF_CENTS: self.varPitchCents.get(),
-                PBO_DEF_VOLUME: self.varVolume.get()
-            }
+        filePlabackOptions = self._buildPlaybackOptions()
 
         self.settings.addRecentFile(fname, filePlabackOptions)
 
@@ -1040,20 +1571,9 @@ class App(_AppBase):
     # Toggle loop playing
     def loopToggle(self, bForceDisable = False):
         if(bForceDisable == False):
-            self.player.loopEnabled = not self.player.loopEnabled
+            self._setLoopEnabledUI(not self.player.loopEnabled, showStatus=True)
         else:
-            self.player.loopEnabled = False
-
-        if(self.player.loopEnabled):
-            self.playButton.configure(image = self.loopIcon, require_redraw=True)
-            self.statusBarMessage(_("Loop enabled"), timeout=1000)
-            self.swtLoopEnabled.select()
-        else:
-            self.playButton.configure(image = None, require_redraw=True)
-            if(bForceDisable == False):
-                self.statusBarMessage(_("Loop disabled"), timeout=1000)
-            self.swtLoopEnabled.deselect()
-        self.updateLoopHint()
+            self._setLoopEnabledUI(False, showStatus=False)
 
     # Sets loop start point
     def setLoopStart(self, loopPoint = 0):
@@ -1072,6 +1592,7 @@ class App(_AppBase):
         self.lblLoopStart.configure(text = f"{dt.timedelta(seconds=floor(secs))}.{utils.get_fractional(secs, 3):03d}")
         self.syncWaveformState()
         self.updateLoopHint()
+        self.setRecentFilePBOptions()
 
     # Sets loop end point
     def setLoopEnd(self, loopPoint = 0):
@@ -1096,6 +1617,7 @@ class App(_AppBase):
             self.lblLoopEnd.configure(text = f"{dt.timedelta(seconds=floor(secs))}.{utils.get_fractional(secs, 3):03d}")
             self.syncWaveformState()
             self.updateLoopHint()
+            self.setRecentFilePBOptions()
             return(loopPoint)
 
     # Move the loop start by shift milliseconds
@@ -1159,6 +1681,7 @@ class App(_AppBase):
         position = self.player.query_position()
         if(position is not None and position >= 0):
             self.waveform.set_playhead(self.player.song_time(position))
+        self.waveform.set_markers(self._buildWaveformMarkers())
 
     def hasValidLoopRange(self):
         return (
@@ -1648,6 +2171,8 @@ class App(_AppBase):
     def parseHotkey(self, event):
         key = event.keysym
         state = event.state
+        is_ctrl = ((state & 0x4) != 0) or state == 20
+        is_shift = (state & 0x1) != 0
         #print("Key: ", key, " - State: ", state)
 
         move = 0
@@ -1662,7 +2187,10 @@ class App(_AppBase):
         elif(key == 'comma'):
             move = -0.1
         elif(key == 'bracketleft'):
-            move = -1.0
+            if(is_ctrl):
+                self.jumpToPreviousFavorite()
+            else:
+                move = -1.0
         
         # Moves right by N seconds
         elif(key == 'KP_3' or key == 'Right'):
@@ -1674,21 +2202,31 @@ class App(_AppBase):
         elif(key == 'period'):
             move = 0.1
         elif(key == 'bracketright'):
-            move = 1.0
+            if(is_ctrl):
+                self.jumpToNextFavorite()
+            else:
+                move = 1.0
         # Rewind to top or to loop start
         elif(key == 'Home'):
             self.player.Rewind()
             self.dispSongTime(Force=True)
         
         # Speed song up
-        elif(key == 'KP_8' or ((key == 'c' or key == 'C') and state != 20)):
+        elif(key == 'KP_8' or ((key == 'c' or key == 'C') and is_ctrl == False)):
             accel = STEPS_SPEED
         # Reset Speed
         elif(key == 'KP_5'):
             self.resetDefaultVar(self.varSpeed)
         # Speed song down
-        elif(key == 'KP_2' or ((key == 'x' or key == 'X') and state != 20)):
+        elif(key == 'KP_2' or ((key == 'x' or key == 'X') and is_ctrl == False)):
             accel = -STEPS_SPEED
+
+        # Favorites
+        elif((key == 'm' or key == 'M') and is_ctrl == False):
+            if(is_shift or key == 'M'):
+                self.deleteFavorite()
+            else:
+                self.addFavoriteAtCurrent()
 
         # Play / Pause (space restarts active loop from A)
         elif(key == 'space'):
@@ -1711,35 +2249,35 @@ class App(_AppBase):
                 self.varPitchST.set(self.varPitchST.get() - STEPS_SEMITONES)
 
         # Ctrl + o: open recent files dialog box
-        elif(key == 'o' and state == 20):
+        elif(key == 'o' and is_ctrl):
             self.openFile()
 
         # Ctrl + r: open recent files dialog box
-        elif(key == 'r' and state == 20):
+        elif(key == 'r' and is_ctrl):
             self.openRecentFileDialog(None)
 
         # Ctrl + y: open YouTube dialog box
-        elif(key == 'y' and state == 20):
+        elif(key == 'y' and is_ctrl):
             self.openYouTubeDialog(None)
 
         # Toggle loop    
         elif(key == 'l' or key == 'L'):
             self.loopToggle()
         # Set loop start
-        elif((key == 'a' or key == 'A' or key == 'KP_Divide') and state != 20):
+        elif((key == 'a' or key == 'A' or key == 'KP_Divide') and is_ctrl == False):
             self.setLoopStart(self.player.query_position())
         # Set loop end
-        elif((key == 'b' or key == 'B'or key == 'KP_Multiply') and state != 20):
+        elif((key == 'b' or key == 'B'or key == 'KP_Multiply') and is_ctrl == False):
             self.setLoopEnd(self.player.query_position())
         # Ctrl + a: Reset loop start
-        elif(key == 'a' and state == 20):
+        elif(key == 'a' and is_ctrl):
             self.setLoopStart(0)
         # Ctrl + b: reset loop end
-        elif(key == 'b' and state == 20):
+        elif(key == 'b' and is_ctrl):
             self.setLoopEnd(self.player.query_duration())
 
         # Ctrl + q: quit
-        elif(key == 'q' and state == 20):
+        elif(key == 'q' and is_ctrl):
             self.destroy()
             exit()
 

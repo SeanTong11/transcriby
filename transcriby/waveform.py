@@ -16,6 +16,7 @@ LOOP_MARKER_COLOR = "#8AF5E7"
 PLAYHEAD_COLOR = "#F8A24D"
 SELECT_FILL_COLOR = "#234B67"
 SELECT_MARKER_COLOR = "#79C2FF"
+DEFAULT_MARKER_COLOR = "#FFD166"
 
 
 class WaveformWidget(ctk.CTkFrame):
@@ -43,6 +44,7 @@ class WaveformWidget(ctk.CTkFrame):
         self._select_start = None
         self._select_end = None
         self._select_anchor = None
+        self._markers = []
 
         self.canvas = tk.Canvas(self, height=self.height, highlightthickness=0, bd=0)
         self.canvas.pack(fill="both", expand=True)
@@ -59,6 +61,7 @@ class WaveformWidget(ctk.CTkFrame):
         self._select_rect_id = None
         self._select_a_id = None
         self._select_b_id = None
+        self._marker_ids = []
 
     def clear(self):
         self._load_token += 1
@@ -70,6 +73,7 @@ class WaveformWidget(ctk.CTkFrame):
         self._select_start = None
         self._select_end = None
         self._select_anchor = None
+        self._markers = []
         self.canvas.delete("all")
         self._loop_rect_id = None
         self._loop_a_id = None
@@ -78,6 +82,7 @@ class WaveformWidget(ctk.CTkFrame):
         self._select_rect_id = None
         self._select_a_id = None
         self._select_b_id = None
+        self._marker_ids = []
 
     def set_media(self, media_path):
         self.clear()
@@ -100,6 +105,13 @@ class WaveformWidget(ctk.CTkFrame):
     def set_loop(self, start_seconds, end_seconds):
         self._loop_start = start_seconds
         self._loop_end = end_seconds
+        self._draw_overlays()
+
+    def set_markers(self, markers):
+        if isinstance(markers, list):
+            self._markers = markers
+        else:
+            self._markers = []
         self._draw_overlays()
 
     def _on_resize(self, _event):
@@ -237,6 +249,7 @@ class WaveformWidget(ctk.CTkFrame):
         self._select_rect_id = None
         self._select_a_id = None
         self._select_b_id = None
+        self._marker_ids = []
 
         width = max(self.canvas.winfo_width(), 1)
         height = max(self.canvas.winfo_height(), 1)
@@ -312,6 +325,38 @@ class WaveformWidget(ctk.CTkFrame):
             self._select_rect_id = None
             self._select_a_id = None
             self._select_b_id = None
+
+        for marker_id in self._marker_ids:
+            self.canvas.delete(marker_id)
+        self._marker_ids = []
+        for marker in self._markers:
+            if not isinstance(marker, dict):
+                continue
+            marker_seconds = marker.get("time_seconds")
+            marker_x = self._seconds_to_x(marker_seconds)
+            if marker_x is None:
+                continue
+            marker_color = marker.get("color", DEFAULT_MARKER_COLOR)
+            marker_label = str(marker.get("label", "")).strip()
+            marker_line_id = self.canvas.create_line(
+                marker_x,
+                0,
+                marker_x,
+                height,
+                fill=marker_color,
+                width=2,
+            )
+            self._marker_ids.append(marker_line_id)
+            if marker_label:
+                marker_text_id = self.canvas.create_text(
+                    marker_x + 3,
+                    8,
+                    text=marker_label,
+                    fill=marker_color,
+                    anchor="nw",
+                    font=("TkDefaultFont", 9, "bold"),
+                )
+                self._marker_ids.append(marker_text_id)
 
         playhead_x = self._seconds_to_x(self._playhead)
         if playhead_x is not None:
