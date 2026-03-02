@@ -322,9 +322,9 @@ class slowPlayer():
         self._apply_pitch_filter()
 
     def set_volume(self, volume):
-        """Set volume (0.0 to 1.0)"""
-        self._volume = max(0.0, min(1.0, volume))
-        # mpv volume is 0..100
+        """Set volume (0.0 to 2.0)"""
+        self._volume = max(0.0, min(2.0, volume))
+        # mpv volume supports values > 100
         self._set_prop("volume", self._volume * 100.0)
 
     def pipeline_time(self, t):

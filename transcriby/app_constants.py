@@ -5,7 +5,7 @@ APP_NAME = "transcriby"
 APP_DESCRIPTION = "Transcriby is a simple audio player with speed/pitch \
 change capabilities, using mpv (libmpv)."
 
-APP_VERSION = "0.3.2"
+APP_VERSION = "0.3.3"
 
 APP_URL = "https://github.com/SeanTong11/transcriby"
 
@@ -67,7 +67,7 @@ MAX_PITCH_CENTS = 50        # Maximum detune up (cents)
 
 DEFAULT_VOLUME = 100
 MIN_VOLUME = 0
-MAX_VOLUME = 100
+MAX_VOLUME = 200
 
 STEPS_SEC_MOVE_1 = 5        # Seconds to move using the num keypad +/- min
 STEPS_SEC_MOVE_2 = 10       # Seconds to move using the num keypad +/- med

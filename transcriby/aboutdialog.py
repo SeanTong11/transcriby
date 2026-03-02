@@ -1,5 +1,5 @@
 import customtkinter as ctk
-from PIL import Image, ImageTk
+from PIL import Image
 import os
 import webbrowser
 
@@ -9,62 +9,12 @@ from transcriby.platform_utils import get_resources_dir
 import gettext
 _ = gettext.gettext
 
-class imgDialog(ctk.CTkToplevel):
-    def __init__(self, master, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        WIDTH = 400
-        HEIGHT = 500
-
-        self.master = master
-
-        resources_dir = get_resources_dir()
-
-        self.wm_title(_("Numeric Keypad Map"))
-        
-        self.after(10)
-
-        self.attributes("-topmost", True)
-        #self.overrideredirect(True)
-
-        self.geometry("%dx%d" % (WIDTH, HEIGHT))
-        self.resizable(width=False, height=False)
-
-        self.lift()
-
-        self.pad = ctk.CTkFrame(self, width=WIDTH, height=HEIGHT)
-        self.pad.pack(expand = True, fill = "both")
-
-        self.img_key = ctk.CTkImage(dark_image=Image.open(os.path.join(resources_dir, "Keypad_about.png")), 
-                                light_image=Image.open(os.path.join(resources_dir, "Keypad_about.png")),
-                                size=(WIDTH, HEIGHT))
-
-        self.keypad = ctk.CTkLabel(self.pad, text="", image=self.img_key)
-        self.keypad.pack(expand = True, fill = "both")
-
-    def show(self):
-        self.deiconify()
-        self.transient(self.master)
-        self.grab_set()
-        self.wm_protocol("WM_DELETE_WINDOW", self.destroy)
-        self.bind_all(sequence="<KeyPress>", func=self._keybind_)
-        self.bind_all(sequence="<1>", func=self._keybind_)
-        self.after(10)
-        self.wait_window(self)
-        return(True)
-    
-    def _keybind_(self, event):
-        key = event.keysym
-        state = event.state
-        #print("Key: ", key, " - State: ", state)
-        self.destroy()
-
 class aboutDialog(ctk.CTkToplevel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        WIDTH = 500
-        HEIGHT = 300
+        WIDTH = 840
+        HEIGHT = 620
 
         # Mark app directories
         resources_dir = get_resources_dir()
@@ -132,47 +82,44 @@ class aboutDialog(ctk.CTkToplevel):
             ("Home", _("Rewind")),
             ("N. Keypad 8", _("Playback speed +5%")),
             ("N. Keypad 2", _("Playback speed -5%")),
+            ("C", _("Playback speed +5%")),
+            ("X", _("Playback speed -5%")),
             ("N. Keypad 5", _("Reset playback speed to 100%")),
             ("N. Keypad +", _("Transpose +1 semitone")),
             ("N. Keypad -", _("Transpose -1 semitone")),
+            ("Enter", _("Play/Pause")),
+            (",", _("Rewind 0.1 second")),
+            (".", _("Forward 0.1 second")),
+            ("[", _("Rewind 1 second")),
+            ("]", _("Forward 1 second")),
             (SC_SECTION_TITLE, _("LOOP SHORTCUTS:")),
             ("L", _("Toggle loop playing")),
-            ("Space", _("Restart loop from A")),
+            ("Space", _("Restart loop from A (loop enabled)")),
             ("A", _("Set loop start")),
             ("B", _("Set loop end")),
             ("CTRL+A", _("Reset loop start")),
             ("CTRL+B", _("Reset loop end")),
         ]
 
-        self.scrollFrame = ctk.CTkScrollableFrame(tab2)
-        self.scrollFrame.grid(row = 0, column = 0, padx = (0), pady = (0), sticky="nsew")
+        self.shortcutsFrame = ctk.CTkFrame(tab2, fg_color="transparent")
+        self.shortcutsFrame.grid(row = 0, column = 0, padx = 14, pady = 12, sticky="nsew")
         
         scLabels = []
         i = 0
         for sc in sc_list:
             if (sc[0] == SC_SECTION_TITLE):
-                scLabels.append(ctk.CTkLabel(self.scrollFrame, text=sc[1], font=("", LBL_FONT_SIZE, "bold")))
+                scLabels.append(ctk.CTkLabel(self.shortcutsFrame, text=sc[1], font=("", LBL_FONT_SIZE, "bold")))
                 scLabels[i].grid(row = i, column = 0, sticky = "ew", columnspan = 2, pady=(10, 0))
                 i = i + 1
             else:
-                scLabels.append(ctk.CTkLabel(self.scrollFrame, text=f"{sc[0]}: ", font=("", LBL_FONT_SIZE, "bold")))
-                scLabels.append(ctk.CTkLabel(self.scrollFrame, text=sc[1], font=("", LBL_FONT_SIZE)))
+                scLabels.append(ctk.CTkLabel(self.shortcutsFrame, text=f"{sc[0]}: ", font=("", LBL_FONT_SIZE, "bold")))
+                scLabels.append(ctk.CTkLabel(self.shortcutsFrame, text=sc[1], font=("", LBL_FONT_SIZE)))
     
                 scLabels[i].grid(row = i, column = 0, sticky = "w", pady=(0, 0))
                 scLabels[i + 1].grid(row = i, column = 1, sticky = "w", pady=(0, 0))
                 i = i + 2
 
-        kpLabel = ctk.CTkButton(self.scrollFrame, text=_("SHOW NUM. KEYPAD MAP"), command=self.imgShow)
-        kpLabel.grid(row = i + 1, column = 0, columnspan = 2, sticky = "w", pady=(10, 0))
-
-        self.scrollFrame.grid_columnconfigure(0, weight=1)
-
-        # Binds all the widget to mouse wheel
-        self.scrollFrame.bind("<Button-4>", self.onScroll)
-        self.scrollFrame.bind("<Button-5>", self.onScroll)
-        for wid in self.scrollFrame.children.values():
-            wid.bind("<Button-4>", self.onScroll)
-            wid.bind("<Button-5>", self.onScroll)
+        self.shortcutsFrame.grid_columnconfigure(1, weight=1)
 
         
         tab1.grid_columnconfigure(0, weight=1)
@@ -181,10 +128,6 @@ class aboutDialog(ctk.CTkToplevel):
     
     def openUrl(self, url):
         webbrowser.open_new(url)
-
-    def imgShow(self):
-        imgPopup = imgDialog(self)
-        imgPopup.show()
 
 
     def show(self):
@@ -199,9 +142,6 @@ class aboutDialog(ctk.CTkToplevel):
         self.wait_window(self)
         return(True)
     
-    def onScroll(self, event = None):
-        self.scrollFrame._parent_canvas.yview_scroll(1 if event.num == 5 else -1, "units")
-
     def _keybind_(self, event):
         key = event.keysym
         state = event.state
