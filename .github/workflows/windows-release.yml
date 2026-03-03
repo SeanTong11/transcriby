@@ -40,6 +40,7 @@ jobs:
       - name: Download pinned libmpv runtime (GitHub)
         shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
           $tag = "${{ env.MPV_WINBUILD_TAG }}"
           $assetPattern = "^mpv-dev-x86_64-$tag-.*\.7z$"
           $coreRegex = "^(libmpv|mpv)(-\d+)?\.dll$"
@@ -59,13 +60,11 @@ jobs:
           Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $archive
           Write-Host "[mpv] archive path: $archive"
 
-          uv run python -m pip install --disable-pip-version-check py7zr
-
           $extractDir = Join-Path $env:RUNNER_TEMP "mpv-dev-$tag"
           if (Test-Path $extractDir) { Remove-Item -Recurse -Force $extractDir }
           New-Item -ItemType Directory -Path $extractDir | Out-Null
 
-          uv run python -c "import pathlib,py7zr,sys; archive=pathlib.Path(sys.argv[1]); outdir=pathlib.Path(sys.argv[2]); py7zr.SevenZipFile(archive, mode='r').extractall(path=outdir); print(outdir)" \"$archive\" \"$extractDir\"
+          uv run --with py7zr python -c "import pathlib,py7zr,sys; archive=pathlib.Path(sys.argv[1]); outdir=pathlib.Path(sys.argv[2]); z=py7zr.SevenZipFile(archive, mode='r'); z.extractall(path=outdir); z.close(); print(outdir)" \"$archive\" \"$extractDir\"
           Write-Host "[mpv] extracted to: $extractDir"
 
           Write-Host "[mpv] DLLs under extract dir (first 120):"
