@@ -102,6 +102,14 @@ def _find_mpv_runtime_dir():
     return unique[0]
 
 
+def _print_mpv_search_diagnostics():
+    """Print concise diagnostics for mpv DLL discovery."""
+    print("  mpv candidate directories:")
+    for d in _collect_mpv_dll_dirs():
+        status = "exists" if d.is_dir() else "missing"
+        print(f"    - {d} [{status}]")
+
+
 def check_requirements():
     """Check if all required tools are installed"""
     print("Checking requirements...")
@@ -196,8 +204,10 @@ def build():
     added_dll_paths = set()
     core_found = False
 
+    _print_mpv_search_diagnostics()
     runtime_dir = _find_mpv_runtime_dir()
     if runtime_dir and runtime_dir.is_dir():
+        print(f"  detected mpv runtime dir: {runtime_dir}")
         try:
             names = os.listdir(runtime_dir)
         except OSError:
@@ -220,6 +230,9 @@ def build():
         print("Set TRANSCRIBY_MPV_DIR to the directory containing mpv DLLs, or install mpv on PATH.")
         return False
     print(f"  Using mpv runtime dir: {runtime_dir}")
+    print("  DLLs in runtime dir:")
+    for dll_name in sorted([n for n in names if n.lower().endswith(".dll")]):
+        print(f"    - {dll_name}")
     print(f"  Bundling {len(added_dll_paths)} DLL(s) for mpv runtime")
 
     # Add icon (if exists)
