@@ -5,11 +5,114 @@ Exports use soundfile + scipy (no rubberband).
 """
 
 import math
+import ctypes.util
 import os
 import shutil
 import sys
 
 from platform_utils import is_windows
+
+def _prepend_env_path_var(key: str, value: str):
+    """Prepend a path entry to an env var if not already present."""
+    if not value:
+        return
+    current = os.environ.get(key, "")
+    parts = [p for p in current.split(os.pathsep) if p]
+    if value in parts:
+        return
+    if current:
+        os.environ[key] = value + os.pathsep + current
+    else:
+        os.environ[key] = value
+
+
+def _find_posix_libmpv():
+    """Best-effort lookup for libmpv on macOS/Linux."""
+    env_lib = (
+        os.environ.get("MPV_LIBRARY")
+        or os.environ.get("TRANSCRIBY_MPV_LIBRARY")
+        or os.environ.get("SLOWPLAY_MPV_LIBRARY")
+    )
+    if env_lib and os.path.isfile(env_lib):
+        return env_lib
+
+    if sys.platform == "darwin":
+        lib_names = ["libmpv.dylib"]
+        candidate_dirs = [
+            "/opt/homebrew/opt/mpv/lib",
+            "/opt/homebrew/lib",
+            "/usr/local/opt/mpv/lib",
+            "/usr/local/lib",
+            "/opt/local/lib",
+            "/usr/lib",
+        ]
+    else:
+        lib_names = ["libmpv.so.2", "libmpv.so.1", "libmpv.so"]
+        candidate_dirs = [
+            "/usr/lib/x86_64-linux-gnu",
+            "/usr/lib/aarch64-linux-gnu",
+            "/usr/local/lib",
+            "/usr/lib64",
+            "/usr/lib",
+            "/lib/x86_64-linux-gnu",
+            "/lib/aarch64-linux-gnu",
+        ]
+
+    # Respect user/library search paths when present.
+    for env_key in ("DYLD_FALLBACK_LIBRARY_PATH", "LD_LIBRARY_PATH"):
+        env_value = os.environ.get(env_key, "")
+        if env_value:
+            candidate_dirs.extend([p for p in env_value.split(os.pathsep) if p])
+
+    mpv_exe = shutil.which("mpv")
+    if mpv_exe:
+        mpv_real = os.path.realpath(mpv_exe)
+        mpv_bin_dir = os.path.dirname(mpv_real)
+        mpv_prefix = os.path.dirname(mpv_bin_dir)
+        candidate_dirs.extend(
+            [
+                os.path.join(mpv_prefix, "lib"),
+                os.path.join(mpv_bin_dir, "..", "lib"),
+            ]
+        )
+
+    seen = set()
+    for d in candidate_dirs:
+        if not d or d in seen:
+            continue
+        seen.add(d)
+        for name in lib_names:
+            path = os.path.abspath(os.path.join(d, name))
+            if os.path.isfile(path):
+                return path
+    return None
+
+
+def _prepare_posix_mpv_lookup():
+    """Make python-mpv able to load libmpv when find_library is unreliable."""
+    mpv_lib = _find_posix_libmpv()
+    if not mpv_lib:
+        return
+
+    lib_dir = os.path.dirname(mpv_lib)
+    os.environ.setdefault("MPV_LIBRARY", mpv_lib)
+    os.environ.setdefault("TRANSCRIBY_MPV_LIBRARY", mpv_lib)
+    os.environ.setdefault("SLOWPLAY_MPV_LIBRARY", mpv_lib)
+
+    if sys.platform == "darwin":
+        _prepend_env_path_var("DYLD_FALLBACK_LIBRARY_PATH", lib_dir)
+    else:
+        _prepend_env_path_var("LD_LIBRARY_PATH", lib_dir)
+
+    original_find_library = ctypes.util.find_library
+
+    def _patched_find_library(name):
+        if name == "mpv":
+            return mpv_lib
+        return original_find_library(name)
+
+    ctypes.util.find_library = _patched_find_library
+
 
 if is_windows():
     # Ensure mpv DLLs can be found by python-mpv on Windows.
@@ -56,6 +159,8 @@ if is_windows():
                 os.add_dll_directory(mpv_dir)
             except OSError:
                 pass
+else:
+    _prepare_posix_mpv_lookup()
 
 import mpv
 import numpy as np

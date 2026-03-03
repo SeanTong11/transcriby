@@ -15,8 +15,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-13
-            arch: x64
           - os: macos-14
             arch: arm64
 
@@ -48,7 +46,10 @@ jobs:
             echo "::error::libmpv.dylib not found after brew install mpv"
             exit 1
           fi
+          libmpv_dir="$(dirname "${libmpv_path}")"
           echo "MPV_LIBRARY=${libmpv_path}" >> "${GITHUB_ENV}"
+          echo "TRANSCRIBY_MPV_LIBRARY=${libmpv_path}" >> "${GITHUB_ENV}"
+          echo "DYLD_FALLBACK_LIBRARY_PATH=${libmpv_dir}:${DYLD_FALLBACK_LIBRARY_PATH:-}" >> "${GITHUB_ENV}"
           echo "Using MPV_LIBRARY=${libmpv_path}"
 
       - name: Sync dependencies
@@ -56,10 +57,10 @@ jobs:
         run: |
           uv sync --dev
 
-      - name: Smoke check mpv import
+      - name: Smoke check player import
         shell: bash
         run: |
-          uv run python -c "import os, mpv; print('python-mpv OK'); print('MPV_LIBRARY=', os.getenv('MPV_LIBRARY'))"
+          uv run python -c "from transcriby.player import slowPlayer; print('slowPlayer import OK')"
 
       - name: Build app bundle (PyInstaller)
         shell: bash
