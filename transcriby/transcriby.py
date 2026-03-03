@@ -150,7 +150,7 @@ class App(_AppBase):
         self._pendingLoopRestore = None     # Deferred loop restore while media duration is unavailable
         self._pendingSeekRestore = None     # Deferred seek restore while media duration is unavailable
         self.favoriteRowsPerColumn = 4
-        self.favoriteGridHeight = 90
+        self.favoriteGridHeight = 96
         self.favoritePalette = [
             "#FF6B6B",
             "#FFD166",
@@ -591,8 +591,8 @@ class App(_AppBase):
             size=(26, 16),
         )
 
-        self.playButton = ctk.CTkButton(self.playbackButtonsRow, text=_("Play"), font=("", 18),
-                                        image=None, compound="right", command=self.togglePlay)
+        self.playButton = ctk.CTkButton(self.playbackButtonsRow, text="", font=("", 18),
+                                        image=None, compound="left", command=self.togglePlay)
         self.playButton.configure(
             height=MAIN_BUTTON_HEIGHT,
             font=("", MAIN_BUTTON_FONT_SIZE),
@@ -602,6 +602,7 @@ class App(_AppBase):
         self.playButton.grid(row=0, column=2, padx=(6, 6), sticky="w")
         self.playButton_tt = CTkToolTip(self.playButton, message=_("Play/Pause"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
+        self._updatePlayButtonText()
 
         self.openButton = ctk.CTkButton(self.RFrame, text=_("Open"), font=("", SECONDARY_BUTTON_FONT_SIZE), 
                                         command=self.openFile, width=110)
@@ -958,6 +959,24 @@ class App(_AppBase):
             int(favorite.get("created_seq", 0)),
         )
 
+    def _ensureFavoriteNeighborContrast(self):
+        if(len(self.favorites) <= 1 or len(self.favoritePalette) <= 1):
+            return
+        total = len(self.favoritePalette)
+        for idx, favorite in enumerate(self.favorites):
+            prevColor = self.favorites[idx - 1].get("color") if idx > 0 else None
+            nextColor = self.favorites[idx + 1].get("color") if (idx + 1) < len(self.favorites) else None
+            currentColor = favorite.get("color", self._favoriteColor(idx))
+            if(currentColor != prevColor and currentColor != nextColor):
+                continue
+
+            seed = int(favorite.get("created_seq", idx))
+            for shift in range(total):
+                candidate = self._favoriteColor(seed + shift)
+                if(candidate != prevColor and candidate != nextColor):
+                    favorite["color"] = candidate
+                    break
+
     def _assignFavoriteDefaults(self, favorite, fallbackIndex=0):
         if(not isinstance(favorite, dict)):
             return(None)
@@ -1079,6 +1098,7 @@ class App(_AppBase):
         for child in self.favoriteCardsInner.winfo_children():
             child.destroy()
         self.favoriteItemButtons = []
+        self._ensureFavoriteNeighborContrast()
 
         if(not (self.selectedFavoriteIndex is not None and
                 self.selectedFavoriteIndex >= 0 and
@@ -1141,6 +1161,7 @@ class App(_AppBase):
                     loaded.append(normalized)
         loaded.sort(key=self._favoriteSortKey)
         self.favorites = loaded
+        self._ensureFavoriteNeighborContrast()
         self.selectedFavoriteIndex = None
         self.refreshFavoritesUI()
 
@@ -1179,6 +1200,7 @@ class App(_AppBase):
         }
         self.favorites.append(newFavorite)
         self.favorites.sort(key=self._favoriteSortKey)
+        self._ensureFavoriteNeighborContrast()
         self.selectedFavoriteIndex = self.favorites.index(newFavorite)
         self.refreshFavoritesUI()
         self.setRecentFilePBOptions()
@@ -1200,6 +1222,7 @@ class App(_AppBase):
             )
 
         del(self.favorites[index])
+        self._ensureFavoriteNeighborContrast()
         if(len(self.favorites) <= 0):
             self.selectedFavoriteIndex = None
         else:
@@ -2161,14 +2184,22 @@ class App(_AppBase):
         else:
             self.Pause()
 
+    def _updatePlayButtonText(self):
+        if(self.player.isPlaying):
+            self.playButton.configure(text=f"{_('Pause')} ||")
+        else:
+            self.playButton.configure(text=f"{_('Play')} >")
+
     # Start Playing   
     def Play(self):
         self.player.Play()
+        self._updatePlayButtonText()
         self.playButton.configure(fg_color=UI_SUCCESS, hover_color=UI_SUCCESS_HOVER, require_redraw=True)
     
     # Pause Playing
     def Pause(self):
         self.player.Pause()
+        self._updatePlayButtonText()
         self.playButton.configure(fg_color=UI_ACCENT, hover_color=UI_ACCENT_HOVER, require_redraw=True)
 
     # Stop playing and rewind
