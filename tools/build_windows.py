@@ -54,6 +54,44 @@ def _collect_mpv_dll_dirs():
     return result
 
 
+def _find_mpv_runtime_dir():
+    """Find the directory that contains libmpv core DLLs."""
+    core_names = {"libmpv-2.dll", "mpv-2.dll", "mpv-1.dll"}
+    matches = []
+
+    for base_dir in _collect_mpv_dll_dirs():
+        if not base_dir.is_dir():
+            continue
+        try:
+            for path in base_dir.rglob("*.dll"):
+                if path.name.lower() in core_names:
+                    matches.append(path.parent)
+        except OSError:
+            continue
+
+    if not matches:
+        return None
+
+    # Deduplicate while preserving order.
+    unique = []
+    seen = set()
+    for d in matches:
+        key = str(d.resolve()).lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(d)
+
+    # Prefer 64-bit/runtime-looking directories when multiple are found.
+    preferred_tokens = ("x86_64", "x64", "64")
+    for d in unique:
+        lower = str(d).lower()
+        if any(token in lower for token in preferred_tokens):
+            return d
+
+    return unique[0]
+
+
 def check_requirements():
     """Check if all required tools are installed"""
     print("Checking requirements...")
@@ -144,23 +182,22 @@ def build():
         "--hidden-import", "platform_utils",
     ])
     
-    # Bundle libmpv DLLs from environment/path/fallback locations.
+    # Bundle libmpv DLLs from discovered runtime directory.
     core_names = {"libmpv-2.dll", "mpv-2.dll", "mpv-1.dll"}
     added_dll_paths = set()
     core_found = False
 
-    for mpv_dir in _collect_mpv_dll_dirs():
-        if not mpv_dir.is_dir():
-            continue
+    runtime_dir = _find_mpv_runtime_dir()
+    if runtime_dir and runtime_dir.is_dir():
         try:
-            names = os.listdir(mpv_dir)
+            names = os.listdir(runtime_dir)
         except OSError:
-            continue
+            names = []
         for name in names:
             lower = name.lower()
             if not lower.endswith(".dll"):
                 continue
-            src = mpv_dir / name
+            src = runtime_dir / name
             key = str(src.resolve()).lower()
             if key in added_dll_paths:
                 continue
@@ -173,6 +210,7 @@ def build():
         print("\nError: Could not find libmpv core DLL (libmpv-2.dll/mpv-2.dll/mpv-1.dll).")
         print("Set TRANSCRIBY_MPV_DIR to the directory containing mpv DLLs, or install mpv on PATH.")
         return False
+    print(f"  Using mpv runtime dir: {runtime_dir}")
     print(f"  Bundling {len(added_dll_paths)} DLL(s) for mpv runtime")
 
     # Add icon (if exists)
