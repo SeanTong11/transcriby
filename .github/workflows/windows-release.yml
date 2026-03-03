@@ -33,70 +33,116 @@ jobs:
         run: |
           uv sync --dev
 
-      - name: Install libmpv runtime (Scoop + shinchiro mpv-dev)
+      - name: Install libmpv runtime (choco -> scoop -> github)
         shell: pwsh
         run: |
-          Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
-          if (-not (Get-Command scoop -ErrorAction SilentlyContinue)) {
-            irm get.scoop.sh | iex
-          }
-          $env:PATH = "$env:USERPROFILE\scoop\shims;$env:PATH"
+          $coreRegex = "^(libmpv|mpv)(-\d+)?\.dll$"
 
-          scoop install 7zip
+          function Find-MpvCoreDir([string[]]$roots, [string]$label) {
+            Write-Host "=== Scan from $label ==="
+            foreach ($root in $roots) {
+              $exists = Test-Path $root
+              Write-Host "[$label] root: $root (exists=$exists)"
+              if (-not $exists) { continue }
 
-          $headers = @{ "User-Agent" = "transcriby-ci" }
-          $release = Invoke-RestMethod -Uri "https://api.github.com/repos/shinchiro/mpv-winbuild-cmake/releases/latest" -Headers $headers
-          Write-Host "Using shinchiro release tag: $($release.tag_name)"
-          $asset = $release.assets | Where-Object { $_.name -match "^mpv-dev-x86_64-.*\.7z$" } | Select-Object -First 1
-          if (-not $asset) {
-            throw "Could not find mpv-dev x86_64 asset from latest shinchiro release"
-          }
-          Write-Host "Selected asset: $($asset.name)"
+              $dlls = Get-ChildItem -Path $root -Filter *.dll -File -Recurse -ErrorAction SilentlyContinue
+              $dlls | Select-Object -First 80 | ForEach-Object { Write-Host "[$label][dll] $($_.FullName)" }
 
-          $archive = Join-Path $env:RUNNER_TEMP $asset.name
-          Write-Host "Downloading $($asset.name) ..."
-          Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $archive
-          Write-Host "Archive downloaded to: $archive"
-
-          $extractDir = Join-Path $env:RUNNER_TEMP "mpv-dev"
-          if (Test-Path $extractDir) { Remove-Item -Recurse -Force $extractDir }
-          New-Item -ItemType Directory -Path $extractDir | Out-Null
-
-          $sevenZip = Join-Path $env:USERPROFILE "scoop\shims\7z.exe"
-          if (-not (Test-Path $sevenZip)) {
-            throw "7z executable not found: $sevenZip"
-          }
-          & $sevenZip x $archive "-o$extractDir" -y | Out-Null
-          Write-Host "Extracted mpv-dev to: $extractDir"
-          Write-Host "Top-level extracted entries:"
-          Get-ChildItem -Path $extractDir -Force | Select-Object -First 40 | ForEach-Object { Write-Host " - $($_.FullName)" }
-          Write-Host "DLL files found under extract dir (first 120):"
-          Get-ChildItem -Path $extractDir -Filter *.dll -File -Recurse -ErrorAction SilentlyContinue |
-            Select-Object -First 120 |
-            ForEach-Object { Write-Host " - $($_.FullName)" }
-
-          $coreDll = Get-ChildItem -Path $extractDir -File -Recurse -ErrorAction SilentlyContinue |
-            Where-Object { $_.Name -match "^(libmpv|mpv)(-\d+)?\.dll$" } |
-            Select-Object -First 1
-
-          if (-not $coreDll) {
-            Write-Host "Could not locate libmpv core DLL. Dumping DLL files under $extractDir ..."
-            Get-ChildItem -Path $extractDir -Filter *.dll -File -Recurse -ErrorAction SilentlyContinue |
-              Select-Object -First 200 |
-              ForEach-Object { Write-Host $_.FullName }
-            throw "libmpv core DLL not found in downloaded mpv-dev package"
+              $core = $dlls | Where-Object { $_.Name -match $coreRegex } | Select-Object -First 1
+              if ($core) {
+                Write-Host "[$label] selected core: $($core.FullName)"
+                return $core.DirectoryName
+              }
+            }
+            Write-Host "[$label] no libmpv core DLL found"
+            return $null
           }
 
-          $mpvDir = $coreDll.DirectoryName
-          Write-Host "Selected core DLL: $($coreDll.FullName)"
-          Write-Host "DLLs in selected runtime dir:"
+          function Ensure-Scoop {
+            Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+            if (-not (Get-Command scoop -ErrorAction SilentlyContinue)) {
+              irm get.scoop.sh | iex
+            }
+            $env:PATH = "$env:USERPROFILE\scoop\shims;$env:PATH"
+          }
+
+          $mpvDir = $null
+
+          # 1) Chocolatey priority
+          Write-Host "=== Step 1: Chocolatey ==="
+          choco install mpvio.install -y --no-progress
+          $chocoRoot = if ($env:ChocolateyInstall) { $env:ChocolateyInstall } else { "C:\ProgramData\chocolatey" }
+          $chocoRoots = @(
+            (Join-Path $chocoRoot "lib\mpvio.install\tools"),
+            (Join-Path $chocoRoot "lib\mpvio\tools"),
+            (Join-Path $chocoRoot "bin")
+          )
+          $mpvDir = Find-MpvCoreDir -roots $chocoRoots -label "choco"
+
+          # 2) Scoop fallback
+          if (-not $mpvDir) {
+            Write-Host "=== Step 2: Scoop fallback ==="
+            Ensure-Scoop
+            $hasExtras = scoop bucket list | Select-String -SimpleMatch "extras"
+            if (-not $hasExtras) {
+              scoop bucket add extras | Out-Null
+            } else {
+              Write-Host "[scoop] extras bucket already added"
+            }
+            scoop install mpv-git
+            $scoopRoot = Join-Path $env:USERPROFILE "scoop"
+            $scoopRoots = @(
+              (Join-Path $scoopRoot "apps\mpv-git\current"),
+              (Join-Path $scoopRoot "apps\mpv\current"),
+              (Join-Path $scoopRoot "shims")
+            )
+            $mpvDir = Find-MpvCoreDir -roots $scoopRoots -label "scoop"
+          }
+
+          # 3) Direct GitHub fallback
+          if (-not $mpvDir) {
+            Write-Host "=== Step 3: GitHub fallback ==="
+            Ensure-Scoop
+            scoop install 7zip
+
+            $headers = @{ "User-Agent" = "transcriby-ci" }
+            $release = Invoke-RestMethod -Uri "https://api.github.com/repos/shinchiro/mpv-winbuild-cmake/releases/latest" -Headers $headers
+            Write-Host "[github] release tag: $($release.tag_name)"
+            $asset = $release.assets | Where-Object { $_.name -match "^mpv-dev-x86_64-.*\.7z$" } | Select-Object -First 1
+            if (-not $asset) {
+              throw "Could not find mpv-dev x86_64 asset from latest shinchiro release"
+            }
+            Write-Host "[github] selected asset: $($asset.name)"
+
+            $archive = Join-Path $env:RUNNER_TEMP $asset.name
+            Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $archive
+            Write-Host "[github] downloaded archive: $archive"
+
+            $extractDir = Join-Path $env:RUNNER_TEMP "mpv-dev"
+            if (Test-Path $extractDir) { Remove-Item -Recurse -Force $extractDir }
+            New-Item -ItemType Directory -Path $extractDir | Out-Null
+
+            $sevenZip = Join-Path $env:USERPROFILE "scoop\shims\7z.exe"
+            if (-not (Test-Path $sevenZip)) {
+              throw "7z executable not found: $sevenZip"
+            }
+            & $sevenZip x $archive "-o$extractDir" -y | Out-Null
+            Write-Host "[github] extracted to: $extractDir"
+
+            $mpvDir = Find-MpvCoreDir -roots @($extractDir) -label "github"
+          }
+
+          if (-not $mpvDir) {
+            throw "libmpv core DLL not found via choco/scoop/github"
+          }
+
+          Write-Host "Final TRANSCRIBY_MPV_DIR: $mpvDir"
+          Write-Host "Final runtime dir DLLs:"
           Get-ChildItem -Path $mpvDir -Filter *.dll -File -ErrorAction SilentlyContinue |
             Sort-Object Name |
-            ForEach-Object { Write-Host " - $($_.Name)" }
-
+            ForEach-Object { Write-Host "  - $($_.Name)" }
           "TRANSCRIBY_MPV_DIR=$mpvDir" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "$mpvDir" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          Write-Host "Using TRANSCRIBY_MPV_DIR=$mpvDir"
 
       - name: Build and package
         shell: pwsh
