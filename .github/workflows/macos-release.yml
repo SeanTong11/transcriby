@@ -15,7 +15,6 @@ jobs:
   build:
     strategy:
       fail-fast: false
-      max-parallel: 1
       matrix:
         include:
           - os: macos-14
@@ -111,8 +110,29 @@ jobs:
             out/Transcriby-macOS-${{ matrix.arch }}.zip
             out/SHA256SUMS-${{ matrix.arch }}.txt
 
+  publish:
+    needs: build
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: transcriby-macos-*
+          merge-multiple: true
+          path: out
+
+      - name: Verify artifact files exist
+        run: |
+          ls -la out
+          test -f out/Transcriby-macOS-arm64.zip
+          test -f out/SHA256SUMS-arm64.txt
+          test -f out/Transcriby-macOS-x64.zip
+          test -f out/SHA256SUMS-x64.txt
+
       - name: Publish nightly release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: nightly
@@ -124,14 +144,18 @@ jobs:
             Automated nightly build from `main`.
             Commit: ${{ github.sha }}
           files: |
-            out/Transcriby-macOS-${{ matrix.arch }}.zip
-            out/SHA256SUMS-${{ matrix.arch }}.txt
+            out/Transcriby-macOS-arm64.zip
+            out/SHA256SUMS-arm64.txt
+            out/Transcriby-macOS-x64.zip
+            out/SHA256SUMS-x64.txt
 
       - name: Publish tagged release
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           overwrite_files: true
           files: |
-            out/Transcriby-macOS-${{ matrix.arch }}.zip
-            out/SHA256SUMS-${{ matrix.arch }}.txt
+            out/Transcriby-macOS-arm64.zip
+            out/SHA256SUMS-arm64.txt
+            out/Transcriby-macOS-x64.zip
+            out/SHA256SUMS-x64.txt

@@ -64,7 +64,7 @@ jobs:
           if (Test-Path $extractDir) { Remove-Item -Recurse -Force $extractDir }
           New-Item -ItemType Directory -Path $extractDir | Out-Null
 
-          uv run --with py7zr python -c "import pathlib,py7zr,sys; archive=pathlib.Path(sys.argv[1]); outdir=pathlib.Path(sys.argv[2]); z=py7zr.SevenZipFile(archive, mode='r'); z.extractall(path=outdir); z.close(); print(outdir)" \"$archive\" \"$extractDir\"
+          uv run --with py7zr python -c 'import pathlib,py7zr,sys; archive=pathlib.Path(sys.argv[1]); outdir=pathlib.Path(sys.argv[2]); z=py7zr.SevenZipFile(str(archive), mode="r"); z.extractall(path=str(outdir)); z.close(); print(outdir)' "$archive" "$extractDir"
           Write-Host "[mpv] extracted to: $extractDir"
 
           Write-Host "[mpv] DLLs under extract dir (first 120):"
