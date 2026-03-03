@@ -10,10 +10,20 @@
 - Windows: `.github/workflows/windows-release.yml`
   - Uses a pinned shinchiro `mpv-dev` release via `MPV_WINBUILD_TAG`
   - Downloads and extracts `libmpv` runtime from GitHub releases
+  - Generates build metadata (`app_version`, `build_tag`, `build_commit`, `channel`) before packaging
   - Produces `Transcriby-Windows.zip` and `SHA256SUMS.txt`
 - macOS: `.github/workflows/macos-release.yml`
   - Builds both `arm64` and `x64`
+  - Generates build metadata (`app_version`, `build_tag`, `build_commit`, `channel`) before packaging
   - Produces `Transcriby-macOS-arm64.zip`, `Transcriby-macOS-x64.zip`, and architecture-specific SHA256 files
+
+## Version Binding
+
+- Runtime version comes from `transcriby/build_version.py`.
+- CI updates `transcriby/build_version.py` using `tools/set_build_version.py`:
+  - `v*` tag builds: `channel=stable`, `app_version=<tag without v>`
+  - `main` builds: `channel=nightly`, `app_version=<base>-nightly+<shortsha>`
+- Exported `.tby` files include `build_info` so session files carry the app build identity.
 
 ## Recommended Release Flow
 

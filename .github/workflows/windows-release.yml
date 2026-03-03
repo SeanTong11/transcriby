@@ -32,6 +32,12 @@ jobs:
         with:
           enable-cache: true
 
+      - name: Set build version metadata
+        shell: pwsh
+        run: |
+          python tools\set_build_version.py
+          Get-Content transcriby\build_version.py
+
       - name: Sync dependencies
         shell: pwsh
         run: |
@@ -123,6 +129,7 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           $ErrorActionPreference = "Stop"
 
@@ -135,7 +142,7 @@ jobs:
 
             for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
               Write-Host "[release] upload attempt $attempt/$MaxAttempts for tag '$Tag'"
-              gh release upload $Tag @Files --clobber
+              gh release upload $Tag @Files --clobber -R $env:GH_REPO
               if ($LASTEXITCODE -eq 0) {
                 return
               }
@@ -155,15 +162,15 @@ jobs:
           $title = "Nightly"
           $notes = "Automated nightly build from main.`nCommit: $env:GITHUB_SHA"
 
-          gh release view $tag *> $null
+          gh release view $tag -R $env:GH_REPO *> $null
           $exists = ($LASTEXITCODE -eq 0)
           if ($exists) {
-            gh release edit $tag --title $title --prerelease --latest=false --notes $notes
+            gh release edit $tag --title $title --prerelease --latest=false --notes $notes -R $env:GH_REPO
             if ($LASTEXITCODE -ne 0) {
               throw "Failed to edit nightly release metadata."
             }
           } else {
-            gh release create $tag --title $title --prerelease --latest=false --notes $notes
+            gh release create $tag --title $title --prerelease --latest=false --notes $notes -R $env:GH_REPO
             if ($LASTEXITCODE -ne 0) {
               throw "Failed to create nightly release."
             }
@@ -176,6 +183,7 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           $ErrorActionPreference = "Stop"
 
@@ -188,7 +196,7 @@ jobs:
 
             for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
               Write-Host "[release] upload attempt $attempt/$MaxAttempts for tag '$Tag'"
-              gh release upload $Tag @Files --clobber
+              gh release upload $Tag @Files --clobber -R $env:GH_REPO
               if ($LASTEXITCODE -eq 0) {
                 return
               }
@@ -209,10 +217,10 @@ jobs:
             throw "GITHUB_REF_NAME is empty."
           }
 
-          gh release view $tag *> $null
+          gh release view $tag -R $env:GH_REPO *> $null
           $exists = ($LASTEXITCODE -eq 0)
           if (-not $exists) {
-            gh release create $tag --title $tag --generate-notes
+            gh release create $tag --title $tag --generate-notes -R $env:GH_REPO
             if ($LASTEXITCODE -ne 0) {
               throw "Failed to create tag release '$tag'."
             }

@@ -1,11 +1,17 @@
+from transcriby.build_version import (
+    APP_VERSION,
+    APP_BASE_VERSION,
+    BUILD_CHANNEL,
+    BUILD_TAG,
+    BUILD_COMMIT,
+)
+
 # Definitions
 
 APP_TITLE = "Transcriby"
 APP_NAME = "transcriby"
 APP_DESCRIPTION = "Transcriby is a simple audio player with speed/pitch \
 change capabilities, using mpv (libmpv)."
-
-APP_VERSION = "0.3.3"
 
 APP_URL = "https://github.com/SeanTong11/transcriby"
 

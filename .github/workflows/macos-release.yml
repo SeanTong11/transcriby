@@ -38,6 +38,12 @@ jobs:
         with:
           enable-cache: true
 
+      - name: Set build version metadata
+        shell: bash
+        run: |
+          python3 tools/set_build_version.py
+          cat transcriby/build_version.py
+
       - name: Install libmpv (mpv)
         shell: bash
         run: |
@@ -114,6 +120,8 @@ jobs:
     needs: build
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     runs-on: ubuntu-latest
+    env:
+      GH_REPO: ${{ github.repository }}
 
     steps:
       - name: Download macOS artifacts
@@ -145,7 +153,7 @@ jobs:
             local rc
             for attempt in 1 2 3 4 5; do
               echo "[release] upload attempt ${attempt}/5 for tag '${tag}'"
-              if gh release upload "${tag}" "$@" --clobber; then
+              if gh release upload "${tag}" "$@" --clobber -R "${GH_REPO}"; then
                 return 0
               fi
               rc=$?
@@ -166,10 +174,10 @@ jobs:
             out/SHA256SUMS-x64.txt
           )
 
-          if gh release view "${tag}" >/dev/null 2>&1; then
-            gh release edit "${tag}" --title "${title}" --prerelease --latest=false --notes "${notes}"
+          if gh release view "${tag}" -R "${GH_REPO}" >/dev/null 2>&1; then
+            gh release edit "${tag}" --title "${title}" --prerelease --latest=false --notes "${notes}" -R "${GH_REPO}"
           else
-            gh release create "${tag}" --title "${title}" --prerelease --latest=false --notes "${notes}"
+            gh release create "${tag}" --title "${title}" --prerelease --latest=false --notes "${notes}" -R "${GH_REPO}"
           fi
 
           upload_with_retry "${tag}" "${files[@]}"
@@ -188,7 +196,7 @@ jobs:
             local rc
             for attempt in 1 2 3 4 5; do
               echo "[release] upload attempt ${attempt}/5 for tag '${tag}'"
-              if gh release upload "${tag}" "$@" --clobber; then
+              if gh release upload "${tag}" "$@" --clobber -R "${GH_REPO}"; then
                 return 0
               fi
               rc=$?
@@ -207,8 +215,8 @@ jobs:
             out/SHA256SUMS-x64.txt
           )
 
-          if ! gh release view "${tag}" >/dev/null 2>&1; then
-            gh release create "${tag}" --title "${tag}" --generate-notes
+          if ! gh release view "${tag}" -R "${GH_REPO}" >/dev/null 2>&1; then
+            gh release create "${tag}" --title "${tag}" --generate-notes -R "${GH_REPO}"
           fi
 
           upload_with_retry "${tag}" "${files[@]}"

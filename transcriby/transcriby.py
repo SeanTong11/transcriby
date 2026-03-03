@@ -1482,9 +1482,17 @@ class App(_AppBase):
             "youtube_url": self.YouTubeUrl if self.bYouTubeFile else "",
             "metadata": self.songMetadata,
         }
+        sessionBuildInfo = {
+            "app_version": APP_VERSION,
+            "app_base_version": APP_BASE_VERSION,
+            "build_channel": BUILD_CHANNEL,
+            "build_tag": BUILD_TAG,
+            "build_commit": BUILD_COMMIT,
+        }
         return {
             "media": sessionMedia,
             "playback_options": self._buildPlaybackOptions(),
+            "build_info": sessionBuildInfo,
         }
 
     def selectTbyToOpen(self) -> str:
@@ -1572,7 +1580,14 @@ class App(_AppBase):
         self._applyPlaybackOptions(playbackOptions)
         self.settings.setVal(CFG_APP_SECTION, "LastOpenDir", os.path.dirname(mediaPath))
         self.settings.setLastSessionTby(os.path.realpath(tbyFile))
-        self.statusBarMessage(_("Loaded .tby session"), timeout=1200)
+
+        statusMsg = _("Loaded .tby session")
+        buildInfo = sessionData.get("build_info", {})
+        if(isinstance(buildInfo, dict)):
+            sourceVersion = str(buildInfo.get("app_version", "")).strip()
+            if(sourceVersion != ""):
+                statusMsg = f"{statusMsg} ({sourceVersion})"
+        self.statusBarMessage(statusMsg, timeout=1200)
         return(True)
 
     def openTbySession(self, tbyFile=None, showErrors=True):

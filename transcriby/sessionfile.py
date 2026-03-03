@@ -26,4 +26,13 @@ def load_tby(path):
     if not isinstance(data, dict):
         raise ValueError("Invalid TBY file: top-level JSON value must be an object")
 
+    schema_version = data.get("schema_version", 0)
+    if not isinstance(schema_version, int):
+        raise ValueError("Invalid TBY file: schema_version must be an integer")
+    if schema_version > TBY_SCHEMA_VERSION:
+        raise ValueError(
+            f"Unsupported TBY schema_version={schema_version} "
+            f"(max supported={TBY_SCHEMA_VERSION})"
+        )
+
     return data
