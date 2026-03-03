@@ -152,30 +152,30 @@ class App(_AppBase):
         self.favoriteRowsPerColumn = 4
         self.favoriteGridHeight = 96
         self.favoritePalette = [
-            "#FF6B6B",
-            "#FFD166",
-            "#06D6A0",
+            "#4D96FF",
+            "#2EC4B6",
+            "#7B61FF",
+            "#00B4D8",
             "#4CC9F0",
-            "#F4A261",
-            "#E76F51",
-            "#C77DFF",
-            "#9EF01A",
-            "#FF8FAB",
-            "#00C2A8",
-            "#48CAE4",
-            "#A0C4FF",
-            "#B9FBC0",
-            "#FFC6FF",
-            "#FEC89A",
-            "#BDB2FF",
-            "#F9844A",
-            "#90BE6D",
             "#43AA8B",
-            "#277DA1",
-            "#F3722C",
-            "#8E9AAF",
-            "#52B788",
-            "#F8961E",
+            "#3A86FF",
+            "#06D6A0",
+            "#9B5DE5",
+            "#00A6FB",
+            "#577590",
+            "#4895EF",
+            "#64DFDF",
+            "#80FFDB",
+            "#5E60CE",
+            "#48BFE3",
+            "#5390D9",
+            "#56CFE1",
+            "#64B6AC",
+            "#6A4C93",
+            "#38A3A5",
+            "#2D6A4F",
+            "#4361EE",
+            "#3D5A80",
         ]
 
         # Build the 3 main frames: Left (shrinkable), Right (buttons)
@@ -931,8 +931,8 @@ class App(_AppBase):
         self.favoriteCanvas.configure(bg=UI_BG_CARD_ALT)
         self.favoriteScroll.configure(
             fg_color=UI_BG_CARD,
-            button_color="#4A6075",
-            button_hover_color="#5C7690",
+            button_color="#7A6542",
+            button_hover_color="#9A825A",
         )
 
     def _formatSecondsText(self, seconds):
