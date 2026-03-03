@@ -149,6 +149,8 @@ class App(_AppBase):
         self.favoriteCreateCounter = 0      # Monotonic id for favorites creation order
         self._pendingLoopRestore = None     # Deferred loop restore while media duration is unavailable
         self._pendingSeekRestore = None     # Deferred seek restore while media duration is unavailable
+        self.favoriteRowsPerColumn = 4
+        self.favoriteGridHeight = 120
         self.favoritePalette = [
             "#FF6B6B",
             "#FFD166",
@@ -284,6 +286,11 @@ class App(_AppBase):
         self.entVolume = ctk.CTkEntry(self.PlaybackTab, width=56, justify="center",
                                           validate='all', validatecommand=vint)
         self.entVolume.grid(row=9, column=2, padx=UI_INNER_PAD, pady=UI_CONTROL_PAD_Y, sticky="w")
+        self.btnResetVolume = ctk.CTkButton(self.PlaybackTab, width=42, image=resetIcon,
+                                            text=None, command=lambda: self.varVolume.set(DEFAULT_VOLUME))
+        self.btnResetVolume.grid(row=9, column=4, padx=(0, UI_INNER_PAD), pady=UI_CONTROL_PAD_Y, sticky="w")
+        self.btnResetVolume_tt = CTkToolTip(self.btnResetVolume, message=_("Reset volume"),
+                                            delay=0.8, alpha=0.5, justify="left", follow=False)
         self.entVolume.bind('<Return>', self.checkVolume)
         self.entVolume.bind('<KP_Enter>', self.checkVolume)
         self.entVolume.bind('<FocusOut>', self.checkVolume)
@@ -296,7 +303,7 @@ class App(_AppBase):
 
         # Inline playback controls
         self.lblPlaybackControls = ctk.CTkLabel(self.PlaybackTab, text=_("Playback control"), font=("", LBL_FONT_SIZE))
-        self.lblPlaybackControls.grid(row=0, column=0, pady=(UI_INNER_PAD + 2, 0), sticky="w")
+        self.lblPlaybackControls.grid(row=0, column=0, columnspan=5, pady=(UI_INNER_PAD + 2, 0), sticky="n")
 
         self.playbackControlsFrame = ctk.CTkFrame(self.PlaybackTab, fg_color="transparent")
         self.playbackControlsFrame.grid(row=1, column=0, columnspan=5, pady=(0, UI_INNER_PAD), sticky="ew")
@@ -462,7 +469,7 @@ class App(_AppBase):
         self.btnFavoriteAdd = ctk.CTkButton(
             self.favoritesFrame, width=42, text="+", font=("", LBL_FONT_SIZE), command=self.addFavoriteAtCurrent
         )
-        self.btnFavoriteAdd.grid(row=0, column=0, padx=(0, 6), pady=(8, 8), sticky="w")
+        self.btnFavoriteAdd.grid(row=0, column=0, padx=(0, 6), pady=(6, 4), sticky="w")
         self.btnFavoriteAdd_tt = CTkToolTip(
             self.btnFavoriteAdd,
             message="Add favorite at current position\nShortcut: M",
@@ -475,7 +482,7 @@ class App(_AppBase):
         self.btnFavoriteDel = ctk.CTkButton(
             self.favoritesFrame, width=42, text="-", font=("", LBL_FONT_SIZE), command=self.deleteFavorite
         )
-        self.btnFavoriteDel.grid(row=0, column=1, padx=(0, 6), pady=(8, 8), sticky="w")
+        self.btnFavoriteDel.grid(row=0, column=1, padx=(0, 6), pady=(6, 4), sticky="w")
         self.btnFavoriteDel_tt = CTkToolTip(
             self.btnFavoriteDel,
             message="Delete selected favorite, or the latest one\nShortcut: Shift+M",
@@ -488,7 +495,7 @@ class App(_AppBase):
         self.btnFavoritePrev = ctk.CTkButton(
             self.favoritesFrame, width=42, text="<", font=("", LBL_FONT_SIZE), command=self.jumpToPreviousFavorite
         )
-        self.btnFavoritePrev.grid(row=0, column=2, padx=(0, 6), pady=(8, 8), sticky="w")
+        self.btnFavoritePrev.grid(row=0, column=2, padx=(0, 6), pady=(6, 4), sticky="w")
         self.btnFavoritePrev_tt = CTkToolTip(
             self.btnFavoritePrev,
             message="Jump to previous favorite\nShortcut: Ctrl+[",
@@ -501,7 +508,7 @@ class App(_AppBase):
         self.btnFavoriteNext = ctk.CTkButton(
             self.favoritesFrame, width=42, text=">", font=("", LBL_FONT_SIZE), command=self.jumpToNextFavorite
         )
-        self.btnFavoriteNext.grid(row=0, column=3, padx=(0, 6), pady=(8, 8), sticky="w")
+        self.btnFavoriteNext.grid(row=0, column=3, padx=(0, 6), pady=(6, 4), sticky="w")
         self.btnFavoriteNext_tt = CTkToolTip(
             self.btnFavoriteNext,
             message="Jump to next favorite\nShortcut: Ctrl+]",
@@ -511,25 +518,26 @@ class App(_AppBase):
             follow=False,
         )
 
-        self.favoriteList = tk.Listbox(
-            self.favoritesFrame,
-            height=6,
-            activestyle="none",
-            highlightthickness=0,
-            borderwidth=0,
-            selectmode=tk.SINGLE,
-            font=("TkDefaultFont", 12, "bold"),
-        )
-        self.favoriteListFrame = ctk.CTkFrame(self.favoritesFrame, height=150, fg_color="transparent")
+        self.favoriteListFrame = ctk.CTkFrame(self.favoritesFrame, height=self.favoriteGridHeight, fg_color="transparent")
         self.favoriteListFrame.grid(row=1, column=0, columnspan=5, sticky="ew", padx=(0, 4), pady=(0, 4))
         self.favoriteListFrame.grid_propagate(False)
         self.favoriteListFrame.grid_columnconfigure(0, weight=1)
         self.favoriteListFrame.grid_rowconfigure(0, weight=1)
-        self.favoriteList.grid(row=0, column=0, sticky="nsew")
-        self.favoriteScroll = tk.Scrollbar(self.favoriteListFrame, orient="vertical", command=self.favoriteList.yview)
-        self.favoriteScroll.grid(row=0, column=1, sticky="ns")
-        self.favoriteList.configure(yscrollcommand=self.favoriteScroll.set)
-        self.favoriteList.bind("<<ListboxSelect>>", self.onFavoriteListSelect)
+
+        self.favoriteCanvas = tk.Canvas(self.favoriteListFrame, highlightthickness=0, bd=0)
+        self.favoriteCanvas.grid(row=0, column=0, sticky="nsew")
+        self.favoriteScroll = tk.Scrollbar(self.favoriteListFrame, orient="horizontal", command=self.favoriteCanvas.xview)
+        self.favoriteScroll.grid(row=1, column=0, sticky="ew")
+        self.favoriteCanvas.configure(xscrollcommand=self.favoriteScroll.set)
+
+        self.favoriteCardsInner = ctk.CTkFrame(self.favoriteCanvas, fg_color="transparent")
+        self.favoriteCanvasWindow = self.favoriteCanvas.create_window((0, 0), window=self.favoriteCardsInner, anchor="nw")
+        self.favoriteCardsInner.bind(
+            "<Configure>",
+            lambda _event: self.favoriteCanvas.configure(scrollregion=self.favoriteCanvas.bbox("all"))
+        )
+        self.favoriteCanvas.bind("<Configure>", self._onFavoriteCanvasResize)
+        self.favoriteItemButtons = []
 
         # Widgets on right panel
         self.lblActionsTitle = ctk.CTkLabel(
@@ -793,6 +801,7 @@ class App(_AppBase):
             self.btnResetSpeed,
             self.btnResetPitchST,
             self.btnResetPitchCents,
+            self.btnResetVolume,
             self.btnResetLoopStart,
             self.btnLoopASet,
             self.btnLoopABack2,
@@ -870,17 +879,11 @@ class App(_AppBase):
             border_color=UI_BORDER_COLOR,
             text_color=UI_TEXT_MUTED,
         )
-        self.favoriteList.configure(
-            bg=UI_BG_INPUT,
-            fg=UI_TEXT_PRIMARY,
-            selectbackground=UI_BG_CARD_ALT,
-            selectforeground=UI_TEXT_PRIMARY,
-            font=("TkDefaultFont", 12, "bold"),
-        )
+        self.favoriteCanvas.configure(bg=UI_BG_INPUT)
         self.favoriteScroll.configure(
             bg=UI_BG_INPUT,
-            troughcolor=UI_BG_CARD_ALT,
-            activebackground=UI_ACCENT,
+            troughcolor=UI_BG_INPUT,
+            activebackground=UI_BG_CARD_ALT,
             highlightbackground=UI_BG_INPUT,
             highlightcolor=UI_BG_INPUT,
         )
@@ -947,22 +950,89 @@ class App(_AppBase):
             })
         return(markers)
 
+    def _onFavoriteCanvasResize(self, event):
+        if(hasattr(self, "favoriteCanvasWindow")):
+            innerWidth = self.favoriteCardsInner.winfo_reqwidth() if hasattr(self, "favoriteCardsInner") else event.width
+            self.favoriteCanvas.itemconfigure(
+                self.favoriteCanvasWindow,
+                height=event.height,
+                width=max(event.width, innerWidth),
+            )
+
+    def _scrollFavoriteIntoView(self, index):
+        if(index is None or index < 0 or index >= len(self.favoriteItemButtons)):
+            return
+        button = self.favoriteItemButtons[index]
+        self.favoriteCanvas.update_idletasks()
+        canvasWidth = max(1, self.favoriteCanvas.winfo_width())
+        innerWidth = max(1, self.favoriteCardsInner.winfo_reqwidth())
+        if(innerWidth <= canvasWidth):
+            self.favoriteCanvas.xview_moveto(0.0)
+            return
+
+        left = button.winfo_x()
+        right = left + button.winfo_width()
+        viewLeft = self.favoriteCanvas.canvasx(0)
+        viewRight = viewLeft + canvasWidth
+
+        if(left < viewLeft):
+            self.favoriteCanvas.xview_moveto(left / innerWidth)
+        elif(right > viewRight):
+            self.favoriteCanvas.xview_moveto((right - canvasWidth) / innerWidth)
+
+    def onFavoriteItemClick(self, index):
+        if(index < 0 or index >= len(self.favorites)):
+            self.selectedFavoriteIndex = None
+            self.refreshFavoritesUI()
+            return
+
+        self.selectedFavoriteIndex = index
+        self.refreshFavoritesUI()
+        self._seekToSeconds(self.favorites[index].get("time_seconds"))
+        self.statusBarMessage(_("Jump to favorite #{}").format(index + 1), timeout=1000)
+
     def refreshFavoritesUI(self):
-        self.favoriteList.delete(0, tk.END)
+        for child in self.favoriteCardsInner.winfo_children():
+            child.destroy()
+        self.favoriteItemButtons = []
+
+        if(not (self.selectedFavoriteIndex is not None and
+                self.selectedFavoriteIndex >= 0 and
+                self.selectedFavoriteIndex < len(self.favorites))):
+            self.selectedFavoriteIndex = None
+
+        maxRows = max(1, int(self.favoriteRowsPerColumn))
         for idx, favorite in enumerate(self.favorites):
+            row = idx % maxRows
+            col = idx // maxRows
             seconds = favorite.get("time_seconds")
             text = f"{idx + 1}. {self._formatSecondsText(seconds)}"
-            self.favoriteList.insert(tk.END, text)
-            self.favoriteList.itemconfig(idx, foreground=favorite.get("color", self._favoriteColor(idx)))
+            favColor = favorite.get("color", self._favoriteColor(idx))
+            isSelected = (idx == self.selectedFavoriteIndex)
+            fgColor = favColor if isSelected else UI_BG_CARD_ALT
+            textColor = UI_BG_INPUT if isSelected else favColor
 
-        if(self.selectedFavoriteIndex is not None and
-           self.selectedFavoriteIndex >= 0 and
-           self.selectedFavoriteIndex < len(self.favorites)):
-            self.favoriteList.selection_clear(0, tk.END)
-            self.favoriteList.selection_set(self.selectedFavoriteIndex)
-        else:
-            self.selectedFavoriteIndex = None
-            self.favoriteList.selection_clear(0, tk.END)
+            btn = ctk.CTkButton(
+                self.favoriteCardsInner,
+                text=text,
+                width=188,
+                height=26,
+                corner_radius=6,
+                border_width=1,
+                border_color=favColor,
+                fg_color=fgColor,
+                hover_color=UI_BG_CARD,
+                text_color=textColor,
+                font=("TkDefaultFont", 12, "bold"),
+                anchor="w",
+                command=lambda i=idx: self.onFavoriteItemClick(i),
+            )
+            btn.grid(row=row, column=col, padx=(0, 6), pady=(0, 6), sticky="w")
+            self.favoriteItemButtons.append(btn)
+
+        self.favoriteCardsInner.update_idletasks()
+        self.favoriteCanvas.configure(scrollregion=self.favoriteCanvas.bbox("all"))
+        self._scrollFavoriteIntoView(self.selectedFavoriteIndex)
 
         self.waveform.set_markers(self._buildWaveformMarkers())
 
@@ -994,21 +1064,6 @@ class App(_AppBase):
         self.player.seek_absolute(self.player.pipeline_time(seconds))
         self.syncWaveformState()
         return(True)
-
-    def onFavoriteListSelect(self, _event):
-        selection = self.favoriteList.curselection()
-        if(len(selection) <= 0):
-            self.selectedFavoriteIndex = None
-            return
-
-        index = int(selection[0])
-        if(index < 0 or index >= len(self.favorites)):
-            self.selectedFavoriteIndex = None
-            return
-
-        self.selectedFavoriteIndex = index
-        self._seekToSeconds(self.favorites[index].get("time_seconds"))
-        self.statusBarMessage(_("Jump to favorite #{}").format(index + 1), timeout=1000)
 
     def addFavoriteAtCurrent(self):
         if(self.player.canPlay == False):
