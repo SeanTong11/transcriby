@@ -146,6 +146,7 @@ class App(_AppBase):
         self._loopContextSeconds = None     # Right-click context target in seconds
         self.favorites = []                 # Favorite timestamps for current media
         self.selectedFavoriteIndex = None
+        self.favoriteCreateCounter = 0      # Monotonic id for favorites creation order
         self._pendingLoopRestore = None     # Deferred loop restore while media duration is unavailable
         self._pendingSeekRestore = None     # Deferred seek restore while media duration is unavailable
         self.favoritePalette = [
@@ -211,18 +212,18 @@ class App(_AppBase):
         self.varSpeed = ctk.DoubleVar(self, value=DEFAULT_SPEED)
         self.varSpeed.trace_add("write", self.speedChanged)
         self.lblSpeed = ctk.CTkLabel(self.PlaybackTab, text=_("Speed:"), font=("", LBL_FONT_SIZE))
-        self.lblSpeed.grid(row=4, column=0, pady=(UI_CONTROL_PAD_Y, 0), sticky="w")
+        self.lblSpeed.grid(row=6, column=0, pady=(UI_CONTROL_PAD_Y, 0), sticky="w")
         self.sldSpeed = ctk.CTkSlider(self.PlaybackTab, from_=SPEED_SLIDER_MIN,
                                       to=MAX_SPEED_PERCENT, number_of_steps=20, variable=self.varSpeed)
-        self.sldSpeed.grid(row=4, column=1, padx=UI_INNER_PAD, sticky="ew")
+        self.sldSpeed.grid(row=6, column=1, padx=UI_INNER_PAD, sticky="ew")
         self.entSpeed = ctk.CTkEntry(self.PlaybackTab, width=56, justify="center",
                                      validate='all', validatecommand=vspeed)
-        self.entSpeed.grid(row=4, column=2, padx=UI_INNER_PAD, pady=UI_CONTROL_PAD_Y, sticky="w")
+        self.entSpeed.grid(row=6, column=2, padx=UI_INNER_PAD, pady=UI_CONTROL_PAD_Y, sticky="w")
         self.lblSpeedEntry = ctk.CTkLabel(self.PlaybackTab, text="x", font=("", LBL_FONT_SIZE))
-        self.lblSpeedEntry.grid(row=4, column=3, padx=(0, UI_INNER_PAD), pady=UI_CONTROL_PAD_Y, sticky="w")
+        self.lblSpeedEntry.grid(row=6, column=3, padx=(0, UI_INNER_PAD), pady=UI_CONTROL_PAD_Y, sticky="w")
         self.btnResetSpeed = ctk.CTkButton(self.PlaybackTab, width=42, image=resetIcon,
                                            text=None, command= lambda: self.resetDefaultVar(self.varSpeed))
-        self.btnResetSpeed.grid(row=4, column=4, padx=(0, UI_INNER_PAD), pady=UI_CONTROL_PAD_Y, sticky="w")
+        self.btnResetSpeed.grid(row=6, column=4, padx=(0, UI_INNER_PAD), pady=UI_CONTROL_PAD_Y, sticky="w")
         self.btnResetSpeed_tt = CTkToolTip(self.btnResetSpeed, message=_("Reset speed"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
         self.entSpeed.bind('<Return>', self.checkSpeed)
@@ -234,18 +235,18 @@ class App(_AppBase):
         self.varPitchST = ctk.IntVar(self, value=DEFAULT_SEMITONES)
         self.varPitchST.trace_add("write", self.semitonesChanged)
         self.lblPitchST = ctk.CTkLabel(self.PlaybackTab, text=_("Transpose:"), font=("", LBL_FONT_SIZE))
-        self.lblPitchST.grid(row=5, column=0, pady=(UI_CONTROL_PAD_Y, 0), sticky="w")
+        self.lblPitchST.grid(row=7, column=0, pady=(UI_CONTROL_PAD_Y, 0), sticky="w")
         self.sldPitchST = ctk.CTkSlider(self.PlaybackTab,from_= MIN_PITCH_SEMITONES,
                                         to = MAX_PITCH_SEMITONES, variable=self.varPitchST)
-        self.sldPitchST.grid(row=5, column=1, padx=UI_INNER_PAD, sticky="ew")
+        self.sldPitchST.grid(row=7, column=1, padx=UI_INNER_PAD, sticky="ew")
         self.entPitchST = ctk.CTkEntry(self.PlaybackTab, width=56, justify="center",
                                        validate='all', validatecommand=vnegint)
-        self.entPitchST.grid(row=5, column=2, padx=UI_INNER_PAD, pady=UI_CONTROL_PAD_Y, sticky="w")
+        self.entPitchST.grid(row=7, column=2, padx=UI_INNER_PAD, pady=UI_CONTROL_PAD_Y, sticky="w")
         self.lblPitchSTEntry = ctk.CTkLabel(self.PlaybackTab, text="s/t", font=("", LBL_FONT_SIZE))
-        self.lblPitchSTEntry.grid(row=5, column=3, padx=(0, UI_INNER_PAD), pady=UI_CONTROL_PAD_Y, sticky="w")
+        self.lblPitchSTEntry.grid(row=7, column=3, padx=(0, UI_INNER_PAD), pady=UI_CONTROL_PAD_Y, sticky="w")
         self.btnResetPitchST = ctk.CTkButton(self.PlaybackTab, width=42, image=resetIcon,
                                              text=None, command= lambda: self.resetDefaultVar(self.varPitchST))
-        self.btnResetPitchST.grid(row=5, column=4, padx=(0, UI_INNER_PAD), pady=UI_CONTROL_PAD_Y, sticky="w")
+        self.btnResetPitchST.grid(row=7, column=4, padx=(0, UI_INNER_PAD), pady=UI_CONTROL_PAD_Y, sticky="w")
         self.btnResetPitchST_tt = CTkToolTip(self.btnResetPitchST, message=_("Reset transpose"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
         self.entPitchST.bind('<Return>', self.checkSemitones)
@@ -255,20 +256,20 @@ class App(_AppBase):
         self.varPitchCents = ctk.IntVar(self, value=DEFAULT_CENTS)
         self.varPitchCents.trace_add("write", self.centsChanged)
         self.lblPitchCents = ctk.CTkLabel(self.PlaybackTab, text=_("Pitch (cents):"), font=("", LBL_FONT_SIZE))
-        self.lblPitchCents.grid(row=6, column=0, pady=(UI_CONTROL_PAD_Y, 0), sticky="w")
+        self.lblPitchCents.grid(row=8, column=0, pady=(UI_CONTROL_PAD_Y, 0), sticky="w")
         self.sldPitchCents = ctk.CTkSlider(self.PlaybackTab,from_= MIN_PITCH_CENTS,
                                            to = MAX_PITCH_CENTS, variable=self.varPitchCents)
-        self.sldPitchCents.grid(row=6, column=1, padx=UI_INNER_PAD, sticky="ew")
+        self.sldPitchCents.grid(row=8, column=1, padx=UI_INNER_PAD, sticky="ew")
         self.entPitchCents = ctk.CTkEntry(self.PlaybackTab, width=56, justify="center",
                                           validate='all', validatecommand=vnegint)
-        self.entPitchCents.grid(row=6, column=2, padx=UI_INNER_PAD, pady=UI_CONTROL_PAD_Y, sticky="w")
+        self.entPitchCents.grid(row=8, column=2, padx=UI_INNER_PAD, pady=UI_CONTROL_PAD_Y, sticky="w")
         self.lblPitchCentsEntry = ctk.CTkLabel(self.PlaybackTab, text="c.", font=("", LBL_FONT_SIZE))
-        self.lblPitchCentsEntry.grid(row=6, column=3, padx=(0, UI_INNER_PAD), pady=UI_CONTROL_PAD_Y, sticky="w")
+        self.lblPitchCentsEntry.grid(row=8, column=3, padx=(0, UI_INNER_PAD), pady=UI_CONTROL_PAD_Y, sticky="w")
         self.btnResetPitchCents = ctk.CTkButton(self.PlaybackTab, width=42, image=resetIcon, text=None,
                                                 command= lambda: self.resetDefaultVar(self.varPitchCents))
         self.btnResetPitchST_tt = CTkToolTip(self.btnResetPitchCents, message=_("Reset pitch"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
-        self.btnResetPitchCents.grid(row=6, column=4, padx=(0, UI_INNER_PAD), pady=UI_CONTROL_PAD_Y, sticky="w")
+        self.btnResetPitchCents.grid(row=8, column=4, padx=(0, UI_INNER_PAD), pady=UI_CONTROL_PAD_Y, sticky="w")
         self.entPitchCents.bind('<Return>', self.checkCents)
         self.entPitchCents.bind('<KP_Enter>', self.checkCents)
         self.entPitchCents.bind('<FocusOut>', self.checkCents)
@@ -276,13 +277,13 @@ class App(_AppBase):
         self.varVolume = ctk.IntVar(self, value=DEFAULT_VOLUME)
         self.varVolume.trace_add("write", self.volumeChanged)
         self.lblVolume = ctk.CTkLabel(self.PlaybackTab, text=_("Volume:"), font=("", LBL_FONT_SIZE))
-        self.lblVolume.grid(row=7, column=0, pady=(UI_CONTROL_PAD_Y, 0), sticky="w")
+        self.lblVolume.grid(row=9, column=0, pady=(UI_CONTROL_PAD_Y, 0), sticky="w")
         self.sldVolume = ctk.CTkSlider(self.PlaybackTab,from_= MIN_VOLUME,
                                            to = MAX_VOLUME, variable=self.varVolume)
-        self.sldVolume.grid(row=7, column=1, padx=UI_INNER_PAD, sticky="ew")
+        self.sldVolume.grid(row=9, column=1, padx=UI_INNER_PAD, sticky="ew")
         self.entVolume = ctk.CTkEntry(self.PlaybackTab, width=56, justify="center",
                                           validate='all', validatecommand=vint)
-        self.entVolume.grid(row=7, column=2, padx=UI_INNER_PAD, pady=UI_CONTROL_PAD_Y, sticky="w")
+        self.entVolume.grid(row=9, column=2, padx=UI_INNER_PAD, pady=UI_CONTROL_PAD_Y, sticky="w")
         self.entVolume.bind('<Return>', self.checkVolume)
         self.entVolume.bind('<KP_Enter>', self.checkVolume)
         self.entVolume.bind('<FocusOut>', self.checkVolume)
@@ -299,18 +300,21 @@ class App(_AppBase):
 
         self.playbackControlsFrame = ctk.CTkFrame(self.PlaybackTab, fg_color="transparent")
         self.playbackControlsFrame.grid(row=1, column=0, columnspan=5, pady=(0, UI_INNER_PAD), sticky="ew")
-        self.btnSeekBack1 = ctk.CTkButton(self.playbackControlsFrame, width=42, text="<<", font=("", LBL_FONT_SIZE),
+        self.playbackButtonsRow = ctk.CTkFrame(self.playbackControlsFrame, fg_color="transparent")
+        self.playbackButtonsRow.pack(anchor="center", pady=8)
+
+        self.btnSeekBack1 = ctk.CTkButton(self.playbackButtonsRow, width=42, text="<<", font=("", LBL_FONT_SIZE),
                                           command=lambda: self.movePlayback(-1.0))
-        self.btnSeekBack01 = ctk.CTkButton(self.playbackControlsFrame, width=42, text="<", font=("", LBL_FONT_SIZE),
+        self.btnSeekBack01 = ctk.CTkButton(self.playbackButtonsRow, width=42, text="<", font=("", LBL_FONT_SIZE),
                                            command=lambda: self.movePlayback(-0.1))
-        self.btnSeekFwd01 = ctk.CTkButton(self.playbackControlsFrame, width=42, text=">", font=("", LBL_FONT_SIZE),
+        self.btnSeekFwd01 = ctk.CTkButton(self.playbackButtonsRow, width=42, text=">", font=("", LBL_FONT_SIZE),
                                           command=lambda: self.movePlayback(0.1))
-        self.btnSeekFwd1 = ctk.CTkButton(self.playbackControlsFrame, width=42, text=">>", font=("", LBL_FONT_SIZE),
+        self.btnSeekFwd1 = ctk.CTkButton(self.playbackButtonsRow, width=42, text=">>", font=("", LBL_FONT_SIZE),
                                          command=lambda: self.movePlayback(1.0))
-        self.btnSeekBack1.grid(row=0, column=0, padx=(0, 4), pady=8, sticky="w")
-        self.btnSeekBack01.grid(row=0, column=1, padx=4, pady=8, sticky="w")
-        self.btnSeekFwd01.grid(row=0, column=2, padx=4, pady=8, sticky="w")
-        self.btnSeekFwd1.grid(row=0, column=3, padx=(4, 0), pady=8, sticky="w")
+        self.btnSeekBack1.grid(row=0, column=0, padx=(0, 6), sticky="w")
+        self.btnSeekBack01.grid(row=0, column=1, padx=(0, 6), sticky="w")
+        self.btnSeekFwd01.grid(row=0, column=3, padx=(6, 6), sticky="w")
+        self.btnSeekFwd1.grid(row=0, column=4, padx=(6, 0), sticky="w")
 
         self.btnSeekBack1_tt = CTkToolTip(self.btnSeekBack1, message="Seek backward (coarse): 1.0s\nShortcut: [",
                                           delay=0.8, alpha=0.5, justify="left", follow=False)
@@ -449,10 +453,10 @@ class App(_AppBase):
 
         # Favorites controls
         self.lblFavorites = ctk.CTkLabel(self.PlaybackTab, text=_("Favorites"), font=("", LBL_FONT_SIZE))
-        self.lblFavorites.grid(row=8, column=0, pady=(UI_INNER_PAD + 2, 0), sticky="w")
+        self.lblFavorites.grid(row=4, column=0, pady=(UI_INNER_PAD + 2, 0), sticky="w")
 
         self.favoritesFrame = ctk.CTkFrame(self.PlaybackTab, fg_color="transparent")
-        self.favoritesFrame.grid(row=9, column=0, columnspan=5, pady=(0, UI_INNER_PAD), sticky="ew")
+        self.favoritesFrame.grid(row=5, column=0, columnspan=5, pady=(0, UI_INNER_PAD), sticky="ew")
         self.favoritesFrame.grid_columnconfigure(4, weight=1)
 
         self.btnFavoriteAdd = ctk.CTkButton(
@@ -509,13 +513,22 @@ class App(_AppBase):
 
         self.favoriteList = tk.Listbox(
             self.favoritesFrame,
-            height=4,
+            height=6,
             activestyle="none",
             highlightthickness=0,
             borderwidth=0,
             selectmode=tk.SINGLE,
+            font=("TkDefaultFont", 12, "bold"),
         )
-        self.favoriteList.grid(row=1, column=0, columnspan=5, sticky="ew", padx=(0, 4), pady=(0, 4))
+        self.favoriteListFrame = ctk.CTkFrame(self.favoritesFrame, height=150, fg_color="transparent")
+        self.favoriteListFrame.grid(row=1, column=0, columnspan=5, sticky="ew", padx=(0, 4), pady=(0, 4))
+        self.favoriteListFrame.grid_propagate(False)
+        self.favoriteListFrame.grid_columnconfigure(0, weight=1)
+        self.favoriteListFrame.grid_rowconfigure(0, weight=1)
+        self.favoriteList.grid(row=0, column=0, sticky="nsew")
+        self.favoriteScroll = tk.Scrollbar(self.favoriteListFrame, orient="vertical", command=self.favoriteList.yview)
+        self.favoriteScroll.grid(row=0, column=1, sticky="ns")
+        self.favoriteList.configure(yscrollcommand=self.favoriteScroll.set)
         self.favoriteList.bind("<<ListboxSelect>>", self.onFavoriteListSelect)
 
         # Widgets on right panel
@@ -533,7 +546,7 @@ class App(_AppBase):
             size=(26, 16),
         )
 
-        self.playButton = ctk.CTkButton(self.RFrame, text=_("Play"), font=("", 18), 
+        self.playButton = ctk.CTkButton(self.playbackButtonsRow, text=_("Play"), font=("", 18),
                                         image=None, compound="right", command=self.togglePlay)
         self.playButton.configure(
             height=MAIN_BUTTON_HEIGHT,
@@ -541,14 +554,14 @@ class App(_AppBase):
             fg_color=UI_ACCENT,
             hover_color=UI_ACCENT_HOVER,
         )
-        self.playButton.grid(row=1, column=0, pady=(UI_INNER_PAD, 0), sticky="ew", columnspan=2)
+        self.playButton.grid(row=0, column=2, padx=(6, 6), sticky="w")
         self.playButton_tt = CTkToolTip(self.playButton, message=_("Play/Pause"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
 
         self.openButton = ctk.CTkButton(self.RFrame, text=_("Open"), font=("", SECONDARY_BUTTON_FONT_SIZE), 
                                         command=self.openFile, width=110)
         self.openButton.configure(height=SECONDARY_BUTTON_HEIGHT)
-        self.openButton.grid(row=2, column=0, pady=(UI_INNER_PAD, 0), sticky="ew")
+        self.openButton.grid(row=1, column=0, pady=(UI_INNER_PAD, 0), sticky="ew")
         self.openButton_tt = CTkToolTip(self.openButton, message=_("Open a file.\nRight-click to reopen a recent file"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
 
@@ -564,7 +577,7 @@ class App(_AppBase):
         self.YTBtn = ctk.CTkButton(self.RFrame, text="", width=ICON_BUTTON_WIDTH, font=("", SECONDARY_BUTTON_FONT_SIZE),
                                        image=YTIcon, command= lambda: self.openYouTubeDialog(None))
         self.YTBtn.configure(height=ICON_BUTTON_HEIGHT)
-        self.YTBtn.grid(row=2, column=1, sticky="e", pady=(UI_INNER_PAD, 0), padx=(UI_INNER_PAD, 0))
+        self.YTBtn.grid(row=1, column=1, sticky="e", pady=(UI_INNER_PAD, 0), padx=(UI_INNER_PAD, 0))
         self.YTBtn_tt = CTkToolTip(self.YTBtn, message=_("Click to extract audio from a YouTube video"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
 
@@ -575,7 +588,7 @@ class App(_AppBase):
             command=self.saveAs,
             height=SECONDARY_BUTTON_HEIGHT,
         )
-        self.saveasButton.grid(row=3, column=0, pady=UI_INNER_PAD, sticky="ew", columnspan=2)
+        self.saveasButton.grid(row=2, column=0, pady=UI_INNER_PAD, sticky="ew", columnspan=2)
         self.saveasButton_tt = CTkToolTip(self.saveasButton, message=_("Save the file with current speed/pitch settings as MP3 or WAV"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
 
@@ -586,7 +599,7 @@ class App(_AppBase):
             command=self.openTbySession,
             height=SECONDARY_BUTTON_HEIGHT,
         )
-        self.openTbyButton.grid(row=4, column=0, pady=(0, UI_INNER_PAD), sticky="ew", columnspan=2)
+        self.openTbyButton.grid(row=3, column=0, pady=(0, UI_INNER_PAD), sticky="ew", columnspan=2)
         self.openTbyButton_tt = CTkToolTip(
             self.openTbyButton,
             message=_("Open a .tby session file and restore media + loop + favorites"),
@@ -603,7 +616,7 @@ class App(_AppBase):
             command=self.exportTbySession,
             height=SECONDARY_BUTTON_HEIGHT,
         )
-        self.exportTbyButton.grid(row=5, column=0, pady=(0, UI_INNER_PAD), sticky="ew", columnspan=2)
+        self.exportTbyButton.grid(row=4, column=0, pady=(0, UI_INNER_PAD), sticky="ew", columnspan=2)
         self.exportTbyButton_tt = CTkToolTip(
             self.exportTbyButton,
             message=_("Export current media session as .tby"),
@@ -623,11 +636,11 @@ class App(_AppBase):
             border_width=1,
             border_color=UI_BORDER_COLOR,
         )
-        self.aboutButton.grid(row=6, column=0, pady=(UI_INNER_PAD, UI_INNER_PAD), sticky="sew", columnspan=2)
+        self.aboutButton.grid(row=5, column=0, pady=(UI_INNER_PAD, UI_INNER_PAD), sticky="sew", columnspan=2)
         self.aboutButton_tt = CTkToolTip(self.aboutButton, message=_("Show info about this software"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
         
-        self.RFrame.rowconfigure(6, weight=1)
+        self.RFrame.rowconfigure(5, weight=1)
         self.RFrame.columnconfigure(0, weight=1)
 
         # Widget on status bar
@@ -707,6 +720,12 @@ class App(_AppBase):
         self.loopCenterFrame.configure(fg_color=UI_BG_CARD_ALT, corner_radius=UI_INPUT_RADIUS)
         self.favoritesFrame.configure(
             fg_color=UI_BG_CARD,
+            corner_radius=UI_INPUT_RADIUS,
+            border_width=1,
+            border_color=UI_BORDER_COLOR,
+        )
+        self.favoriteListFrame.configure(
+            fg_color=UI_BG_INPUT,
             corner_radius=UI_INPUT_RADIUS,
             border_width=1,
             border_color=UI_BORDER_COLOR,
@@ -856,6 +875,14 @@ class App(_AppBase):
             fg=UI_TEXT_PRIMARY,
             selectbackground=UI_BG_CARD_ALT,
             selectforeground=UI_TEXT_PRIMARY,
+            font=("TkDefaultFont", 12, "bold"),
+        )
+        self.favoriteScroll.configure(
+            bg=UI_BG_INPUT,
+            troughcolor=UI_BG_CARD_ALT,
+            activebackground=UI_ACCENT,
+            highlightbackground=UI_BG_INPUT,
+            highlightcolor=UI_BG_INPUT,
         )
 
     def _formatSecondsText(self, seconds):
@@ -869,6 +896,42 @@ class App(_AppBase):
             return(UI_TEXT_PRIMARY)
         return(self.favoritePalette[index % len(self.favoritePalette)])
 
+    def _favoriteSortKey(self, favorite):
+        return(
+            float(favorite.get("time_seconds", 0.0)),
+            int(favorite.get("created_seq", 0)),
+        )
+
+    def _assignFavoriteDefaults(self, favorite, fallbackIndex=0):
+        if(not isinstance(favorite, dict)):
+            return(None)
+        try:
+            seconds = float(favorite.get("time_seconds"))
+        except Exception:
+            return(None)
+        if(seconds < 0):
+            return(None)
+
+        createdSeq = favorite.get("created_seq")
+        try:
+            createdSeq = int(createdSeq)
+        except Exception:
+            createdSeq = self.favoriteCreateCounter
+            self.favoriteCreateCounter += 1
+
+        if(createdSeq >= self.favoriteCreateCounter):
+            self.favoriteCreateCounter = createdSeq + 1
+
+        color = favorite.get("color")
+        if(not isinstance(color, str) or color.strip() == ""):
+            color = self._favoriteColor(createdSeq if createdSeq is not None else fallbackIndex)
+
+        return({
+            "time_seconds": seconds,
+            "color": color,
+            "created_seq": createdSeq,
+        })
+
     def _buildWaveformMarkers(self):
         markers = []
         for idx, favorite in enumerate(self.favorites):
@@ -880,7 +943,7 @@ class App(_AppBase):
             markers.append({
                 "time_seconds": seconds,
                 "label": str(idx + 1),
-                "color": self._favoriteColor(idx),
+                "color": favorite.get("color", self._favoriteColor(idx)),
             })
         return(markers)
 
@@ -890,7 +953,7 @@ class App(_AppBase):
             seconds = favorite.get("time_seconds")
             text = f"{idx + 1}. {self._formatSecondsText(seconds)}"
             self.favoriteList.insert(tk.END, text)
-            self.favoriteList.itemconfig(idx, foreground=self._favoriteColor(idx))
+            self.favoriteList.itemconfig(idx, foreground=favorite.get("color", self._favoriteColor(idx)))
 
         if(self.selectedFavoriteIndex is not None and
            self.selectedFavoriteIndex >= 0 and
@@ -905,19 +968,16 @@ class App(_AppBase):
 
     def _loadFavorites(self, rawFavorites):
         loaded = []
+        self.favoriteCreateCounter = 0
         if(isinstance(rawFavorites, list)):
-            for favorite in rawFavorites:
+            for idx, favorite in enumerate(rawFavorites):
                 if(isinstance(favorite, dict)):
-                    seconds = favorite.get("time_seconds")
+                    normalized = self._assignFavoriteDefaults(favorite, idx)
                 else:
-                    seconds = favorite
-                try:
-                    seconds = float(seconds)
-                except Exception:
-                    continue
-                if(seconds < 0):
-                    continue
-                loaded.append({"time_seconds": seconds})
+                    normalized = self._assignFavoriteDefaults({"time_seconds": favorite}, idx)
+                if(normalized is not None):
+                    loaded.append(normalized)
+        loaded.sort(key=self._favoriteSortKey)
         self.favorites = loaded
         self.selectedFavoriteIndex = None
         self.refreshFavoritesUI()
@@ -963,8 +1023,16 @@ class App(_AppBase):
     def addFavorite(self, seconds):
         if(seconds is None):
             return(False)
-        self.favorites.append({"time_seconds": max(0.0, float(seconds))})
-        self.selectedFavoriteIndex = len(self.favorites) - 1
+        createdSeq = self.favoriteCreateCounter
+        self.favoriteCreateCounter += 1
+        newFavorite = {
+            "time_seconds": max(0.0, float(seconds)),
+            "color": self._favoriteColor(createdSeq),
+            "created_seq": createdSeq,
+        }
+        self.favorites.append(newFavorite)
+        self.favorites.sort(key=self._favoriteSortKey)
+        self.selectedFavoriteIndex = self.favorites.index(newFavorite)
         self.refreshFavoritesUI()
         self.setRecentFilePBOptions()
         self.statusBarMessage(_("Favorite #{} added").format(self.selectedFavoriteIndex + 1), timeout=1000)
@@ -979,7 +1047,10 @@ class App(_AppBase):
            self.selectedFavoriteIndex < len(self.favorites)):
             index = self.selectedFavoriteIndex
         else:
-            index = len(self.favorites) - 1
+            index = max(
+                range(len(self.favorites)),
+                key=lambda i: int(self.favorites[i].get("created_seq", -1)),
+            )
 
         del(self.favorites[index])
         if(len(self.favorites) <= 0):
@@ -1164,7 +1235,14 @@ class App(_AppBase):
             PBO_DEF_DURATION_SECONDS: durationSeconds,
             PBO_DEF_CURRENT_POSITION_SECONDS: currentPositionSeconds,
             PBO_DEF_LOOP: self._buildLoopData(),
-            PBO_DEF_FAVORITES: [{"time_seconds": f.get("time_seconds")} for f in self.favorites],
+            PBO_DEF_FAVORITES: [
+                {
+                    "time_seconds": f.get("time_seconds"),
+                    "color": f.get("color"),
+                    "created_seq": f.get("created_seq"),
+                }
+                for f in self.favorites
+            ],
         }
 
     def _applyLoopData(self, loopData):
@@ -1250,10 +1328,16 @@ class App(_AppBase):
     def selectTbyToSave(self) -> str:
         self.unbind_all('<KeyPress>')
         self.unbind_all('<1>')
+        baseName = "session"
+        if(self.mediaFileName):
+            stem, _ext = os.path.splitext(self.mediaFileName)
+            baseName = stem if stem else self.mediaFileName
+        elif(self.songMetadata):
+            baseName = self.songMetadata
         try:
             filename = filedialogs.saveFileDialog(
                 title = _('Export .tby'),
-                initialfile = (self.mediaFileName or "session") + ".tby",
+                initialfile = baseName + ".tby",
                 initialdir = self.settings.getVal(CFG_APP_SECTION, "LastSaveDir", os.path.expanduser("~")),
                 filter = ("tby",),
                 overwrite = False,
@@ -1373,6 +1457,7 @@ class App(_AppBase):
         self.player.endPoint = -1
         self.favorites = []
         self.selectedFavoriteIndex = None
+        self.favoriteCreateCounter = 0
         self._pendingLoopRestore = None
         self._pendingSeekRestore = None
         self.waveform.clear()

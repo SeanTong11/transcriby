@@ -17,6 +17,7 @@ PLAYHEAD_COLOR = "#F8A24D"
 SELECT_FILL_COLOR = "#234B67"
 SELECT_MARKER_COLOR = "#79C2FF"
 DEFAULT_MARKER_COLOR = "#FFD166"
+MARKER_LABEL_FONT = ("TkDefaultFont", 13, "bold")
 
 
 class WaveformWidget(ctk.CTkFrame):
@@ -350,11 +351,11 @@ class WaveformWidget(ctk.CTkFrame):
             if marker_label:
                 marker_text_id = self.canvas.create_text(
                     marker_x + 3,
-                    8,
+                    10,
                     text=marker_label,
                     fill=marker_color,
                     anchor="nw",
-                    font=("TkDefaultFont", 9, "bold"),
+                    font=MARKER_LABEL_FONT,
                 )
                 self._marker_ids.append(marker_text_id)
 
