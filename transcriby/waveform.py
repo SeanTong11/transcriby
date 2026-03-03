@@ -4,13 +4,14 @@ import tkinter as tk
 
 import customtkinter as ctk
 
-WAVE_BG_COLOR = "#121B25"
-LOOP_FILL_COLOR = "#1D5A5A"
-LOOP_MARKER_COLOR = "#8AF5E7"
-PLAYHEAD_COLOR = "#F8A24D"
-SELECT_FILL_COLOR = "#234B67"
-SELECT_MARKER_COLOR = "#79C2FF"
-DEFAULT_MARKER_COLOR = "#FFD166"
+from transcriby.app_constants import (
+    UI_ACCENT,
+    UI_ACCENT_HOVER,
+    UI_BG_CARD_ALT,
+    UI_BG_INPUT,
+    UI_TEXT_PRIMARY,
+)
+
 MARKER_LABEL_FONT = ("TkDefaultFont", 13, "bold")
 
 
@@ -40,6 +41,15 @@ class WaveformWidget(ctk.CTkFrame):
         self._select_end = None
         self._select_anchor = None
         self._markers = []
+        self._colors = {
+            "bg": UI_BG_INPUT,
+            "loop_fill": UI_BG_CARD_ALT,
+            "loop_marker": UI_ACCENT,
+            "select_fill": UI_BG_CARD_ALT,
+            "select_marker": UI_ACCENT_HOVER,
+            "playhead": UI_TEXT_PRIMARY,
+            "marker_fallback": UI_ACCENT,
+        }
 
         self.canvas = tk.Canvas(self, height=self.height, highlightthickness=0, bd=0)
         self.canvas.pack(fill="both", expand=True)
@@ -91,6 +101,33 @@ class WaveformWidget(ctk.CTkFrame):
         self._select_anchor = None
         self._select_start = None
         self._select_end = None
+        self._redraw()
+
+    def apply_theme(
+        self,
+        bg_color=None,
+        loop_fill_color=None,
+        loop_marker_color=None,
+        select_fill_color=None,
+        select_marker_color=None,
+        playhead_color=None,
+        default_marker_color=None,
+    ):
+        """Apply visual theme colors used by the timeline overlay."""
+        if(bg_color is not None):
+            self._colors["bg"] = bg_color
+        if(loop_fill_color is not None):
+            self._colors["loop_fill"] = loop_fill_color
+        if(loop_marker_color is not None):
+            self._colors["loop_marker"] = loop_marker_color
+        if(select_fill_color is not None):
+            self._colors["select_fill"] = select_fill_color
+        if(select_marker_color is not None):
+            self._colors["select_marker"] = select_marker_color
+        if(playhead_color is not None):
+            self._colors["playhead"] = playhead_color
+        if(default_marker_color is not None):
+            self._colors["marker_fallback"] = default_marker_color
         self._redraw()
 
     def _on_resize(self, _event):
@@ -150,24 +187,24 @@ class WaveformWidget(ctk.CTkFrame):
         width = max(self.canvas.winfo_width(), 1)
         height = max(self.canvas.winfo_height(), 1)
         self.canvas.delete("all")
-        self.canvas.create_rectangle(0, 0, width, height, fill=WAVE_BG_COLOR, outline="")
+        self.canvas.create_rectangle(0, 0, width, height, fill=self._colors["bg"], outline="")
         self._draw_overlays(width, height)
 
     def _draw_overlays(self, _width, height):
         a_x = self._seconds_to_x(self._loop_start)
         b_x = self._seconds_to_x(self._loop_end)
         if(a_x is not None and b_x is not None and b_x > a_x):
-            self.canvas.create_rectangle(a_x, 0, b_x, height, fill=LOOP_FILL_COLOR, outline="", stipple="gray50")
-            self.canvas.create_line(a_x, 0, a_x, height, fill=LOOP_MARKER_COLOR, width=2)
-            self.canvas.create_line(b_x, 0, b_x, height, fill=LOOP_MARKER_COLOR, width=2)
+            self.canvas.create_rectangle(a_x, 0, b_x, height, fill=self._colors["loop_fill"], outline="", stipple="gray50")
+            self.canvas.create_line(a_x, 0, a_x, height, fill=self._colors["loop_marker"], width=2)
+            self.canvas.create_line(b_x, 0, b_x, height, fill=self._colors["loop_marker"], width=2)
 
         s_a_x = self._seconds_to_x(self._select_start)
         s_b_x = self._seconds_to_x(self._select_end)
         if(s_a_x is not None and s_b_x is not None and abs(s_b_x - s_a_x) > 1):
             x1, x2 = (s_a_x, s_b_x) if s_a_x <= s_b_x else (s_b_x, s_a_x)
-            self.canvas.create_rectangle(x1, 0, x2, height, fill=SELECT_FILL_COLOR, outline="", stipple="gray25")
-            self.canvas.create_line(x1, 0, x1, height, fill=SELECT_MARKER_COLOR, width=2)
-            self.canvas.create_line(x2, 0, x2, height, fill=SELECT_MARKER_COLOR, width=2)
+            self.canvas.create_rectangle(x1, 0, x2, height, fill=self._colors["select_fill"], outline="", stipple="gray25")
+            self.canvas.create_line(x1, 0, x1, height, fill=self._colors["select_marker"], width=2)
+            self.canvas.create_line(x2, 0, x2, height, fill=self._colors["select_marker"], width=2)
 
         for marker in self._markers:
             if(not isinstance(marker, dict)):
@@ -176,7 +213,7 @@ class WaveformWidget(ctk.CTkFrame):
             marker_x = self._seconds_to_x(marker_seconds)
             if(marker_x is None):
                 continue
-            marker_color = marker.get("color", DEFAULT_MARKER_COLOR)
+            marker_color = marker.get("color", self._colors["marker_fallback"])
             marker_label = str(marker.get("label", "")).strip()
             self.canvas.create_line(marker_x, 0, marker_x, height, fill=marker_color, width=2)
             if(marker_label):
@@ -191,4 +228,4 @@ class WaveformWidget(ctk.CTkFrame):
 
         playhead_x = self._seconds_to_x(self._playhead)
         if(playhead_x is not None):
-            self.canvas.create_line(playhead_x, 0, playhead_x, height, fill=PLAYHEAD_COLOR, width=2)
+            self.canvas.create_line(playhead_x, 0, playhead_x, height, fill=self._colors["playhead"], width=2)

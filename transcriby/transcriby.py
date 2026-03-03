@@ -8,7 +8,6 @@ import customtkinter as ctk
 from CTkMessagebox import CTkMessagebox
 from CTkToolTip import *
 #from tkinter import ttk
-from tkinter import PhotoImage
 import datetime as dt
 import os
 import argparse
@@ -31,6 +30,7 @@ from transcriby.platform_utils import (
     is_wsl,
     get_resources_dir,
     get_locales_dir,
+    apply_window_icon,
 )
 from transcriby import utils
 from transcriby.player import slowPlayer
@@ -87,15 +87,8 @@ class App(_AppBase):
         self.title(APP_TITLE)
 
         # Sets the app icon
-        self.wm_iconphoto(True, PhotoImage(file=os.path.join(resources_dir, "Icona-32.png")))
+        apply_window_icon(self, resources_dir)
         if is_windows():
-            icon_ico = os.path.join(resources_dir, "Icona.ico")
-            if os.path.exists(icon_ico):
-                try:
-                    self.iconbitmap(icon_ico)
-                except Exception:
-                    pass
-
             try:
                 ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("SeanTong11.Transcriby")
             except Exception:
@@ -934,6 +927,16 @@ class App(_AppBase):
             button_color="#7A6542",
             button_hover_color="#9A825A",
         )
+        if(self.waveform is not None):
+            self.waveform.apply_theme(
+                bg_color=UI_BG_INPUT,
+                loop_fill_color=UI_BG_CARD_ALT,
+                loop_marker_color=UI_ACCENT,
+                select_fill_color=UI_BG_CARD_ALT,
+                select_marker_color=UI_ACCENT_HOVER,
+                playhead_color=UI_TEXT_PRIMARY,
+                default_marker_color=UI_ACCENT,
+            )
 
     def _formatSecondsText(self, seconds):
         if(seconds is None):

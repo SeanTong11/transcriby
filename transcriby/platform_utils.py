@@ -114,6 +114,56 @@ def get_locales_dir() -> str:
     return os.path.join(_get_bundle_base_dir(), "locales")
 
 
+def apply_window_icon(window, resources_dir: str | None = None) -> bool:
+    """Apply app icon assets to a Tk/CTk window.
+
+    On Windows this sets both iconphoto (runtime) and iconbitmap (.ico) to improve
+    titlebar/taskbar rendering. On other platforms iconphoto is used.
+    """
+    if resources_dir is None:
+        resources_dir = get_resources_dir()
+
+    icon_applied = False
+    icon_images = []
+    icon_png_sizes = [256, 128, 96, 64, 48, 40, 32, 24, 20, 16]
+
+    try:
+        import tkinter as tk
+
+        for size in icon_png_sizes:
+            png_path = os.path.join(resources_dir, f"Icona-{size}.png")
+            if os.path.isfile(png_path):
+                try:
+                    icon_images.append(tk.PhotoImage(master=window, file=png_path))
+                except Exception:
+                    pass
+
+        if icon_images:
+            try:
+                window.wm_iconphoto(True, *icon_images)
+                icon_applied = True
+            except Exception:
+                try:
+                    window.iconphoto(True, *icon_images)
+                    icon_applied = True
+                except Exception:
+                    pass
+            setattr(window, "_transcriby_icon_images", icon_images)
+    except Exception:
+        pass
+
+    if is_windows():
+        icon_ico = os.path.join(resources_dir, "Icona.ico")
+        if os.path.isfile(icon_ico):
+            try:
+                window.iconbitmap(icon_ico)
+                icon_applied = True
+            except Exception:
+                pass
+
+    return icon_applied
+
+
 def check_cmd_exists(cmd: str) -> bool:
     """Check if a command exists on the system"""
     import subprocess

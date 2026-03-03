@@ -4,7 +4,7 @@ import os
 import webbrowser
 
 from transcriby.app_constants import *
-from transcriby.platform_utils import get_resources_dir
+from transcriby.platform_utils import get_resources_dir, apply_window_icon
 
 import gettext
 _ = gettext.gettext
@@ -18,6 +18,7 @@ class aboutDialog(ctk.CTkToplevel):
 
         # Mark app directories
         resources_dir = get_resources_dir()
+        apply_window_icon(self, resources_dir)
                 
         self.wm_title(_("About"))
         
