@@ -33,64 +33,51 @@ jobs:
         run: |
           uv sync --dev
 
-      - name: Install mpv runtime (Chocolatey)
+      - name: Install libmpv runtime (Scoop + shinchiro mpv-dev)
         shell: pwsh
         run: |
-          $coreNames = @("libmpv-2.dll", "mpv-2.dll", "mpv-1.dll")
+          Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+          if (-not (Get-Command scoop -ErrorAction SilentlyContinue)) {
+            irm get.scoop.sh | iex
+          }
+          $env:PATH = "$env:USERPROFILE\scoop\shims;$env:PATH"
 
-          function Find-MpvCoreDir([string[]]$roots) {
-            foreach ($root in $roots) {
-              if (-not (Test-Path $root)) { continue }
-              foreach ($core in $coreNames) {
-                $found = Get-ChildItem -Path $root -Filter $core -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
-                if ($found) { return $found.DirectoryName }
-              }
-            }
-            return $null
+          scoop install 7zip
+
+          $headers = @{ "User-Agent" = "transcriby-ci" }
+          $release = Invoke-RestMethod -Uri "https://api.github.com/repos/shinchiro/mpv-winbuild-cmake/releases/latest" -Headers $headers
+          $asset = $release.assets | Where-Object { $_.name -match "^mpv-dev-x86_64-.*\.7z$" } | Select-Object -First 1
+          if (-not $asset) {
+            throw "Could not find mpv-dev x86_64 asset from latest shinchiro release"
           }
 
-          $chocoRoot = if ($env:ChocolateyInstall) { $env:ChocolateyInstall } else { "C:\ProgramData\chocolatey" }
-          $chocoRoots = @(
-            (Join-Path $chocoRoot "lib\mpvio.install\tools"),
-            (Join-Path $chocoRoot "lib\mpvio\tools"),
-            (Join-Path $chocoRoot "bin")
-          )
+          $archive = Join-Path $env:RUNNER_TEMP $asset.name
+          Write-Host "Downloading $($asset.name) ..."
+          Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $archive
 
-          Write-Host "Installing mpv via Chocolatey..."
-          choco install mpvio.install -y --no-progress
+          $extractDir = Join-Path $env:RUNNER_TEMP "mpv-dev"
+          if (Test-Path $extractDir) { Remove-Item -Recurse -Force $extractDir }
+          New-Item -ItemType Directory -Path $extractDir | Out-Null
 
-          $mpvDir = Find-MpvCoreDir -roots $chocoRoots
-          if (-not $mpvDir) {
-            Write-Warning "Chocolatey mpv install did not provide libmpv core DLLs. Falling back to Scoop mpv-git..."
+          $sevenZip = Join-Path $env:USERPROFILE "scoop\shims\7z.exe"
+          if (-not (Test-Path $sevenZip)) {
+            throw "7z executable not found: $sevenZip"
+          }
+          & $sevenZip x $archive "-o$extractDir" -y | Out-Null
 
-            Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
-            if (-not (Get-Command scoop -ErrorAction SilentlyContinue)) {
-              irm get.scoop.sh | iex
-            }
+          $coreDll = Get-ChildItem -Path $extractDir -File -Recurse -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -match "^(libmpv|mpv)(-\d+)?\.dll$" } |
+            Select-Object -First 1
 
-            scoop bucket add extras | Out-Null
-            scoop install mpv-git
-
-            $scoopRoot = Join-Path $env:USERPROFILE "scoop"
-            $scoopRoots = @(
-              (Join-Path $scoopRoot "apps\mpv-git\current"),
-              (Join-Path $scoopRoot "apps\mpv\current"),
-              (Join-Path $scoopRoot "shims")
-            )
-            $mpvDir = Find-MpvCoreDir -roots $scoopRoots
+          if (-not $coreDll) {
+            Write-Host "Could not locate libmpv core DLL. Dumping DLL files under $extractDir ..."
+            Get-ChildItem -Path $extractDir -Filter *.dll -File -Recurse -ErrorAction SilentlyContinue |
+              Select-Object -First 200 |
+              ForEach-Object { Write-Host $_.FullName }
+            throw "libmpv core DLL not found in downloaded mpv-dev package"
           }
 
-          if (-not $mpvDir) {
-            Write-Host "Could not locate core mpv DLLs. Dumping discovered DLL files for diagnostics..."
-            $allRoots = $chocoRoots + (Join-Path $env:USERPROFILE "scoop\apps") + (Join-Path $env:USERPROFILE "scoop\shims")
-            foreach ($r in $allRoots) {
-              if (-not (Test-Path $r)) { continue }
-              Write-Host "--- DLLs under $r ---"
-              Get-ChildItem -Path $r -Filter *.dll -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 120 | ForEach-Object { Write-Host $_.FullName }
-            }
-            throw "libmpv core DLLs not found after Chocolatey/Scoop install"
-          }
-
+          $mpvDir = $coreDll.DirectoryName
           "TRANSCRIBY_MPV_DIR=$mpvDir" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "$mpvDir" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
           Write-Host "Using TRANSCRIBY_MPV_DIR=$mpvDir"

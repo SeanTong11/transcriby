@@ -14,6 +14,17 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
+def _is_windows_mpv_core_dll(name: str) -> bool:
+    lower = name.lower()
+    if lower in {"libmpv.dll", "mpv.dll", "libmpv-2.dll", "mpv-2.dll", "mpv-1.dll"}:
+        return True
+    if lower.startswith("libmpv-") and lower.endswith(".dll"):
+        return True
+    if lower.startswith("mpv-") and lower.endswith(".dll"):
+        return True
+    return False
+
+
 def _collect_mpv_dll_dirs():
     """Collect candidate directories that may contain libmpv DLLs."""
     dirs = []
@@ -56,7 +67,6 @@ def _collect_mpv_dll_dirs():
 
 def _find_mpv_runtime_dir():
     """Find the directory that contains libmpv core DLLs."""
-    core_names = {"libmpv-2.dll", "mpv-2.dll", "mpv-1.dll"}
     matches = []
 
     for base_dir in _collect_mpv_dll_dirs():
@@ -64,7 +74,7 @@ def _find_mpv_runtime_dir():
             continue
         try:
             for path in base_dir.rglob("*.dll"):
-                if path.name.lower() in core_names:
+                if _is_windows_mpv_core_dll(path.name):
                     matches.append(path.parent)
         except OSError:
             continue
@@ -183,7 +193,6 @@ def build():
     ])
     
     # Bundle libmpv DLLs from discovered runtime directory.
-    core_names = {"libmpv-2.dll", "mpv-2.dll", "mpv-1.dll"}
     added_dll_paths = set()
     core_found = False
 
@@ -203,11 +212,11 @@ def build():
                 continue
             added_dll_paths.add(key)
             cmd.extend(["--add-binary", f"{src};."])
-            if lower in core_names:
+            if _is_windows_mpv_core_dll(lower):
                 core_found = True
 
     if not core_found:
-        print("\nError: Could not find libmpv core DLL (libmpv-2.dll/mpv-2.dll/mpv-1.dll).")
+        print("\nError: Could not find libmpv core DLL (libmpv*.dll or mpv-*.dll).")
         print("Set TRANSCRIBY_MPV_DIR to the directory containing mpv DLLs, or install mpv on PATH.")
         return False
     print(f"  Using mpv runtime dir: {runtime_dir}")

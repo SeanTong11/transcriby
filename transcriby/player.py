@@ -116,7 +116,29 @@ def _prepare_posix_mpv_lookup():
 
 if is_windows():
     # Ensure mpv DLLs can be found by python-mpv on Windows.
-    dll_names = ["libmpv-2.dll", "mpv-2.dll", "mpv-1.dll"]
+    preferred_dll_order = ["libmpv-2.dll", "mpv-2.dll", "mpv-1.dll", "libmpv.dll", "mpv.dll"]
+
+    def _is_windows_mpv_core_dll(name: str) -> bool:
+        lower = name.lower()
+        if lower in {"libmpv.dll", "mpv.dll", "libmpv-2.dll", "mpv-2.dll", "mpv-1.dll"}:
+            return True
+        if lower.startswith("libmpv-") and lower.endswith(".dll"):
+            return True
+        if lower.startswith("mpv-") and lower.endswith(".dll"):
+            return True
+        return False
+
+    def _dll_priority(name: str) -> int:
+        lower = name.lower()
+        if lower in preferred_dll_order:
+            # Smaller index = higher priority
+            return preferred_dll_order.index(lower)
+        # Generic libmpv preferred over generic mpv-*.dll
+        if lower.startswith("libmpv-"):
+            return 50
+        if lower.startswith("mpv-"):
+            return 60
+        return 100
 
     def _find_mpv_dll_dir():
         candidates = []
@@ -144,9 +166,18 @@ if is_windows():
             if not base or base in seen or not os.path.isdir(base):
                 continue
             seen.add(base)
-            for name in dll_names:
-                if os.path.isfile(os.path.join(base, name)):
-                    return base, os.path.join(base, name)
+            core_dlls = []
+            try:
+                for name in os.listdir(base):
+                    if _is_windows_mpv_core_dll(name):
+                        full = os.path.join(base, name)
+                        if os.path.isfile(full):
+                            core_dlls.append((name, full))
+            except OSError:
+                core_dlls = []
+            if core_dlls:
+                core_dlls.sort(key=lambda item: (_dll_priority(item[0]), item[0].lower()))
+                return base, core_dlls[0][1]
         return None, None
 
     mpv_dir, mpv_dll = _find_mpv_dll_dir()

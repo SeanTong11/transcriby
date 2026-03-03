@@ -134,13 +134,13 @@ If the last played song was extracted from a YouTube video, the app will not aut
 - **FFmpeg** (for YouTube support only)
 
 **mpv runtime install:**
-- **Windows**: Download from https://mpv.io/installation/ and ensure `mpv.exe` and `libmpv-2.dll` are on PATH (or next to the app)
+- **Windows**: Download from https://mpv.io/installation/ and ensure `mpv.exe` plus `libmpv*.dll` are on PATH (or next to the app)
 - **macOS**: `brew install mpv` (installs `libmpv.dylib`)
 - **Ubuntu/Debian/WSL**: `sudo apt-get install libmpv2 python3-tk`
 - **Fedora**: `sudo dnf install mpv`
 - **Arch**: `sudo pacman -S mpv`
 
-**Tip (Windows):** If `python-mpv` cannot find `libmpv-2.dll`, set `TRANSCRIBY_MPV_DIR` to the folder containing the DLL (for example the same folder as `mpv.exe`).
+**Tip (Windows):** If `python-mpv` cannot find libmpv, set `TRANSCRIBY_MPV_DIR` to the folder containing `libmpv*.dll` (for example the same folder as `mpv.exe`).
 **Tip (macOS/Linux):** The critical dependency is the `libmpv` shared library. If auto-detection fails, set `MPV_LIBRARY` to the full library path (for example `/opt/homebrew/lib/libmpv.dylib`, `/usr/local/lib/libmpv.dylib`, or `/usr/lib/x86_64-linux-gnu/libmpv.so.2`).
 
 ### Quick Start with uv
@@ -207,19 +207,22 @@ uv sync --dev
 
 ### Windows Build
 
-1. Install mpv runtime (includes `libmpv-2.dll`):
+1. Install Scoop and 7-Zip:
 
 ```cmd
-choco install mpvio.install -y
+powershell -ExecutionPolicy RemoteSigned -Command "irm get.scoop.sh | iex"
+scoop install 7zip
 ```
 
-2. Set mpv DLL directory for packaging:
+2. Download latest shinchiro `mpv-dev` package and extract it.
+
+3. Set mpv DLL directory for packaging (the folder that contains `libmpv*.dll`):
 
 ```cmd
-for /f "delims=" %i in ('where mpv.exe') do set TRANSCRIBY_MPV_DIR=%~dpi
+set TRANSCRIBY_MPV_DIR=C:\path\to\mpv-dev\folder\with\dlls
 ```
 
-3. Run:
+4. Run:
 
 ```cmd
 powershell -ExecutionPolicy Bypass -File tools\package_windows.ps1
