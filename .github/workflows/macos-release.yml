@@ -1,0 +1,114 @@
+name: macos-release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-13
+            arch: x64
+          - os: macos-14
+            arch: arm64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install libmpv (mpv)
+        shell: bash
+        run: |
+          brew install mpv
+          libmpv_path="$(brew --prefix mpv)/lib/libmpv.dylib"
+          if [[ ! -f "${libmpv_path}" ]]; then
+            libmpv_path="$(brew --prefix)/lib/libmpv.dylib"
+          fi
+          if [[ ! -f "${libmpv_path}" ]]; then
+            echo "::error::libmpv.dylib not found after brew install mpv"
+            exit 1
+          fi
+          echo "MPV_LIBRARY=${libmpv_path}" >> "${GITHUB_ENV}"
+          echo "Using MPV_LIBRARY=${libmpv_path}"
+
+      - name: Sync dependencies
+        shell: bash
+        run: |
+          uv sync --dev
+
+      - name: Smoke check mpv import
+        shell: bash
+        run: |
+          uv run python -c "import os, mpv; print('python-mpv OK'); print('MPV_LIBRARY=', os.getenv('MPV_LIBRARY'))"
+
+      - name: Build app bundle (PyInstaller)
+        shell: bash
+        run: |
+          uv run python -m PyInstaller \
+            --name Transcriby \
+            --windowed \
+            --noconfirm \
+            --clean \
+            --add-data "transcriby/resources:resources" \
+            --add-data "transcriby/locales:locales" \
+            --hidden-import mpv \
+            --hidden-import soundfile \
+            --hidden-import scipy \
+            --hidden-import numpy \
+            --hidden-import customtkinter \
+            --hidden-import CTkMessagebox \
+            --hidden-import CTkToolTip \
+            --hidden-import tkinterdnd2 \
+            --hidden-import platform_utils \
+            transcriby-launch.py
+
+      - name: Package artifact
+        shell: bash
+        run: |
+          app_path="dist/Transcriby.app"
+          if [[ ! -d "${app_path}" ]]; then
+            echo "::error::Expected app bundle not found: ${app_path}"
+            ls -la dist || true
+            exit 1
+          fi
+
+          mkdir -p out
+          zip_name="Transcriby-macOS-${{ matrix.arch }}.zip"
+          ditto -c -k --sequesterRsrc --keepParent "${app_path}" "out/${zip_name}"
+          shasum -a 256 "out/${zip_name}" > "out/SHA256SUMS-${{ matrix.arch }}.txt"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: transcriby-macos-${{ matrix.arch }}
+          path: |
+            out/Transcriby-macOS-${{ matrix.arch }}.zip
+            out/SHA256SUMS-${{ matrix.arch }}.txt
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            out/Transcriby-macOS-${{ matrix.arch }}.zip
+            out/SHA256SUMS-${{ matrix.arch }}.txt
