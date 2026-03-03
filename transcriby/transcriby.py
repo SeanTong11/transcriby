@@ -207,14 +207,26 @@ class App(_AppBase):
         self.scale.bind("<B3-Motion>", self._bar_loop_select_drag)
         self.scale.bind("<ButtonRelease-3>", self._bar_loop_select_end)
 
-        self.waveform = WaveformWidget(
-            self.LFrame,
-            on_seek=self.waveformSeek,
-            on_loop_select=self.waveformLoopSelect,
-            on_context_request=self.waveformContextRequest,
-            height=WAVEFORM_HEIGHT,
-        )
-        self.waveform.grid(row=3, column=0, padx=UI_INNER_PAD, pady=(UI_INNER_PAD, 0), sticky="ew")
+        self.waveformEnabled = False
+        self.waveform = None
+        if(self.waveformEnabled):
+            self.waveform = WaveformWidget(
+                self.LFrame,
+                on_seek=self.waveformSeek,
+                on_loop_select=self.waveformLoopSelect,
+                on_context_request=self.waveformContextRequest,
+                height=WAVEFORM_HEIGHT,
+            )
+            self.waveform.grid(row=3, column=0, padx=UI_INNER_PAD, pady=(UI_INNER_PAD, 0), sticky="ew")
+        else:
+            self.waveformPlaceholder = ctk.CTkFrame(
+                self.LFrame,
+                height=WAVEFORM_HEIGHT,
+                fg_color=UI_BG_INPUT,
+                corner_radius=UI_INPUT_RADIUS,
+            )
+            self.waveformPlaceholder.grid(row=3, column=0, padx=UI_INNER_PAD, pady=(UI_INNER_PAD, 0), sticky="ew")
+            self.waveformPlaceholder.grid_propagate(False)
 
         self.CTLFrame = ctk.CTkFrame(self.LFrame)
         self.CTLFrame.grid(row=4, column=0, padx=UI_INNER_PAD, pady=UI_INNER_PAD, sticky="nsew")
@@ -545,13 +557,13 @@ class App(_AppBase):
         self.favoriteScroll = ctk.CTkScrollbar(
             self.favoriteListFrame,
             orientation="horizontal",
-            height=8,
+            height=12,
             command=self.favoriteCanvas.xview,
         )
         self.favoriteScroll.grid(row=1, column=0, sticky="ew")
         self.favoriteCanvas.configure(xscrollcommand=self.favoriteScroll.set)
 
-        self.favoriteCardsInner = ctk.CTkFrame(self.favoriteCanvas, fg_color="transparent")
+        self.favoriteCardsInner = ctk.CTkFrame(self.favoriteCanvas, fg_color=UI_BG_CARD_ALT)
         self.favoriteCanvasWindow = self.favoriteCanvas.create_window((0, 0), window=self.favoriteCardsInner, anchor="nw")
         self.favoriteCardsInner.bind(
             "<Configure>",
@@ -763,6 +775,11 @@ class App(_AppBase):
             border_width=1,
             border_color=UI_BORDER_COLOR,
         )
+        if(hasattr(self, "waveformPlaceholder")):
+            self.waveformPlaceholder.configure(
+                fg_color=UI_BG_INPUT,
+                corner_radius=UI_INPUT_RADIUS,
+            )
 
         self.dispPosition.configure(text_color=UI_TEXT_PRIMARY, font=("", TITLE_FONT_SIZE, "bold"))
         self.fileLabel.configure(text_color=UI_TEXT_MUTED)
@@ -906,9 +923,9 @@ class App(_AppBase):
         )
         self.favoriteCanvas.configure(bg=UI_BG_CARD_ALT)
         self.favoriteScroll.configure(
-            fg_color=UI_BG_CARD_ALT,
-            button_color=UI_BORDER_COLOR,
-            button_hover_color=UI_TEXT_MUTED,
+            fg_color=UI_BG_CARD,
+            button_color="#4A6075",
+            button_hover_color="#5C7690",
         )
 
     def _formatSecondsText(self, seconds):
@@ -1108,7 +1125,8 @@ class App(_AppBase):
         self._updateFavoriteScrollState()
         self._scrollFavoriteIntoView(self.selectedFavoriteIndex)
 
-        self.waveform.set_markers(self._buildWaveformMarkers())
+        if(self.waveform is not None):
+            self.waveform.set_markers(self._buildWaveformMarkers())
 
     def _loadFavorites(self, rawFavorites):
         loaded = []
@@ -1589,7 +1607,8 @@ class App(_AppBase):
         self.favoriteCreateCounter = 0
         self._pendingLoopRestore = None
         self._pendingSeekRestore = None
-        self.waveform.clear()
+        if(self.waveform is not None):
+            self.waveform.clear()
         self._setLoopEnabledUI(False, showStatus=False)
         self.Pause()
         self.player.Rewind()
@@ -1646,7 +1665,8 @@ class App(_AppBase):
         # Actually load the media
         self.player.MediaLoad(self.mediaUri)
         self.player.update_position()
-        self.waveform.set_media(self.media)
+        if(self.waveform is not None):
+            self.waveform.set_media(self.media)
 
         # Set the metadata only if it's not a Youtube downloaded file
         if(self.bYouTubeFile == False):
@@ -1955,6 +1975,8 @@ class App(_AppBase):
         return(True)
 
     def syncWaveformState(self):
+        if(self.waveform is None):
+            return
         duration = self.player.query_duration()
         if(duration is not None and duration > 0):
             self.waveform.set_duration(self.player.song_time(duration))
@@ -2031,7 +2053,7 @@ class App(_AppBase):
         if(self.player.canPlay == False):
             return
         self._barLoopSelectStart = self._seconds_from_widget_x(event.widget, event.x)
-        if(self._barLoopSelectStart is not None):
+        if(self.waveform is not None and self._barLoopSelectStart is not None):
             self.waveform.set_selection_preview(self._barLoopSelectStart, self._barLoopSelectStart)
 
     def _bar_loop_select_drag(self, event):
@@ -2040,7 +2062,8 @@ class App(_AppBase):
         curSeconds = self._seconds_from_widget_x(event.widget, event.x)
         if(curSeconds is None):
             return
-        self.waveform.set_selection_preview(self._barLoopSelectStart, curSeconds)
+        if(self.waveform is not None):
+            self.waveform.set_selection_preview(self._barLoopSelectStart, curSeconds)
 
     def _bar_loop_select_end(self, event):
         if(self._barLoopSelectStart is None):
@@ -2048,7 +2071,8 @@ class App(_AppBase):
         endSeconds = self._seconds_from_widget_x(event.widget, event.x)
         startSeconds = self._barLoopSelectStart
         self._barLoopSelectStart = None
-        self.waveform.clear_selection_preview()
+        if(self.waveform is not None):
+            self.waveform.clear_selection_preview()
         if(endSeconds is None):
             return
         if(abs(endSeconds - startSeconds) < 0.01):
