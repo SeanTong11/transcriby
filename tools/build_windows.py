@@ -8,6 +8,7 @@ import os
 import sys
 import shutil
 import subprocess
+import importlib.util
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -73,20 +74,25 @@ def check_requirements():
     
     # Check core dependencies
     required = [
-        ('mpv', 'python-mpv'),
-        ('soundfile', 'soundfile'),
-        ('scipy', 'scipy'),
-        ('numpy', 'numpy'),
-        ('customtkinter', 'customtkinter'),
-        ('PIL', 'pillow'),
-        ('CTkMessagebox', 'CTkMessagebox'),
-        ('CTkToolTip', 'CTkToolTip'),
-        ('tkinterdnd2', 'tkinterdnd2'),
+        ('mpv', 'python-mpv', True),
+        ('soundfile', 'soundfile', False),
+        ('scipy', 'scipy', False),
+        ('numpy', 'numpy', False),
+        ('customtkinter', 'customtkinter', False),
+        ('PIL', 'pillow', False),
+        ('CTkMessagebox', 'CTkMessagebox', False),
+        ('CTkToolTip', 'CTkToolTip', False),
+        ('tkinterdnd2', 'tkinterdnd2', False),
     ]
     
-    for module, pkg in required:
+    for module, pkg, check_spec_only in required:
         try:
-            __import__(module)
+            if check_spec_only:
+                # python-mpv import requires libmpv runtime; check install without loading DLLs.
+                if importlib.util.find_spec(module) is None:
+                    raise ImportError(module)
+            else:
+                __import__(module)
             print(f"  {module}: OK")
         except ImportError:
             print(f"  {module}: NOT FOUND")

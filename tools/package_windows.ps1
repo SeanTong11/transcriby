@@ -8,6 +8,9 @@ if (-not $env:TRANSCRIBY_MPV_DIR) {
 
 Write-Host "== Building Transcriby =="
 uv run python $PSScriptRoot\build_windows.py
+if ($LASTEXITCODE -ne 0) {
+  throw "Windows build failed with exit code $LASTEXITCODE"
+}
 
 $distDir = Join-Path (Get-Location) "Transcriby-Windows"
 if (-not (Test-Path $distDir)) {
