@@ -207,22 +207,20 @@ uv sync --dev
 
 ### Windows Build
 
-1. Install Scoop and 7-Zip:
+1. Download a pinned shinchiro `mpv-dev` package (example tag `20260303`) from:
 
 ```cmd
-powershell -ExecutionPolicy RemoteSigned -Command "irm get.scoop.sh | iex"
-scoop install 7zip
+https://github.com/shinchiro/mpv-winbuild-cmake/releases/tag/20260303
 ```
 
-2. Download latest shinchiro `mpv-dev` package and extract it.
-
-3. Set mpv DLL directory for packaging (the folder that contains `libmpv*.dll`):
+2. Extract the archive and set mpv DLL directory for packaging
+   (the folder that contains `libmpv*.dll`):
 
 ```cmd
 set TRANSCRIBY_MPV_DIR=C:\path\to\mpv-dev\folder\with\dlls
 ```
 
-4. Run:
+3. Run:
 
 ```cmd
 powershell -ExecutionPolicy Bypass -File tools\package_windows.ps1
