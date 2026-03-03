@@ -150,7 +150,7 @@ class App(_AppBase):
         self._pendingLoopRestore = None     # Deferred loop restore while media duration is unavailable
         self._pendingSeekRestore = None     # Deferred seek restore while media duration is unavailable
         self.favoriteRowsPerColumn = 4
-        self.favoriteGridHeight = 120
+        self.favoriteGridHeight = 90
         self.favoritePalette = [
             "#FF6B6B",
             "#FFD166",
@@ -160,6 +160,22 @@ class App(_AppBase):
             "#E76F51",
             "#C77DFF",
             "#9EF01A",
+            "#FF8FAB",
+            "#00C2A8",
+            "#48CAE4",
+            "#A0C4FF",
+            "#B9FBC0",
+            "#FFC6FF",
+            "#FEC89A",
+            "#BDB2FF",
+            "#F9844A",
+            "#90BE6D",
+            "#43AA8B",
+            "#277DA1",
+            "#F3722C",
+            "#8E9AAF",
+            "#52B788",
+            "#F8961E",
         ]
 
         # Build the 3 main frames: Left (shrinkable), Right (buttons)
@@ -469,7 +485,7 @@ class App(_AppBase):
         self.btnFavoriteAdd = ctk.CTkButton(
             self.favoritesFrame, width=42, text="+", font=("", LBL_FONT_SIZE), command=self.addFavoriteAtCurrent
         )
-        self.btnFavoriteAdd.grid(row=0, column=0, padx=(0, 6), pady=(6, 4), sticky="w")
+        self.btnFavoriteAdd.grid(row=0, column=0, padx=(0, 6), pady=(4, 2), sticky="w")
         self.btnFavoriteAdd_tt = CTkToolTip(
             self.btnFavoriteAdd,
             message="Add favorite at current position\nShortcut: M",
@@ -482,7 +498,7 @@ class App(_AppBase):
         self.btnFavoriteDel = ctk.CTkButton(
             self.favoritesFrame, width=42, text="-", font=("", LBL_FONT_SIZE), command=self.deleteFavorite
         )
-        self.btnFavoriteDel.grid(row=0, column=1, padx=(0, 6), pady=(6, 4), sticky="w")
+        self.btnFavoriteDel.grid(row=0, column=1, padx=(0, 6), pady=(4, 2), sticky="w")
         self.btnFavoriteDel_tt = CTkToolTip(
             self.btnFavoriteDel,
             message="Delete selected favorite, or the latest one\nShortcut: Shift+M",
@@ -495,7 +511,7 @@ class App(_AppBase):
         self.btnFavoritePrev = ctk.CTkButton(
             self.favoritesFrame, width=42, text="<", font=("", LBL_FONT_SIZE), command=self.jumpToPreviousFavorite
         )
-        self.btnFavoritePrev.grid(row=0, column=2, padx=(0, 6), pady=(6, 4), sticky="w")
+        self.btnFavoritePrev.grid(row=0, column=2, padx=(0, 6), pady=(4, 2), sticky="w")
         self.btnFavoritePrev_tt = CTkToolTip(
             self.btnFavoritePrev,
             message="Jump to previous favorite\nShortcut: Ctrl+[",
@@ -508,7 +524,7 @@ class App(_AppBase):
         self.btnFavoriteNext = ctk.CTkButton(
             self.favoritesFrame, width=42, text=">", font=("", LBL_FONT_SIZE), command=self.jumpToNextFavorite
         )
-        self.btnFavoriteNext.grid(row=0, column=3, padx=(0, 6), pady=(6, 4), sticky="w")
+        self.btnFavoriteNext.grid(row=0, column=3, padx=(0, 6), pady=(4, 2), sticky="w")
         self.btnFavoriteNext_tt = CTkToolTip(
             self.btnFavoriteNext,
             message="Jump to next favorite\nShortcut: Ctrl+]",
@@ -519,14 +535,19 @@ class App(_AppBase):
         )
 
         self.favoriteListFrame = ctk.CTkFrame(self.favoritesFrame, height=self.favoriteGridHeight, fg_color="transparent")
-        self.favoriteListFrame.grid(row=1, column=0, columnspan=5, sticky="ew", padx=(0, 4), pady=(0, 4))
+        self.favoriteListFrame.grid(row=1, column=0, columnspan=5, sticky="ew", padx=(0, 4), pady=(0, 2))
         self.favoriteListFrame.grid_propagate(False)
         self.favoriteListFrame.grid_columnconfigure(0, weight=1)
         self.favoriteListFrame.grid_rowconfigure(0, weight=1)
 
         self.favoriteCanvas = tk.Canvas(self.favoriteListFrame, highlightthickness=0, bd=0)
         self.favoriteCanvas.grid(row=0, column=0, sticky="nsew")
-        self.favoriteScroll = tk.Scrollbar(self.favoriteListFrame, orient="horizontal", command=self.favoriteCanvas.xview)
+        self.favoriteScroll = ctk.CTkScrollbar(
+            self.favoriteListFrame,
+            orientation="horizontal",
+            height=8,
+            command=self.favoriteCanvas.xview,
+        )
         self.favoriteScroll.grid(row=1, column=0, sticky="ew")
         self.favoriteCanvas.configure(xscrollcommand=self.favoriteScroll.set)
 
@@ -537,6 +558,10 @@ class App(_AppBase):
             lambda _event: self.favoriteCanvas.configure(scrollregion=self.favoriteCanvas.bbox("all"))
         )
         self.favoriteCanvas.bind("<Configure>", self._onFavoriteCanvasResize)
+        self.favoriteCanvas.bind("<MouseWheel>", self._onFavoriteMouseWheel)
+        self.favoriteCanvas.bind("<Shift-MouseWheel>", self._onFavoriteMouseWheel)
+        self.favoriteCanvas.bind("<Button-4>", self._onFavoriteMouseWheel)
+        self.favoriteCanvas.bind("<Button-5>", self._onFavoriteMouseWheel)
         self.favoriteItemButtons = []
 
         # Widgets on right panel
@@ -733,7 +758,7 @@ class App(_AppBase):
             border_color=UI_BORDER_COLOR,
         )
         self.favoriteListFrame.configure(
-            fg_color=UI_BG_INPUT,
+            fg_color=UI_BG_CARD_ALT,
             corner_radius=UI_INPUT_RADIUS,
             border_width=1,
             border_color=UI_BORDER_COLOR,
@@ -879,13 +904,11 @@ class App(_AppBase):
             border_color=UI_BORDER_COLOR,
             text_color=UI_TEXT_MUTED,
         )
-        self.favoriteCanvas.configure(bg=UI_BG_INPUT)
+        self.favoriteCanvas.configure(bg=UI_BG_CARD_ALT)
         self.favoriteScroll.configure(
-            bg=UI_BG_INPUT,
-            troughcolor=UI_BG_INPUT,
-            activebackground=UI_BG_CARD_ALT,
-            highlightbackground=UI_BG_INPUT,
-            highlightcolor=UI_BG_INPUT,
+            fg_color=UI_BG_CARD_ALT,
+            button_color=UI_BORDER_COLOR,
+            button_hover_color=UI_TEXT_MUTED,
         )
 
     def _formatSecondsText(self, seconds):
@@ -898,6 +921,19 @@ class App(_AppBase):
         if(len(self.favoritePalette) <= 0):
             return(UI_TEXT_PRIMARY)
         return(self.favoritePalette[index % len(self.favoritePalette)])
+
+    def _textColorForBackground(self, color, light=UI_TEXT_PRIMARY, dark=UI_BG_INPUT):
+        try:
+            hexColor = color.lstrip("#")
+            if(len(hexColor) != 6):
+                return(light)
+            r = int(hexColor[0:2], 16)
+            g = int(hexColor[2:4], 16)
+            b = int(hexColor[4:6], 16)
+            luma = (0.2126 * r) + (0.7152 * g) + (0.0722 * b)
+            return(dark if luma >= 155 else light)
+        except Exception:
+            return(light)
 
     def _favoriteSortKey(self, favorite):
         return(
@@ -958,10 +994,41 @@ class App(_AppBase):
                 height=event.height,
                 width=max(event.width, innerWidth),
             )
+            self.favoriteCanvas.configure(scrollregion=self.favoriteCanvas.bbox("all"))
+            self._updateFavoriteScrollState()
+
+    def _updateFavoriteScrollState(self):
+        if(not (hasattr(self, "favoriteCanvas") and hasattr(self, "favoriteCardsInner") and hasattr(self, "favoriteScroll"))):
+            return
+        self.favoriteCanvas.update_idletasks()
+        canvasWidth = max(1, self.favoriteCanvas.winfo_width())
+        innerWidth = max(1, self.favoriteCardsInner.winfo_reqwidth())
+        needsScroll = (innerWidth > (canvasWidth + 2))
+        if(needsScroll):
+            self.favoriteScroll.grid()
+        else:
+            self.favoriteCanvas.xview_moveto(0.0)
+            self.favoriteScroll.grid_remove()
+
+    def _onFavoriteMouseWheel(self, event):
+        self._updateFavoriteScrollState()
+        if(hasattr(self, "favoriteScroll") == False or self.favoriteScroll.winfo_ismapped() == False):
+            return("break")
+        delta = 0
+        if(hasattr(event, "delta") and event.delta):
+            delta = -1 if event.delta > 0 else 1
+        elif(hasattr(event, "num") and event.num == 4):
+            delta = -1
+        elif(hasattr(event, "num") and event.num == 5):
+            delta = 1
+        if(delta != 0):
+            self.favoriteCanvas.xview_scroll(delta * 2, "units")
+        return("break")
 
     def _scrollFavoriteIntoView(self, index):
         if(index is None or index < 0 or index >= len(self.favoriteItemButtons)):
             return
+        self._updateFavoriteScrollState()
         button = self.favoriteItemButtons[index]
         self.favoriteCanvas.update_idletasks()
         canvasWidth = max(1, self.favoriteCanvas.winfo_width())
@@ -1010,28 +1077,35 @@ class App(_AppBase):
             favColor = favorite.get("color", self._favoriteColor(idx))
             isSelected = (idx == self.selectedFavoriteIndex)
             fgColor = favColor if isSelected else UI_BG_CARD_ALT
-            textColor = UI_BG_INPUT if isSelected else favColor
+            textColor = self._textColorForBackground(fgColor) if isSelected else favColor
+            hoverColor = fgColor if isSelected else UI_BG_CARD
 
             btn = ctk.CTkButton(
                 self.favoriteCardsInner,
                 text=text,
-                width=188,
-                height=26,
+                width=152,
+                height=19,
                 corner_radius=6,
                 border_width=1,
                 border_color=favColor,
                 fg_color=fgColor,
-                hover_color=UI_BG_CARD,
+                hover_color=hoverColor,
                 text_color=textColor,
-                font=("TkDefaultFont", 12, "bold"),
+                text_color_disabled=textColor,
+                font=("TkDefaultFont", 11, "bold"),
                 anchor="w",
                 command=lambda i=idx: self.onFavoriteItemClick(i),
             )
-            btn.grid(row=row, column=col, padx=(0, 6), pady=(0, 6), sticky="w")
+            btn.grid(row=row, column=col, padx=(0, 6), pady=(0, 1), sticky="w")
+            btn.bind("<MouseWheel>", self._onFavoriteMouseWheel)
+            btn.bind("<Shift-MouseWheel>", self._onFavoriteMouseWheel)
+            btn.bind("<Button-4>", self._onFavoriteMouseWheel)
+            btn.bind("<Button-5>", self._onFavoriteMouseWheel)
             self.favoriteItemButtons.append(btn)
 
         self.favoriteCardsInner.update_idletasks()
         self.favoriteCanvas.configure(scrollregion=self.favoriteCanvas.bbox("all"))
+        self._updateFavoriteScrollState()
         self._scrollFavoriteIntoView(self.selectedFavoriteIndex)
 
         self.waveform.set_markers(self._buildWaveformMarkers())

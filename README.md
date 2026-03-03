@@ -26,6 +26,8 @@ Current maintained repository: [SeanTong11/transcriby](https://github.com/SeanTo
 - [YouTube audio extraction from URL](#youtube-audio-extraction)
 - [Loop a range of the song, with fine adjustment of boundaries](#loop-ab)
 - [Waveform view with click-to-seek](#waveform-view)
+- [Favorites and quick timestamp markers](#favorites-and-session-files)
+- [Session files (`.tby`) for full restore](#favorites-and-session-files)
 - [Modified audio export in MP3 or WAV audio format](#export-modified-audio)
 - [No nonsense keyboard shortcuts](#optimized-keyobard-shortcuts)
 - [...and more!](#other-features)
@@ -68,6 +70,24 @@ Transcriby now includes a waveform panel under the seek bar:
 - Right-click drag on waveform or seek/progress area to set a loop range quickly
 
 For media containers like MP4, waveform extraction first tries `soundfile` and falls back to `ffmpeg` if available on your system.
+
+### Favorites and session files:
+
+Transcriby provides timestamp favorites directly in the Playback panel:
+
+- Add a favorite at the current playhead position
+- Jump to previous/next favorite quickly
+- Delete the selected favorite (or the latest one when none is selected)
+- Favorites auto-number by time order and keep stable per-item colors
+- Favorite markers are also displayed on the waveform
+
+You can also save/restore complete playback sessions with `.tby` files:
+
+- Current media path
+- Speed, transpose, pitch cents, volume
+- Loop A/B start/end and loop enabled state
+- Current playback position
+- Favorite timestamps and colors
 
 ### Export modified audio:
 
@@ -226,6 +246,11 @@ The following commands are all assigned to the numeric keypad. Refer to the draw
 - **8**: Increase speed by `0.1x`
 - **2**: Decrease speed by `0.1x`
 - **5**: Reset speed to 100%
+
+- **M**: Add favorite at current position
+- **Shift+M** (or **M** with uppercase): Delete selected/latest favorite
+- **Ctrl+[**: Jump to previous favorite
+- **Ctrl+]**: Jump to next favorite
 
 - **+**: Transpose +1 semitone
 - **-**: Transpose -1 semitone
