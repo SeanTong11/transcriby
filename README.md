@@ -1,9 +1,12 @@
 # Transcriby
 
 **Transcriby** is a simple audio player with speed/pitch change capabilities. It is meant to help music students/teachers transcribe music and play along with it.
+It is also an open-source alternative for Transcribe!-style transcription workflows.
 
 - **Cross-platform**: Works on Windows, Linux, and macOS
 - **Lightweight**: Uses `mpv` (libmpv) for audio playback (no GStreamer required)
+
+Transcriby is an independent project and is not affiliated with or endorsed by Seventh String Software.
 
 **Made by a musician for musicians**
 
@@ -132,12 +135,13 @@ If the last played song was extracted from a YouTube video, the app will not aut
 
 **mpv runtime install:**
 - **Windows**: Download from https://mpv.io/installation/ and ensure `mpv.exe` and `libmpv-2.dll` are on PATH (or next to the app)
-- **macOS**: `brew install mpv`
+- **macOS**: `brew install mpv` (installs `libmpv.dylib`)
 - **Ubuntu/Debian/WSL**: `sudo apt-get install libmpv2 python3-tk`
 - **Fedora**: `sudo dnf install mpv`
 - **Arch**: `sudo pacman -S mpv`
 
 **Tip (Windows):** If `python-mpv` cannot find `libmpv-2.dll`, set `TRANSCRIBY_MPV_DIR` to the folder containing the DLL (for example the same folder as `mpv.exe`).
+**Tip (macOS/Linux):** The critical dependency is the `libmpv` shared library. If auto-detection fails, set `MPV_LIBRARY` to the full library path (for example `/opt/homebrew/lib/libmpv.dylib`, `/usr/local/lib/libmpv.dylib`, or `/usr/lib/x86_64-linux-gnu/libmpv.so.2`).
 
 ### Quick Start with uv
 
@@ -181,6 +185,10 @@ python transcriby-launch.py
 
 ```bash
 brew install mpv
+
+# If python-mpv cannot locate libmpv automatically:
+# export MPV_LIBRARY=/opt/homebrew/lib/libmpv.dylib  # Apple Silicon
+# export MPV_LIBRARY=/usr/local/lib/libmpv.dylib     # Intel
 
 git clone https://github.com/SeanTong11/transcriby.git
 cd transcriby
