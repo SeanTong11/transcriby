@@ -13,6 +13,46 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
+def _collect_mpv_dll_dirs():
+    """Collect candidate directories that may contain libmpv DLLs."""
+    dirs = []
+
+    # Preferred: explicit environment variable from CI or local setup.
+    env_dir = os.environ.get("TRANSCRIBY_MPV_DIR") or os.environ.get("SLOWPLAY_MPV_DIR")
+    if env_dir:
+        dirs.append(Path(env_dir))
+
+    # Fallback: derive from mpv executable on PATH.
+    mpv_exe = shutil.which("mpv")
+    if mpv_exe:
+        mpv_dir = Path(mpv_exe).resolve().parent
+        dirs.extend(
+            [
+                mpv_dir,
+                mpv_dir / "bin",
+                mpv_dir / "lib",
+                mpv_dir.parent / "bin",
+                mpv_dir.parent / "lib",
+            ]
+        )
+
+    # Legacy fallback for manual local builds.
+    dirs.append(PROJECT_ROOT / "third_party" / "mpv")
+
+    seen = set()
+    result = []
+    for d in dirs:
+        try:
+            key = str(d.resolve()).lower()
+        except Exception:
+            key = str(d).lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        result.append(d)
+    return result
+
+
 def check_requirements():
     """Check if all required tools are installed"""
     print("Checking requirements...")
@@ -98,13 +138,36 @@ def build():
         "--hidden-import", "platform_utils",
     ])
     
-    # Bundle libmpv DLLs if present (third_party/mpv)
-    mpv_dir = PROJECT_ROOT / "third_party" / "mpv"
-    if mpv_dir.is_dir():
-        for name in os.listdir(mpv_dir):
-            if name.lower().endswith(".dll"):
-                src = mpv_dir / name
-                cmd.extend(["--add-binary", f"{src};."])
+    # Bundle libmpv DLLs from environment/path/fallback locations.
+    core_names = {"libmpv-2.dll", "mpv-2.dll", "mpv-1.dll"}
+    added_dll_paths = set()
+    core_found = False
+
+    for mpv_dir in _collect_mpv_dll_dirs():
+        if not mpv_dir.is_dir():
+            continue
+        try:
+            names = os.listdir(mpv_dir)
+        except OSError:
+            continue
+        for name in names:
+            lower = name.lower()
+            if not lower.endswith(".dll"):
+                continue
+            src = mpv_dir / name
+            key = str(src.resolve()).lower()
+            if key in added_dll_paths:
+                continue
+            added_dll_paths.add(key)
+            cmd.extend(["--add-binary", f"{src};."])
+            if lower in core_names:
+                core_found = True
+
+    if not core_found:
+        print("\nError: Could not find libmpv core DLL (libmpv-2.dll/mpv-2.dll/mpv-1.dll).")
+        print("Set TRANSCRIBY_MPV_DIR to the directory containing mpv DLLs, or install mpv on PATH.")
+        return False
+    print(f"  Bundling {len(added_dll_paths)} DLL(s) for mpv runtime")
 
     # Add icon (if exists)
     icon_path = PROJECT_ROOT / "transcriby" / "resources" / "Icona.ico"

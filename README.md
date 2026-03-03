@@ -203,15 +203,26 @@ To install with all development dependencies (pyinstaller, yt-dlp):
 
 ```bash
 uv sync --dev
+```
 
 ### Windows Build
 
-1. Download the mpv **libmpv dev** package and extract DLLs into `third_party/mpv/`
-2. Run:
+1. Install mpv runtime (includes `libmpv-2.dll`):
+
+```cmd
+choco install mpvio.install -y
+```
+
+2. Set mpv DLL directory for packaging:
+
+```cmd
+for /f "delims=" %i in ('where mpv.exe') do set TRANSCRIBY_MPV_DIR=%~dpi
+```
+
+3. Run:
 
 ```cmd
 powershell -ExecutionPolicy Bypass -File tools\package_windows.ps1
-```
 ```
 
 ### Legacy pip Setup (Not Recommended)

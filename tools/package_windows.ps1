@@ -1,12 +1,13 @@
 $ErrorActionPreference = "Stop"
 
-$mpvDir = Join-Path (Get-Location) "third_party\mpv"
-if (-not (Test-Path $mpvDir)) {
-  Write-Error "Missing libmpv DLLs. Place mpv dev DLLs under: $mpvDir"
+if (-not $env:TRANSCRIBY_MPV_DIR) {
+  Write-Warning "TRANSCRIBY_MPV_DIR is not set. Build will try PATH and fallback locations."
+} else {
+  Write-Host "Using TRANSCRIBY_MPV_DIR=$env:TRANSCRIBY_MPV_DIR"
 }
 
 Write-Host "== Building Transcriby =="
-python $PSScriptRoot\build_windows.py
+uv run python $PSScriptRoot\build_windows.py
 
 $distDir = Join-Path (Get-Location) "Transcriby-Windows"
 if (-not (Test-Path $distDir)) {

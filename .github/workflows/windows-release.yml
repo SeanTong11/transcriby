@@ -6,6 +6,9 @@ on:
     tags:
       - "v*"
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-latest
@@ -28,17 +31,16 @@ jobs:
       - name: Sync dependencies
         shell: pwsh
         run: |
-          uv sync
+          uv sync --dev
 
-      - name: Install 7-Zip
+      - name: Install mpv runtime (Chocolatey)
         shell: pwsh
         run: |
-          choco install 7zip -y
-
-      - name: Fetch libmpv DLLs
-        shell: pwsh
-        run: |
-          powershell -ExecutionPolicy Bypass -File tools\fetch_mpv.ps1
+          choco install mpvio.install -y --no-progress
+          $mpvExe = (Get-Command mpv.exe -ErrorAction Stop).Source
+          $mpvDir = Split-Path $mpvExe -Parent
+          "TRANSCRIBY_MPV_DIR=$mpvDir" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "Using TRANSCRIBY_MPV_DIR=$mpvDir"
 
       - name: Build and package
         shell: pwsh
