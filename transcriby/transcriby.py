@@ -146,6 +146,8 @@ class App(_AppBase):
         self._loopContextSeconds = None     # Right-click context target in seconds
         self.favorites = []                 # Favorite timestamps for current media
         self.selectedFavoriteIndex = None
+        self._pendingLoopRestore = None     # Deferred loop restore while media duration is unavailable
+        self._pendingSeekRestore = None     # Deferred seek restore while media duration is unavailable
         self.favoritePalette = [
             "#FF6B6B",
             "#FFD166",
@@ -210,8 +212,8 @@ class App(_AppBase):
         self.varSpeed.trace_add("write", self.speedChanged)
         self.lblSpeed = ctk.CTkLabel(self.PlaybackTab, text=_("Speed:"), font=("", LBL_FONT_SIZE))
         self.lblSpeed.grid(row=4, column=0, pady=(UI_CONTROL_PAD_Y, 0), sticky="w")
-        self.sldSpeed = ctk.CTkSlider(self.PlaybackTab, from_=MIN_SPEED_PERCENT,
-                                      to=MAX_SPEED_PERCENT, number_of_steps=19, variable=self.varSpeed)
+        self.sldSpeed = ctk.CTkSlider(self.PlaybackTab, from_=SPEED_SLIDER_MIN,
+                                      to=MAX_SPEED_PERCENT, number_of_steps=20, variable=self.varSpeed)
         self.sldSpeed.grid(row=4, column=1, padx=UI_INNER_PAD, sticky="ew")
         self.entSpeed = ctk.CTkEntry(self.PlaybackTab, width=56, justify="center",
                                      validate='all', validatecommand=vspeed)
@@ -1053,32 +1055,17 @@ class App(_AppBase):
             loopData["end_seconds"] = self.player.song_time(self.player.endPoint)
         return(loopData)
 
-    def _buildPlaybackOptions(self):
-        durationSeconds = None
+    def _queryDurationSeconds(self):
         duration = self.player.query_duration()
-        if(duration is not None and duration > 0):
-            durationSeconds = self.player.song_time(duration)
+        if(duration is None or duration <= 0):
+            return(None)
+        return(self.player.song_time(duration))
 
-        return {
-            PBO_DEF_METADATA: self.songMetadata,
-            PBO_DEF_YOUTUBE: self.bYouTubeFile,
-            PBO_DEF_SPEED: self.varSpeed.get(),
-            PBO_DEF_SEMITONES: self.varPitchST.get(),
-            PBO_DEF_CENTS: self.varPitchCents.get(),
-            PBO_DEF_VOLUME: self.varVolume.get(),
-            PBO_DEF_DURATION_SECONDS: durationSeconds,
-            PBO_DEF_LOOP: self._buildLoopData(),
-            PBO_DEF_FAVORITES: [{"time_seconds": f.get("time_seconds")} for f in self.favorites],
-        }
-
-    def _applyLoopData(self, loopData):
-        self.player.startPoint = -2
-        self.player.endPoint = -1
-        self.setLoopStart(0)
-
+    def _normalizeLoopRestore(self, loopData):
         startSeconds = None
         endSeconds = None
         enableLoop = False
+
         if(isinstance(loopData, dict)):
             try:
                 startSeconds = float(loopData.get("start_seconds"))
@@ -1090,23 +1077,101 @@ class App(_AppBase):
                 endSeconds = None
             enableLoop = bool(loopData.get("enabled", False))
 
-        duration = self.player.query_duration()
-        durationSeconds = self.player.song_time(duration) if(duration is not None and duration > 0) else None
-        if(durationSeconds is not None):
-            if(startSeconds is not None):
-                startSeconds = max(0.0, min(startSeconds, durationSeconds))
-            if(endSeconds is not None):
-                endSeconds = max(0.0, min(endSeconds, durationSeconds))
+        if(startSeconds is not None and startSeconds < 0):
+            startSeconds = 0.0
+        if(endSeconds is not None and endSeconds < 0):
+            endSeconds = 0.0
+
+        if(startSeconds is not None and endSeconds is not None and endSeconds < startSeconds):
+            startSeconds, endSeconds = endSeconds, startSeconds
+
+        return({
+            "start_seconds": startSeconds,
+            "end_seconds": endSeconds,
+            "enabled": enableLoop,
+        })
+
+    def _tryApplyLoopRestore(self, loopData):
+        normalized = self._normalizeLoopRestore(loopData)
+        durationSeconds = self._queryDurationSeconds()
+        if(durationSeconds is None):
+            return(False)
+
+        startSeconds = normalized["start_seconds"]
+        endSeconds = normalized["end_seconds"]
+        enableLoop = normalized["enabled"]
 
         if(startSeconds is not None):
-            self.setLoopStart(self.player.pipeline_time(startSeconds))
+            startSeconds = max(0.0, min(startSeconds, durationSeconds))
         if(endSeconds is not None):
-            self.setLoopEnd(self.player.pipeline_time(endSeconds))
-        if(startSeconds is None and endSeconds is None and duration is not None and duration > 0):
-            self.setLoopEnd(duration)
+            endSeconds = max(0.0, min(endSeconds, durationSeconds))
 
+        if(startSeconds is None):
+            startSeconds = 0.0
+        if(endSeconds is None):
+            endSeconds = durationSeconds
+
+        if((endSeconds - startSeconds) < LOOP_MINIMUM_GAP):
+            endSeconds = min(durationSeconds, startSeconds + LOOP_MINIMUM_GAP)
+            if((endSeconds - startSeconds) < LOOP_MINIMUM_GAP):
+                startSeconds = max(0.0, endSeconds - LOOP_MINIMUM_GAP)
+
+        self.player.startPoint = -2
+        self.player.endPoint = -1
+        self.setLoopStart(self.player.pipeline_time(startSeconds))
+        self.setLoopEnd(self.player.pipeline_time(endSeconds))
         self._setLoopEnabledUI(enableLoop, showStatus=False)
         self.syncWaveformState()
+        return(True)
+
+    def _tryRestoreCurrentPosition(self, positionSeconds):
+        if(positionSeconds is None):
+            return(True)
+
+        durationSeconds = self._queryDurationSeconds()
+        if(durationSeconds is None):
+            return(False)
+
+        targetSeconds = max(0.0, min(float(positionSeconds), durationSeconds))
+        return(self._seekToSeconds(targetSeconds))
+
+    def _applyPendingSessionRestore(self):
+        if(self._pendingLoopRestore is not None):
+            if(self._tryApplyLoopRestore(self._pendingLoopRestore)):
+                self._pendingLoopRestore = None
+
+        if(self._pendingSeekRestore is not None):
+            if(self._tryRestoreCurrentPosition(self._pendingSeekRestore)):
+                self._pendingSeekRestore = None
+
+    def _buildPlaybackOptions(self):
+        durationSeconds = None
+        currentPositionSeconds = None
+        duration = self.player.query_duration()
+        position = self.player.query_position()
+        if(duration is not None and duration > 0):
+            durationSeconds = self.player.song_time(duration)
+        if(position is not None and position >= 0):
+            currentPositionSeconds = self.player.song_time(position)
+
+        return {
+            PBO_DEF_METADATA: self.songMetadata,
+            PBO_DEF_YOUTUBE: self.bYouTubeFile,
+            PBO_DEF_SPEED: self.varSpeed.get(),
+            PBO_DEF_SEMITONES: self.varPitchST.get(),
+            PBO_DEF_CENTS: self.varPitchCents.get(),
+            PBO_DEF_VOLUME: self.varVolume.get(),
+            PBO_DEF_DURATION_SECONDS: durationSeconds,
+            PBO_DEF_CURRENT_POSITION_SECONDS: currentPositionSeconds,
+            PBO_DEF_LOOP: self._buildLoopData(),
+            PBO_DEF_FAVORITES: [{"time_seconds": f.get("time_seconds")} for f in self.favorites],
+        }
+
+    def _applyLoopData(self, loopData):
+        if(self._tryApplyLoopRestore(loopData)):
+            self._pendingLoopRestore = None
+        else:
+            self._pendingLoopRestore = self._normalizeLoopRestore(loopData)
 
     def _applyPlaybackOptions(self, playbackOptions):
         if(not isinstance(playbackOptions, dict)):
@@ -1147,6 +1212,14 @@ class App(_AppBase):
 
         self._loadFavorites(playbackOptions.get(PBO_DEF_FAVORITES, []))
         self._applyLoopData(playbackOptions.get(PBO_DEF_LOOP, {}))
+        try:
+            currentPositionSeconds = float(playbackOptions.get(PBO_DEF_CURRENT_POSITION_SECONDS))
+        except Exception:
+            currentPositionSeconds = None
+        if(self._tryRestoreCurrentPosition(currentPositionSeconds)):
+            self._pendingSeekRestore = None
+        else:
+            self._pendingSeekRestore = currentPositionSeconds
 
     def _buildTbyData(self):
         sessionMedia = {
@@ -1300,6 +1373,8 @@ class App(_AppBase):
         self.player.endPoint = -1
         self.favorites = []
         self.selectedFavoriteIndex = None
+        self._pendingLoopRestore = None
+        self._pendingSeekRestore = None
         self.waveform.clear()
         self._setLoopEnabledUI(False, showStatus=False)
         self.Pause()
@@ -1940,6 +2015,7 @@ class App(_AppBase):
             self.setLoopStart(0)
 
         self.syncWaveformState()
+        self._applyPendingSessionRestore()
 
     # Display the metadata on the statusbar
     def displaySongMetadata(self):
@@ -1983,6 +2059,15 @@ class App(_AppBase):
 
     def speedChanged(self, a, b, c):
         speedValue = round(float(self.varSpeed.get()), 1)
+        if(speedValue < MIN_SPEED_PERCENT):
+            speedValue = MIN_SPEED_PERCENT
+        elif(speedValue > MAX_SPEED_PERCENT):
+            speedValue = MAX_SPEED_PERCENT
+
+        if(abs(float(self.varSpeed.get()) - speedValue) > 0.0001):
+            self.varSpeed.set(speedValue)
+            return
+
         self.entSpeed.delete(0, 'end')
         self.entSpeed.insert(0, f"{speedValue:.1f}")
 

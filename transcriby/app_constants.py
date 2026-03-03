@@ -52,6 +52,7 @@ UI_CARD_RADIUS = 14
 UI_INPUT_RADIUS = 8
 
 DEFAULT_SPEED = 1.0         # Default speed (x)
+SPEED_SLIDER_MIN = 0.0      # UI-only slider minimum, keeps 1.0 centered on the track
 MIN_SPEED_PERCENT = 0.1     # Minimum speed (x)
 MAX_SPEED_PERCENT = 2.0     # Maximum speed (x)
 STEPS_SPEED = 0.1           # Speed incr/decr steps (x)

@@ -35,7 +35,7 @@ Current maintained repository: [SeanTong11/transcriby](https://github.com/SeanTo
 **Transcriby** can speed down/up songs or change their pitch independently "on the fly". You can import all the most common audio files format (mp3, wav, flac, aif...).
 It also supports video files like mp4/m4v/mkv, which will open in a separate mpv window while the audio controls stay in Transcriby.
 
-Speed change is made by moving the slider which will change it in 5% steps, or by entering the precise percentage value in the edit box (eg 87%).You can transpose your song up and down by semitones or fine adjust the pitch by cents, in case the song is not in tune with your instruments. For your convenience, Transcriby offers several numeric keypad shortcuts. Please take a look at the [shortcut](#optimized-keyobard-shortcuts) list further on in this document.
+Speed change is made by moving the slider in 0.1x steps, or by entering the precise value in the edit box (for example `0.9`). The slider is visually centered at `1.0x`; effective speed is clamped to `0.1x .. 2.0x`. You can transpose your song up and down by semitones or fine adjust the pitch by cents, in case the song is not in tune with your instruments. For your convenience, Transcriby offers several numeric keypad shortcuts. Please take a look at the [shortcut](#optimized-keyobard-shortcuts) list further on in this document.
 
 ### YouTube audio extraction:
 
@@ -79,7 +79,7 @@ If you use Transcriby for music practicing, you probably want access its functio
 
 - Numbers in the left column (1, 4, 7) move the song position back by 5, 10 and 15 seconds. Numbers on the right column (3, 6, 9) move it forward accordingly. You can reach the song position you want to reharse in a bit.
 
-- Speed controls are assigned to the central column. Numbers 2 and 8 change speed by -5% and +5% respectively, while number 5 resets the speed to normal.
+- Speed controls are assigned to the central column. Numbers 2 and 8 change speed by `-0.1x` and `+0.1x` respectively, while number 5 resets the speed to normal.
 
 - Plus and minus keys transpose the song by semitones
 
@@ -223,8 +223,8 @@ The following commands are all assigned to the numeric keypad. Refer to the draw
 - **6**: Forward 10 seconds
 - **9**: Forward 15 seconds
 
-- **8**: Increase speed by 5%
-- **2**: Decrease speed by 5%
+- **8**: Increase speed by `0.1x`
+- **2**: Decrease speed by `0.1x`
 - **5**: Reset speed to 100%
 
 - **+**: Transpose +1 semitone

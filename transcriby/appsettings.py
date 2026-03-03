@@ -17,6 +17,7 @@ PBO_DEF_SEMITONES = "Semitones"
 PBO_DEF_CENTS = "Cents"
 PBO_DEF_VOLUME = "Volume"
 PBO_DEF_DURATION_SECONDS = "DurationSeconds"
+PBO_DEF_CURRENT_POSITION_SECONDS = "CurrentPositionSeconds"
 PBO_DEF_LOOP = "Loop"
 PBO_DEF_FAVORITES = "Favorites"
 
