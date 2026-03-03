@@ -693,6 +693,7 @@ class App(_AppBase):
 
         self.update()
         self.minsize(max(self.winfo_width(), MIN_WINDOW_WIDTH), max(self.winfo_height(), MIN_WINDOW_HEIGHT))
+        self._applyDefaultWindowMode()
 
         # Check if the user asked to delete the recent file list
         if(args.delete_recent is not None and args.delete_recent == True):
@@ -724,6 +725,20 @@ class App(_AppBase):
                             self.bYouTubeFile = False
                             self.YouTubeUrl = ""
                             self.setFile(lastPlayed, applyRecentOptions=False)
+
+    def _applyDefaultWindowMode(self):
+        if(is_windows()):
+            return
+        try:
+            if(sys.platform == "darwin"):
+                self.attributes("-fullscreen", True)
+            else:
+                try:
+                    self.attributes("-zoomed", True)
+                except Exception:
+                    self.attributes("-fullscreen", True)
+        except Exception:
+            pass
 
     def _apply_ui_styles(self):
         self.LFrame.configure(

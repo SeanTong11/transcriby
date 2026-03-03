@@ -25,7 +25,7 @@ Current maintained repository: [SeanTong11/transcriby](https://github.com/SeanTo
 - [Video playback in a synced external window](#speed-and-pitch-change)
 - [YouTube audio extraction from URL](#youtube-audio-extraction)
 - [Loop a range of the song, with fine adjustment of boundaries](#loop-ab)
-- [Waveform view with click-to-seek](#waveform-view)
+- [Timeline marker bar with click-to-seek](#timeline-marker-bar)
 - [Favorites and quick timestamp markers](#favorites-and-session-files)
 - [Session files (`.tby`) for full restore](#favorites-and-session-files)
 - [Modified audio export in MP3 or WAV audio format](#export-modified-audio)
@@ -60,16 +60,15 @@ Use the "Set loop start" (shortcut "A" or num keypad divide) and "Set loop end" 
 
 To achieve maximum execution precision, you can fine adjust the loop points by moving them left and right by 10 or 100 milliseconds using the associated buttons. *NOTE: Please keep in mind that there can be very short silence gap when restarting the loop. This is normal and it can't be avoided*
 
-### Waveform view:
+### Timeline marker bar:
 
-Transcriby now includes a waveform panel under the seek bar:
+Transcriby includes a timeline marker bar under the seek bar:
 
-- Click anywhere on the waveform to seek playback to that point
-- A/B loop boundaries are shown directly on the waveform
+- Click anywhere on the timeline to seek playback to that point
+- A/B loop boundaries are shown directly on the timeline
+- Favorite markers are shown directly on the timeline
 - The playhead updates in real time while playing
-- Right-click drag on waveform or seek/progress area to set a loop range quickly
-
-For media containers like MP4, waveform extraction first tries `soundfile` and falls back to `ffmpeg` if available on your system.
+- Right-click drag on timeline or seek/progress area to set a loop range quickly
 
 ### Favorites and session files:
 
@@ -79,7 +78,7 @@ Transcriby provides timestamp favorites directly in the Playback panel:
 - Jump to previous/next favorite quickly
 - Delete the selected favorite (or the latest one when none is selected)
 - Favorites auto-number by time order and keep stable per-item colors
-- Favorite markers are also displayed on the waveform
+- Favorite markers are also displayed on the timeline bar
 
 You can also save/restore complete playback sessions with `.tby` files:
 
@@ -114,9 +113,11 @@ See the [shortcuts](#shortcuts) section for a more complete key reference.
 
 ### Other features:
 
-- **Recent files list**: To access the recent files list use the **Ctrl+R** shortcut, or right-click on the "Open" button. Transcriby keeps track of the last 16 played files and all the playback parameters (speed, pitch, cents and volume), which are restored as you load the song again.
-If the software is launched without specifying any media in the command line, it attempts to reopen the last played track.
-If the last played song was extracted from a YouTube video, the app will not automatically open it to prevent unwanted downloads. You can dwonload it again by accessing the recent files dialog.
+- **Recent files list**: To access the recent files list use the **Ctrl+R** shortcut, or right-click on the "Open" button. Transcriby keeps track of the last 16 media files.
+Opening a regular media file always starts with clean/default playback values.
+Full playback restore (speed/pitch/loop/favorites/position) is done only from `.tby` session files.
+On startup, Transcriby tries to load the last `.tby` session first; if unavailable, it falls back to the last played media file.
+If the last played song was extracted from a YouTube video, the app will not automatically open it to prevent unwanted downloads. You can download it again by accessing the recent files dialog.
 
 - **Drag-n-drop**: you can drop audio files straight from your file manager or from other applications.
 
@@ -132,7 +133,7 @@ If the last played song was extracted from a YouTube video, the app will not aut
 **mpv runtime install:**
 - **Windows**: Download from https://mpv.io/installation/ and ensure `mpv.exe` and `libmpv-2.dll` are on PATH (or next to the app)
 - **macOS**: `brew install mpv`
-- **Ubuntu/Debian/WSL**: `sudo apt-get install mpv`
+- **Ubuntu/Debian/WSL**: `sudo apt-get install libmpv2 python3-tk`
 - **Fedora**: `sudo dnf install mpv`
 - **Arch**: `sudo pacman -S mpv`
 
