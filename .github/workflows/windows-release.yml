@@ -64,7 +64,26 @@ jobs:
           if (Test-Path $extractDir) { Remove-Item -Recurse -Force $extractDir }
           New-Item -ItemType Directory -Path $extractDir | Out-Null
 
-          uv run --with py7zr python -c 'import pathlib,py7zr,sys; archive=pathlib.Path(sys.argv[1]); outdir=pathlib.Path(sys.argv[2]); z=py7zr.SevenZipFile(str(archive), mode="r"); z.extractall(path=str(outdir)); z.close(); print(outdir)' "$archive" "$extractDir"
+          $sevenZip = @(
+            "$env:ProgramFiles\7-Zip\7z.exe",
+            "$env:ProgramFiles(x86)\7-Zip\7z.exe"
+          ) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+          if (-not $sevenZip) {
+            $sevenZipCmd = Get-Command 7z.exe -ErrorAction SilentlyContinue
+            if ($sevenZipCmd) {
+              $sevenZip = $sevenZipCmd.Source
+            }
+          }
+          if (-not $sevenZip) {
+            throw "7z.exe not found on runner. Cannot extract mpv-dev archive."
+          }
+          Write-Host "[mpv] using 7z: $sevenZip"
+
+          & $sevenZip x "$archive" "-o$extractDir" -y
+          if ($LASTEXITCODE -ne 0) {
+            throw "7z extraction failed with exit code $LASTEXITCODE"
+          }
+
           Write-Host "[mpv] extracted to: $extractDir"
 
           Write-Host "[mpv] DLLs under extract dir (first 120):"
@@ -101,25 +120,102 @@ jobs:
 
       - name: Publish nightly release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: nightly
-          name: Nightly
-          prerelease: true
-          make_latest: false
-          overwrite_files: true
-          body: |
-            Automated nightly build from `main`.
-            Commit: ${{ github.sha }}
-          files: |
-            Transcriby-Windows.zip
-            SHA256SUMS.txt
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          function Upload-WithRetry {
+            param(
+              [Parameter(Mandatory = $true)][string]$Tag,
+              [Parameter(Mandatory = $true)][string[]]$Files,
+              [int]$MaxAttempts = 5
+            )
+
+            for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
+              Write-Host "[release] upload attempt $attempt/$MaxAttempts for tag '$Tag'"
+              gh release upload $Tag @Files --clobber
+              if ($LASTEXITCODE -eq 0) {
+                return
+              }
+
+              if ($attempt -eq $MaxAttempts) {
+                throw "Failed to upload assets to release '$Tag' after $MaxAttempts attempts."
+              }
+
+              $sleep = 5 * $attempt
+              Write-Warning "[release] upload failed, retrying in ${sleep}s..."
+              Start-Sleep -Seconds $sleep
+            }
+          }
+
+          $files = @("Transcriby-Windows.zip", "SHA256SUMS.txt")
+          $tag = "nightly"
+          $title = "Nightly"
+          $notes = "Automated nightly build from main.`nCommit: $env:GITHUB_SHA"
+
+          gh release view $tag *> $null
+          $exists = ($LASTEXITCODE -eq 0)
+          if ($exists) {
+            gh release edit $tag --title $title --prerelease --latest=false --notes $notes
+            if ($LASTEXITCODE -ne 0) {
+              throw "Failed to edit nightly release metadata."
+            }
+          } else {
+            gh release create $tag --title $title --prerelease --latest=false --notes $notes
+            if ($LASTEXITCODE -ne 0) {
+              throw "Failed to create nightly release."
+            }
+          }
+
+          Upload-WithRetry -Tag $tag -Files $files
 
       - name: Publish tagged release
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          overwrite_files: true
-          files: |
-            Transcriby-Windows.zip
-            SHA256SUMS.txt
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          function Upload-WithRetry {
+            param(
+              [Parameter(Mandatory = $true)][string]$Tag,
+              [Parameter(Mandatory = $true)][string[]]$Files,
+              [int]$MaxAttempts = 5
+            )
+
+            for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
+              Write-Host "[release] upload attempt $attempt/$MaxAttempts for tag '$Tag'"
+              gh release upload $Tag @Files --clobber
+              if ($LASTEXITCODE -eq 0) {
+                return
+              }
+
+              if ($attempt -eq $MaxAttempts) {
+                throw "Failed to upload assets to release '$Tag' after $MaxAttempts attempts."
+              }
+
+              $sleep = 5 * $attempt
+              Write-Warning "[release] upload failed, retrying in ${sleep}s..."
+              Start-Sleep -Seconds $sleep
+            }
+          }
+
+          $files = @("Transcriby-Windows.zip", "SHA256SUMS.txt")
+          $tag = $env:GITHUB_REF_NAME
+          if (-not $tag) {
+            throw "GITHUB_REF_NAME is empty."
+          }
+
+          gh release view $tag *> $null
+          $exists = ($LASTEXITCODE -eq 0)
+          if (-not $exists) {
+            gh release create $tag --title $tag --generate-notes
+            if ($LASTEXITCODE -ne 0) {
+              throw "Failed to create tag release '$tag'."
+            }
+          }
+
+          Upload-WithRetry -Tag $tag -Files $files
