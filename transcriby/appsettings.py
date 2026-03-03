@@ -108,6 +108,14 @@ class AppSettings(object):
             #print(json.dumps(filelist, indent=2))
             #print(lastfile)
             return(lastfile)
+
+    def getLastSessionTby(self):
+        return(self.getVal(CFG_APP_SECTION, "LastSessionTby", ""))
+
+    def setLastSessionTby(self, tbyPath, saveSettings=True):
+        if(not isinstance(tbyPath, str)):
+            tbyPath = ""
+        return(self.setVal(CFG_APP_SECTION, "LastSessionTby", tbyPath, saveSettings))
    
     # Add playback options to the list of recent files
     def addRecentFile(self, filename, data, saveSettings = True):
@@ -182,7 +190,8 @@ class AppSettings(object):
             CFG_APP_SECTION : {
                 "LastOpenDir": USER_HOME_DIR,
                 "LastSaveDir": USER_HOME_DIR,
-                "MaxRecentFileList": MAX_RECENTFILE_LIST
+                "MaxRecentFileList": MAX_RECENTFILE_LIST,
+                "LastSessionTby": "",
             },
             CFG_RECENTFILE_SECTION: {}
         }

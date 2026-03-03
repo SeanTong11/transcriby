@@ -207,26 +207,14 @@ class App(_AppBase):
         self.scale.bind("<B3-Motion>", self._bar_loop_select_drag)
         self.scale.bind("<ButtonRelease-3>", self._bar_loop_select_end)
 
-        self.waveformEnabled = False
-        self.waveform = None
-        if(self.waveformEnabled):
-            self.waveform = WaveformWidget(
-                self.LFrame,
-                on_seek=self.waveformSeek,
-                on_loop_select=self.waveformLoopSelect,
-                on_context_request=self.waveformContextRequest,
-                height=WAVEFORM_HEIGHT,
-            )
-            self.waveform.grid(row=3, column=0, padx=UI_INNER_PAD, pady=(UI_INNER_PAD, 0), sticky="ew")
-        else:
-            self.waveformPlaceholder = ctk.CTkFrame(
-                self.LFrame,
-                height=WAVEFORM_HEIGHT,
-                fg_color=UI_BG_INPUT,
-                corner_radius=UI_INPUT_RADIUS,
-            )
-            self.waveformPlaceholder.grid(row=3, column=0, padx=UI_INNER_PAD, pady=(UI_INNER_PAD, 0), sticky="ew")
-            self.waveformPlaceholder.grid_propagate(False)
+        self.waveform = WaveformWidget(
+            self.LFrame,
+            on_seek=self.waveformSeek,
+            on_loop_select=self.waveformLoopSelect,
+            on_context_request=self.waveformContextRequest,
+            height=WAVEFORM_HEIGHT,
+        )
+        self.waveform.grid(row=3, column=0, padx=UI_INNER_PAD, pady=(UI_INNER_PAD, 0), sticky="ew")
 
         self.CTLFrame = ctk.CTkFrame(self.LFrame)
         self.CTLFrame.grid(row=4, column=0, padx=UI_INNER_PAD, pady=UI_INNER_PAD, sticky="nsew")
@@ -712,22 +700,30 @@ class App(_AppBase):
 
         # Check if a filename is passed from the command line
         if(args.media != None):
-            self.setFile(args.media)
+            self.bYouTubeFile = False
+            self.YouTubeUrl = ""
+            self.setFile(args.media, applyRecentOptions=False)
         else:
-            # If no file is specified tries to load the last played media
-            lastPlayed = self.settings.getLastPlayedFilename()
+            loadedStartupSession = False
+            lastTby = self.settings.getLastSessionTby()
+            if(isinstance(lastTby, str) and lastTby.strip() != "" and os.path.isfile(lastTby)):
+                loadedStartupSession = self.openTbySession(tbyFile=lastTby, showErrors=False)
 
-            # Gather information about the last played file
-            # if it is a YouTube video does not automatically load
-            if(lastPlayed is not None):
-                filePlabackOptions = self.settings.getRecentFile(lastPlayed)
-                if(filePlabackOptions is not None and isinstance(filePlabackOptions, dict)):
-                    # Check for local file or youtube url
-                    if(PBO_DEF_YOUTUBE in filePlabackOptions and filePlabackOptions[PBO_DEF_YOUTUBE] == True):
-                        pass
-                        #self.setYouTubeUrl(lastPlayed, filePlabackOptions[PBO_DEF_METADATA])
-                    else:
-                        self.setFile(lastPlayed)
+            if(loadedStartupSession == False):
+                # If no startup session is loaded, tries to load the last played media only
+                # (without applying old playback options).
+                lastPlayed = self.settings.getLastPlayedFilename()
+                if(lastPlayed is not None):
+                    filePlabackOptions = self.settings.getRecentFile(lastPlayed)
+                    if(filePlabackOptions is not None and isinstance(filePlabackOptions, dict)):
+                        # Check for local file or youtube url
+                        if(PBO_DEF_YOUTUBE in filePlabackOptions and filePlabackOptions[PBO_DEF_YOUTUBE] == True):
+                            pass
+                            #self.setYouTubeUrl(lastPlayed, filePlabackOptions[PBO_DEF_METADATA])
+                        elif(os.path.isfile(lastPlayed)):
+                            self.bYouTubeFile = False
+                            self.YouTubeUrl = ""
+                            self.setFile(lastPlayed, applyRecentOptions=False)
 
     def _apply_ui_styles(self):
         self.LFrame.configure(
@@ -776,11 +772,6 @@ class App(_AppBase):
             border_width=1,
             border_color=UI_BORDER_COLOR,
         )
-        if(hasattr(self, "waveformPlaceholder")):
-            self.waveformPlaceholder.configure(
-                fg_color=UI_BG_INPUT,
-                corner_radius=UI_INPUT_RADIUS,
-            )
 
         self.dispPosition.configure(text_color=UI_TEXT_PRIMARY, font=("", TITLE_FONT_SIZE, "bold"))
         self.fileLabel.configure(text_color=UI_TEXT_MUTED)
@@ -1517,21 +1508,18 @@ class App(_AppBase):
             self.bind_all('<KeyPress>', self._hotkey_manager_)
         return(filename)
 
-    def openTbySession(self):
-        tbyFile = self.selectTbyToOpen()
-        if(tbyFile is None or str(tbyFile) == ""):
-            return(False)
-
+    def _openTbySessionFile(self, tbyFile, showErrors=True):
         try:
             sessionData = sessionfile.load_tby(tbyFile)
         except Exception as ex:
-            CTkMessagebox(
-                master=self,
-                title=_("Error"),
-                message=_("Unable to open .tby file: {}").format(ex),
-                icon="cancel",
-                font=("", LBL_FONT_SIZE),
-            )
+            if(showErrors):
+                CTkMessagebox(
+                    master=self,
+                    title=_("Error"),
+                    message=_("Unable to open .tby file: {}").format(ex),
+                    icon="cancel",
+                    font=("", LBL_FONT_SIZE),
+                )
             return(False)
 
         mediaData = sessionData.get("media", {})
@@ -1540,34 +1528,45 @@ class App(_AppBase):
         if(isinstance(mediaData, dict)):
             mediaPath = mediaData.get("path", "")
         if(not mediaPath):
-            CTkMessagebox(
-                master=self,
-                title=_("Error"),
-                message=_("Invalid .tby file: missing media path"),
-                icon="cancel",
-                font=("", LBL_FONT_SIZE),
-            )
+            if(showErrors):
+                CTkMessagebox(
+                    master=self,
+                    title=_("Error"),
+                    message=_("Invalid .tby file: missing media path"),
+                    icon="cancel",
+                    font=("", LBL_FONT_SIZE),
+                )
             return(False)
 
         if(not os.path.isabs(mediaPath)):
             mediaPath = os.path.realpath(os.path.join(os.path.dirname(tbyFile), mediaPath))
         if(not os.path.isfile(mediaPath)):
-            CTkMessagebox(
-                master=self,
-                title=_("Error: file not found"),
-                message=_("Unable to open file: {}").format(mediaPath),
-                icon="cancel",
-                font=("", LBL_FONT_SIZE),
-            )
+            if(showErrors):
+                CTkMessagebox(
+                    master=self,
+                    title=_("Error: file not found"),
+                    message=_("Unable to open file: {}").format(mediaPath),
+                    icon="cancel",
+                    font=("", LBL_FONT_SIZE),
+                )
             return(False)
 
         self.bYouTubeFile = False
         self.YouTubeUrl = ""
-        self.setFile(mediaPath)
+        self.setFile(mediaPath, applyRecentOptions=False)
         self._applyPlaybackOptions(playbackOptions)
         self.settings.setVal(CFG_APP_SECTION, "LastOpenDir", os.path.dirname(mediaPath))
+        self.settings.setLastSessionTby(os.path.realpath(tbyFile))
         self.statusBarMessage(_("Loaded .tby session"), timeout=1200)
         return(True)
+
+    def openTbySession(self, tbyFile=None, showErrors=True):
+        if(tbyFile is None):
+            tbyFile = self.selectTbyToOpen()
+        if(tbyFile is None or str(tbyFile) == ""):
+            return(False)
+
+        return(self._openTbySessionFile(tbyFile, showErrors=showErrors))
 
     def exportTbySession(self):
         if(self.player.canPlay == False):
@@ -1594,6 +1593,7 @@ class App(_AppBase):
             return(False)
 
         self.settings.setVal(CFG_APP_SECTION, "LastSaveDir", os.path.dirname(filename))
+        self.settings.setLastSessionTby(os.path.realpath(filename))
         self.statusBarMessage(_("Exported .tby: {}").format(filename), timeout=1500)
         return(True)
 
@@ -1655,7 +1655,7 @@ class App(_AppBase):
 
     # Ask the player to load the selected file
     # and prepares it to play
-    def setFile(self, filename):
+    def setFile(self, filename, applyRecentOptions=False):
         #print(filename)
         if(not filename or filename == ''):
             return
@@ -1704,16 +1704,22 @@ class App(_AppBase):
         # Updates window title and status bar
         self.displaySongMetadata()
 
-        # if the file was recently open, it loads its settings
-        # otherwise saves it into the list
-        filePlabackOptions = self.settings.getRecentFile(recentFileKey)
+        if(applyRecentOptions):
+            # Optional behavior used by explicit session restore workflows only.
+            filePlabackOptions = self.settings.getRecentFile(recentFileKey)
+            if(filePlabackOptions is not None and isinstance(filePlabackOptions, dict)):
+                self.settings.moveToLastPosition(recentFileKey)
+                self._applyPlaybackOptions(filePlabackOptions)
+                return
 
-        if(filePlabackOptions is not None and isinstance(filePlabackOptions, dict)):
-            self.settings.moveToLastPosition(recentFileKey)
-            self._applyPlaybackOptions(filePlabackOptions)
-        else:
+        # Default media loading policy: start from a clean playback state.
+        self.settings.bUpdateForbidden = True
+        try:
             self.resetValues()
-            self.setRecentFilePBOptions()
+        finally:
+            self.settings.bUpdateForbidden = False
+        self.settings.moveToLastPosition(recentFileKey)
+        self.setRecentFilePBOptions()
 
     # Saves the playback options to the recent files list
     def setRecentFilePBOptions(self):
