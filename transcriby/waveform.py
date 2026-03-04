@@ -6,10 +6,12 @@ import customtkinter as ctk
 
 from transcriby.app_constants import (
     UI_ACCENT,
-    UI_ACCENT_HOVER,
-    UI_BG_CARD_ALT,
-    UI_BG_INPUT,
-    UI_TEXT_PRIMARY,
+    UI_TIMELINE_BG,
+    UI_TIMELINE_LOOP_FILL,
+    UI_TIMELINE_LOOP_MARKER,
+    UI_TIMELINE_PLAYHEAD,
+    UI_TIMELINE_SELECT_FILL,
+    UI_TIMELINE_SELECT_MARKER,
 )
 
 MARKER_LABEL_FONT = ("TkDefaultFont", 13, "bold")
@@ -42,12 +44,12 @@ class WaveformWidget(ctk.CTkFrame):
         self._select_anchor = None
         self._markers = []
         self._colors = {
-            "bg": UI_BG_INPUT,
-            "loop_fill": UI_BG_CARD_ALT,
-            "loop_marker": UI_ACCENT,
-            "select_fill": UI_BG_CARD_ALT,
-            "select_marker": UI_ACCENT_HOVER,
-            "playhead": UI_TEXT_PRIMARY,
+            "bg": UI_TIMELINE_BG,
+            "loop_fill": UI_TIMELINE_LOOP_FILL,
+            "loop_marker": UI_TIMELINE_LOOP_MARKER,
+            "select_fill": UI_TIMELINE_SELECT_FILL,
+            "select_marker": UI_TIMELINE_SELECT_MARKER,
+            "playhead": UI_TIMELINE_PLAYHEAD,
             "marker_fallback": UI_ACCENT,
         }
 
@@ -194,15 +196,15 @@ class WaveformWidget(ctk.CTkFrame):
         a_x = self._seconds_to_x(self._loop_start)
         b_x = self._seconds_to_x(self._loop_end)
         if(a_x is not None and b_x is not None and b_x > a_x):
-            self.canvas.create_rectangle(a_x, 0, b_x, height, fill=self._colors["loop_fill"], outline="", stipple="gray50")
-            self.canvas.create_line(a_x, 0, a_x, height, fill=self._colors["loop_marker"], width=2)
-            self.canvas.create_line(b_x, 0, b_x, height, fill=self._colors["loop_marker"], width=2)
+            self.canvas.create_rectangle(a_x, 0, b_x, height, fill=self._colors["loop_fill"], outline="")
+            self.canvas.create_line(a_x, 0, a_x, height, fill=self._colors["loop_marker"], width=3)
+            self.canvas.create_line(b_x, 0, b_x, height, fill=self._colors["loop_marker"], width=3)
 
         s_a_x = self._seconds_to_x(self._select_start)
         s_b_x = self._seconds_to_x(self._select_end)
         if(s_a_x is not None and s_b_x is not None and abs(s_b_x - s_a_x) > 1):
             x1, x2 = (s_a_x, s_b_x) if s_a_x <= s_b_x else (s_b_x, s_a_x)
-            self.canvas.create_rectangle(x1, 0, x2, height, fill=self._colors["select_fill"], outline="", stipple="gray25")
+            self.canvas.create_rectangle(x1, 0, x2, height, fill=self._colors["select_fill"], outline="")
             self.canvas.create_line(x1, 0, x1, height, fill=self._colors["select_marker"], width=2)
             self.canvas.create_line(x2, 0, x2, height, fill=self._colors["select_marker"], width=2)
 

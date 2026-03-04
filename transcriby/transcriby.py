@@ -929,12 +929,12 @@ class App(_AppBase):
         )
         if(self.waveform is not None):
             self.waveform.apply_theme(
-                bg_color=UI_BG_INPUT,
-                loop_fill_color=UI_BG_CARD_ALT,
-                loop_marker_color=UI_ACCENT,
-                select_fill_color=UI_BG_CARD_ALT,
-                select_marker_color=UI_ACCENT_HOVER,
-                playhead_color=UI_TEXT_PRIMARY,
+                bg_color=UI_TIMELINE_BG,
+                loop_fill_color=UI_TIMELINE_LOOP_FILL,
+                loop_marker_color=UI_TIMELINE_LOOP_MARKER,
+                select_fill_color=UI_TIMELINE_SELECT_FILL,
+                select_marker_color=UI_TIMELINE_SELECT_MARKER,
+                playhead_color=UI_TIMELINE_PLAYHEAD,
                 default_marker_color=UI_ACCENT,
             )
 
