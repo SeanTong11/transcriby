@@ -40,6 +40,35 @@ git push origin vX.Y.Z
    - Windows zip + SHA256
    - macOS arm64/x64 zips + SHA256
 
+## Icon Generation From SVG
+
+Use the icon generation script to rebuild all app icon assets from a single SVG source.
+
+Recommended command:
+
+```bash
+uv run --with cairosvg --with pillow python tools/generate_icons_from_svg.py \
+  --svg transcriby/resources/Icona-clean.svg
+```
+
+What it generates:
+
+- `transcriby/resources/Icona-{16,20,24,32,40,48,64,96,128,256,1024}.png`
+- `transcriby/resources/icona.png` (256x256 alias)
+- `transcriby/resources/Icona.ico` (exact multi-size PNG frames for Windows)
+
+Useful options:
+
+- `--supersample 8`: render at `size*8` before downsampling (improves small-size quality).
+- `--padding 0.06`: enforce transparent edge padding and centered composition.
+- `--no-small-sharpen`: disable mild sharpening for `<=48px` icons.
+
+If taskbar/titlebar still shows stale icons on Windows, clear icon cache:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools/refresh_windows_icon_cache.ps1
+```
+
 ## Rollback Strategy
 
 - Nightly rollback: push a fix to `main`; the next nightly run replaces the previous artifacts.
