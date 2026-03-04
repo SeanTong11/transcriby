@@ -17,17 +17,17 @@ class aboutDialog(ctk.CTkToplevel):
         HEIGHT = 760
 
         # Mark app directories
-        resources_dir = get_resources_dir()
-        apply_window_icon(self, resources_dir)
+        self.resources_dir = get_resources_dir()
+        apply_window_icon(self, self.resources_dir)
                 
         self.wm_title(_("About"))
         
         self.geometry("%dx%d" % (WIDTH, HEIGHT))
         self.resizable(width=False, height=False)
 
-        img = ctk.CTkImage(dark_image=Image.open(os.path.join(resources_dir, "Icona-64.png")), 
-                                light_image=Image.open(os.path.join(resources_dir, "Icona-64.png")),
-                                size=(64, 64))
+        img = ctk.CTkImage(dark_image=Image.open(os.path.join(self.resources_dir, "Icona-64.png")),
+                           light_image=Image.open(os.path.join(self.resources_dir, "Icona-64.png")),
+                           size=(64, 64))
 
         self.ico = ctk.CTkLabel(self, text="", image=img)
         self.ico.grid(row=0, column=0, rowspan=2, padx=10, sticky="ns")
@@ -45,21 +45,29 @@ class aboutDialog(ctk.CTkToplevel):
         tab2 = self.tabview.add(_("Shortcuts"))
 
         # Widget on tab 1: "About"
+        self.aboutCoverImage = ctk.CTkImage(
+            dark_image=Image.open(os.path.join(self.resources_dir, "Icona-256.png")),
+            light_image=Image.open(os.path.join(self.resources_dir, "Icona-256.png")),
+            size=(176, 176)
+        )
+        self.aboutCoverLabel = ctk.CTkLabel(tab1, text="", image=self.aboutCoverImage)
+        self.aboutCoverLabel.grid(row=0, column=0, pady=(10, 0), sticky="n")
+
         self.mainLabel = ctk.CTkLabel(tab1, text=APP_TITLE, justify="center", anchor="center", 
                                       compound="center", font=("", 28, "bold"))
-        self.mainLabel.grid(row=0, column=0, pady=(10, 0), sticky="n")
+        self.mainLabel.grid(row=1, column=0, pady=(10, 0), sticky="n")
 
         self.versLabel = ctk.CTkLabel(tab1, text=APP_VERSION, justify="center", anchor="center", 
                                       compound="center", font=("", 20))
-        self.versLabel.grid(row=1, column=0, pady=(8, 0), sticky="n")
+        self.versLabel.grid(row=2, column=0, pady=(8, 0), sticky="n")
 
         self.authLabel = ctk.CTkLabel(tab1, text="Maintained by Sean Tong", justify="center", anchor="center",
                                       compound="center", font=("", LBL_FONT_SIZE))
-        self.authLabel.grid(row=2, column=0, sticky="n")
+        self.authLabel.grid(row=3, column=0, sticky="n")
 
         self.linkLabel = ctk.CTkLabel(tab1, text=APP_URL, justify="center", anchor="center", 
                                       compound="center", text_color="#1f538d", font=("", LBL_FONT_SIZE), cursor="hand2")
-        self.linkLabel.grid(row=3, column=0, sticky="n")
+        self.linkLabel.grid(row=4, column=0, sticky="n")
         self.linkLabel.bind("<1>", lambda e: self.openUrl(APP_URL))
 
         # Widget on tab 2: "Shorcuts"
@@ -146,6 +154,7 @@ class aboutDialog(ctk.CTkToplevel):
 
     def show(self):
         self.deiconify()
+        apply_window_icon(self, self.resources_dir)
         self.grab_set()
         self.wm_protocol("WM_DELETE_WINDOW", self.destroy)
         self.bind_all(sequence="<KeyPress>", func=self._keybind_)
