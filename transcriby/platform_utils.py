@@ -128,6 +128,25 @@ def apply_window_icon(window, resources_dir: str | None = None, schedule_retry: 
     icon_images = []
     icon_png_sizes = [256, 128, 96, 64, 48, 40, 32, 24, 20, 16]
 
+    # On Windows/CustomTkinter, calling wm_iconbitmap marks internal flags that
+    # prevent CTk/CTkToplevel from replacing icons with the default one later.
+    if is_windows():
+        icon_ico = os.path.join(resources_dir, "Icona.ico")
+        if os.path.isfile(icon_ico):
+            try:
+                window.wm_iconbitmap(default=icon_ico)
+                icon_applied = True
+            except Exception:
+                try:
+                    window.iconbitmap(icon_ico)
+                    icon_applied = True
+                except Exception:
+                    pass
+            try:
+                setattr(window, "_iconbitmap_method_called", True)
+            except Exception:
+                pass
+
     try:
         import tkinter as tk
 
@@ -153,17 +172,8 @@ def apply_window_icon(window, resources_dir: str | None = None, schedule_retry: 
     except Exception:
         pass
 
-    if is_windows():
-        icon_ico = os.path.join(resources_dir, "Icona.ico")
-        if os.path.isfile(icon_ico):
-            try:
-                window.iconbitmap(icon_ico)
-                icon_applied = True
-            except Exception:
-                pass
-
-    # Some Windows environments apply a default icon after initial paint.
-    # Re-apply once on idle to keep taskbar/titlebar icon stable.
+    # Some Windows environments apply a default icon shortly after creation.
+    # Re-apply once after that window to keep taskbar/titlebar icon stable.
     if is_windows() and icon_applied and schedule_retry:
         try:
             if not getattr(window, "_transcriby_icon_retry_scheduled", False):
@@ -175,7 +185,8 @@ def apply_window_icon(window, resources_dir: str | None = None, schedule_retry: 
                     finally:
                         setattr(window, "_transcriby_icon_retry_scheduled", False)
 
-                window.after_idle(_retry)
+                # CTk may apply its default icon around 200ms after creation.
+                window.after(320, _retry)
         except Exception:
             pass
 
