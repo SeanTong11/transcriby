@@ -20,6 +20,11 @@ def is_linux() -> bool:
     return platform.system() == "Linux"
 
 
+def is_macos() -> bool:
+    """Check if running on macOS"""
+    return platform.system() == "Darwin"
+
+
 def is_wsl() -> bool:
     """Check if running on Windows Subsystem for Linux (WSL)
     
@@ -118,38 +123,36 @@ def get_locales_dir() -> str:
 def apply_window_icon(window, resources_dir: str | None = None, schedule_retry: bool = True) -> bool:
     """Apply app icon assets to a Tk/CTk window.
 
-    Windows: prefer .ico only to keep taskbar/titlebar frame selection consistent.
-    Linux/macOS: try .ico first, then fall back to multi-size iconphoto PNGs.
+    Windows: use .ico only to keep taskbar/titlebar frame selection consistent.
+    Linux/macOS: use multi-size iconphoto PNGs.
     """
     if resources_dir is None:
         resources_dir = get_resources_dir()
 
     icon_applied = False
-    icon_ico = os.path.join(resources_dir, "Icona.ico")
-    if os.path.isfile(icon_ico):
-        icon_ico_abs = os.path.abspath(icon_ico).replace("\\", "/")
-        try:
-            window.iconbitmap(icon_ico_abs)
-            icon_applied = True
-        except Exception:
+    if is_windows():
+        icon_ico = os.path.join(resources_dir, "Icona.ico")
+        if os.path.isfile(icon_ico):
+            icon_ico_abs = os.path.abspath(icon_ico).replace("\\", "/")
             try:
-                window.wm_iconbitmap(icon_ico_abs)
+                window.iconbitmap(icon_ico_abs)
                 icon_applied = True
             except Exception:
-                pass
-        if is_windows():
+                try:
+                    window.wm_iconbitmap(icon_ico_abs)
+                    icon_applied = True
+                except Exception:
+                    pass
             try:
                 _apply_windows_hicon(window, icon_ico_abs)
                 icon_applied = True
             except Exception:
                 pass
-        try:
-            setattr(window, "_iconbitmap_method_called", True)
-        except Exception:
-            pass
-
-    # Keep Windows on .ico-only path. For Linux/macOS, load PNG iconphoto fallback.
-    if not is_windows():
+            try:
+                setattr(window, "_iconbitmap_method_called", True)
+            except Exception:
+                pass
+    else:
         icon_images = []
         icon_png_sizes = [256, 128, 96, 64, 48, 40, 32, 24, 20, 16]
         try:
