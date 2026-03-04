@@ -80,6 +80,7 @@ jobs:
             --windowed \
             --noconfirm \
             --clean \
+            --add-binary "${MPV_LIBRARY}:lib" \
             --add-data "transcriby/resources:resources" \
             --add-data "transcriby/locales:locales" \
             --hidden-import mpv \
@@ -102,6 +103,14 @@ jobs:
             ls -la dist || true
             exit 1
           fi
+
+          bundled_mpv="$(find "${app_path}" -type f \( -name 'libmpv.dylib' -o -name 'libmpv.2.dylib' \) | head -n 1 || true)"
+          if [[ -z "${bundled_mpv}" ]]; then
+            echo "::error::Bundled libmpv.dylib not found in app bundle"
+            find "${app_path}" -maxdepth 5 -type f | head -n 200
+            exit 1
+          fi
+          echo "Bundled libmpv: ${bundled_mpv}"
 
           mkdir -p out
           zip_name="Transcriby-macOS-${{ matrix.arch }}.zip"

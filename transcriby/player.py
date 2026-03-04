@@ -36,19 +36,54 @@ def _find_posix_libmpv():
     if env_lib and os.path.isfile(env_lib):
         return env_lib
 
+    candidate_dirs = []
+
+    # Prefer bundled runtime locations first (PyInstaller and app bundle layouts).
+    if hasattr(sys, "_MEIPASS"):
+        meipass = os.path.abspath(getattr(sys, "_MEIPASS"))
+        candidate_dirs.extend(
+            [
+                meipass,
+                os.path.join(meipass, "lib"),
+                os.path.join(meipass, "Frameworks"),
+                os.path.join(meipass, "MacOS"),
+            ]
+        )
+
+    exe_dir = os.path.dirname(os.path.abspath(sys.executable))
+    candidate_dirs.extend(
+        [
+            exe_dir,
+            os.path.join(exe_dir, "lib"),
+            os.path.abspath(os.path.join(exe_dir, "..", "Frameworks")),
+            os.path.abspath(os.path.join(exe_dir, "..", "MacOS", "lib")),
+        ]
+    )
+
+    module_dir = os.path.dirname(os.path.abspath(__file__))
+    candidate_dirs.extend(
+        [
+            module_dir,
+            os.path.join(module_dir, "lib"),
+        ]
+    )
+
     if sys.platform == "darwin":
-        lib_names = ["libmpv.dylib"]
-        candidate_dirs = [
+        lib_names = ["libmpv.dylib", "libmpv.2.dylib"]
+        candidate_dirs.extend(
+            [
             "/opt/homebrew/opt/mpv/lib",
             "/opt/homebrew/lib",
             "/usr/local/opt/mpv/lib",
             "/usr/local/lib",
             "/opt/local/lib",
             "/usr/lib",
-        ]
+            ]
+        )
     else:
         lib_names = ["libmpv.so.2", "libmpv.so.1", "libmpv.so"]
-        candidate_dirs = [
+        candidate_dirs.extend(
+            [
             "/usr/lib/x86_64-linux-gnu",
             "/usr/lib/aarch64-linux-gnu",
             "/usr/local/lib",
@@ -56,7 +91,8 @@ def _find_posix_libmpv():
             "/usr/lib",
             "/lib/x86_64-linux-gnu",
             "/lib/aarch64-linux-gnu",
-        ]
+            ]
+        )
 
     # Respect user/library search paths when present.
     for env_key in ("DYLD_FALLBACK_LIBRARY_PATH", "LD_LIBRARY_PATH"):
