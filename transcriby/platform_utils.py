@@ -127,12 +127,19 @@ def apply_window_icon(window, resources_dir: str | None = None, schedule_retry: 
     icon_applied = False
     icon_ico = os.path.join(resources_dir, "Icona.ico")
     if os.path.isfile(icon_ico):
+        icon_ico_abs = os.path.abspath(icon_ico).replace("\\", "/")
         try:
-            window.iconbitmap(icon_ico)
+            window.iconbitmap(icon_ico_abs)
             icon_applied = True
         except Exception:
             try:
-                window.wm_iconbitmap(icon_ico)
+                window.wm_iconbitmap(icon_ico_abs)
+                icon_applied = True
+            except Exception:
+                pass
+        if is_windows():
+            try:
+                _apply_windows_hicon(window, icon_ico_abs)
                 icon_applied = True
             except Exception:
                 pass
@@ -201,6 +208,34 @@ def set_windows_app_user_model_id(app_id: str) -> bool:
         return True
     except Exception:
         return False
+
+
+def _apply_windows_hicon(window, icon_path: str) -> None:
+    """Force window big/small icons via Win32 API from .ico file."""
+    if not is_windows():
+        return
+
+    user32 = ctypes.windll.user32
+    hwnd = user32.GetParent(window.winfo_id())
+    if hwnd == 0:
+        hwnd = window.winfo_id()
+
+    IMAGE_ICON = 1
+    LR_LOADFROMFILE = 0x0010
+    WM_SETICON = 0x0080
+    ICON_SMALL = 0
+    ICON_BIG = 1
+
+    # Load explicit sizes for titlebar/taskbar contexts.
+    hicon_small = user32.LoadImageW(None, icon_path, IMAGE_ICON, 16, 16, LR_LOADFROMFILE)
+    hicon_big = user32.LoadImageW(None, icon_path, IMAGE_ICON, 32, 32, LR_LOADFROMFILE)
+
+    if hicon_small:
+        user32.SendMessageW(hwnd, WM_SETICON, ICON_SMALL, hicon_small)
+        setattr(window, "_transcriby_hicon_small", hicon_small)
+    if hicon_big:
+        user32.SendMessageW(hwnd, WM_SETICON, ICON_BIG, hicon_big)
+        setattr(window, "_transcriby_hicon_big", hicon_big)
 
 
 def check_cmd_exists(cmd: str) -> bool:
