@@ -118,59 +118,57 @@ def get_locales_dir() -> str:
 def apply_window_icon(window, resources_dir: str | None = None, schedule_retry: bool = True) -> bool:
     """Apply app icon assets to a Tk/CTk window.
 
-    On Windows this sets both iconphoto (runtime) and iconbitmap (.ico) to improve
-    titlebar/taskbar rendering. On other platforms iconphoto is used.
+    Windows: prefer .ico only to keep taskbar/titlebar frame selection consistent.
+    Linux/macOS: try .ico first, then fall back to multi-size iconphoto PNGs.
     """
     if resources_dir is None:
         resources_dir = get_resources_dir()
 
     icon_applied = False
-    icon_images = []
-    icon_png_sizes = [256, 128, 96, 64, 48, 40, 32, 24, 20, 16]
-
-    # On Windows/CustomTkinter, calling wm_iconbitmap marks internal flags that
-    # prevent CTk/CTkToplevel from replacing icons with the default one later.
-    if is_windows():
-        icon_ico = os.path.join(resources_dir, "Icona.ico")
-        if os.path.isfile(icon_ico):
+    icon_ico = os.path.join(resources_dir, "Icona.ico")
+    if os.path.isfile(icon_ico):
+        try:
+            window.iconbitmap(icon_ico)
+            icon_applied = True
+        except Exception:
             try:
-                window.iconbitmap(icon_ico)
+                window.wm_iconbitmap(icon_ico)
                 icon_applied = True
-            except Exception:
-                try:
-                    window.wm_iconbitmap(icon_ico)
-                    icon_applied = True
-                except Exception:
-                    pass
-            try:
-                setattr(window, "_iconbitmap_method_called", True)
             except Exception:
                 pass
+        try:
+            setattr(window, "_iconbitmap_method_called", True)
+        except Exception:
+            pass
 
-    try:
-        import tkinter as tk
+    # Keep Windows on .ico-only path. For Linux/macOS, load PNG iconphoto fallback.
+    if not is_windows():
+        icon_images = []
+        icon_png_sizes = [256, 128, 96, 64, 48, 40, 32, 24, 20, 16]
+        try:
+            import tkinter as tk
 
-        for size in icon_png_sizes:
-            png_path = os.path.join(resources_dir, f"Icona-{size}.png")
-            if os.path.isfile(png_path):
+            for size in icon_png_sizes:
+                png_path = os.path.join(resources_dir, f"Icona-{size}.png")
+                if os.path.isfile(png_path):
+                    try:
+                        icon_images.append(tk.PhotoImage(master=window, file=png_path))
+                    except Exception:
+                        pass
+
+            if icon_images:
                 try:
-                    icon_images.append(tk.PhotoImage(master=window, file=png_path))
-                except Exception:
-                    pass
-
-        if icon_images:
-            try:
-                window.wm_iconphoto(True, *icon_images)
-                icon_applied = True
-            except Exception:
-                try:
-                    window.iconphoto(True, *icon_images)
+                    window.wm_iconphoto(True, *icon_images)
                     icon_applied = True
                 except Exception:
-                    pass
-            setattr(window, "_transcriby_icon_images", icon_images)
-    except Exception:
-        pass
+                    try:
+                        window.iconphoto(True, *icon_images)
+                        icon_applied = True
+                    except Exception:
+                        pass
+                setattr(window, "_transcriby_icon_images", icon_images)
+        except Exception:
+            pass
 
     # Some Windows environments apply a default icon shortly after creation.
     # Re-apply once after that window to keep taskbar/titlebar icon stable.
