@@ -13,6 +13,7 @@ import os
 import argparse
 from PIL import Image
 import re
+import urllib.parse
 import sys, pathlib
 from math import floor
 
@@ -138,6 +139,11 @@ class App(_AppBase):
         self.favoriteCreateCounter = 0      # Monotonic id for favorites creation order
         self._pendingLoopRestore = None     # Deferred loop restore while media duration is unavailable
         self._pendingSeekRestore = None     # Deferred seek restore while media duration is unavailable
+        self._loopRestartAfterID = ""
+        self.loopRestartDelayEnabled = bool(self.settings.getVal(CFG_APP_SECTION, "LoopRestartDelayEnabled", False))
+        self.loopRestartDelaySeconds = self._normalizeLoopRestartDelay(
+            self.settings.getVal(CFG_APP_SECTION, "LoopRestartDelaySeconds", 0.25)
+        )
         self.favoriteRowsPerColumn = 4
         self.favoriteGridHeight = 96
         self.favoritePalette = [
@@ -649,18 +655,18 @@ class App(_AppBase):
             follow=False,
         )
 
-        self.aboutButton = ctk.CTkButton(
+        self.settingsButton = ctk.CTkButton(
             self.RFrame,
-            text=_("About"),
+            text=_("Settings"),
             font=("", AUX_BUTTON_FONT_SIZE),
-            command=self.openAboutDialog,
+            command=self.openSettingsDialog,
             height=AUX_BUTTON_HEIGHT,
             fg_color="transparent",
             border_width=1,
             border_color=UI_BORDER_COLOR,
         )
-        self.aboutButton.grid(row=5, column=0, pady=(UI_INNER_PAD, UI_INNER_PAD), sticky="sew", columnspan=2)
-        self.aboutButton_tt = CTkToolTip(self.aboutButton, message=_("Show info about this software"),
+        self.settingsButton.grid(row=5, column=0, pady=(UI_INNER_PAD, UI_INNER_PAD), sticky="sew", columnspan=2)
+        self.settingsButton_tt = CTkToolTip(self.settingsButton, message=_("Open app settings and shortcuts"),
                                         delay=0.8, alpha=0.5, justify="left", follow=False)
         
         self.RFrame.rowconfigure(5, weight=1)
@@ -910,7 +916,7 @@ class App(_AppBase):
             border_color=UI_BORDER_COLOR,
             text_color=UI_TEXT_PRIMARY,
         )
-        self.aboutButton.configure(
+        self.settingsButton.configure(
             fg_color="transparent",
             hover_color=UI_BG_INPUT,
             border_width=1,
@@ -1530,6 +1536,40 @@ class App(_AppBase):
             self.bind_all('<KeyPress>', self._hotkey_manager_)
         return(filename)
 
+    def _normalizeTbyExportFilename(self, filename):
+        if(filename is None):
+            return("")
+
+        out = str(filename).strip()
+        if(out == ""):
+            return("")
+
+        if(out.lower().endswith(".tby")):
+            return(out)
+
+        stem, ext = os.path.splitext(out)
+        if(ext):
+            out = stem
+        return(out + ".tby")
+
+    def _resolveSessionMediaPath(self, rawMediaPath, tbyFile):
+        mediaPath = str(rawMediaPath or "").strip()
+        if(mediaPath == ""):
+            return("")
+
+        if(mediaPath.startswith("file://")):
+            parsed = urllib.parse.urlparse(mediaPath)
+            if(parsed.scheme == "file"):
+                parsedPath = urllib.parse.unquote(parsed.path or "")
+                if(is_windows() and len(parsedPath) > 2 and parsedPath[0] == "/" and parsedPath[2] == ":"):
+                    parsedPath = parsedPath[1:]
+                mediaPath = parsedPath
+
+        if(not os.path.isabs(mediaPath)):
+            mediaPath = os.path.join(os.path.dirname(tbyFile), mediaPath)
+
+        return(os.path.realpath(mediaPath))
+
     def _openTbySessionFile(self, tbyFile, showErrors=True):
         try:
             sessionData = sessionfile.load_tby(tbyFile)
@@ -1546,10 +1586,10 @@ class App(_AppBase):
 
         mediaData = sessionData.get("media", {})
         playbackOptions = sessionData.get("playback_options", {})
-        mediaPath = ""
+        mediaPathRaw = ""
         if(isinstance(mediaData, dict)):
-            mediaPath = mediaData.get("path", "")
-        if(not mediaPath):
+            mediaPathRaw = mediaData.get("path", "")
+        if(not mediaPathRaw):
             if(showErrors):
                 CTkMessagebox(
                     master=self,
@@ -1560,8 +1600,7 @@ class App(_AppBase):
                 )
             return(False)
 
-        if(not os.path.isabs(mediaPath)):
-            mediaPath = os.path.realpath(os.path.join(os.path.dirname(tbyFile), mediaPath))
+        mediaPath = self._resolveSessionMediaPath(mediaPathRaw, tbyFile)
         if(not os.path.isfile(mediaPath)):
             if(showErrors):
                 CTkMessagebox(
@@ -1575,7 +1614,9 @@ class App(_AppBase):
 
         self.bYouTubeFile = False
         self.YouTubeUrl = ""
-        self.setFile(mediaPath, applyRecentOptions=False)
+        if(self.setFile(mediaPath, applyRecentOptions=False) == False):
+            return(False)
+        self._cancelPendingLoopRestart()
         self._applyPlaybackOptions(playbackOptions)
         self.settings.setVal(CFG_APP_SECTION, "LastOpenDir", os.path.dirname(mediaPath))
         self.settings.setLastSessionTby(os.path.realpath(tbyFile))
@@ -1606,8 +1647,7 @@ class App(_AppBase):
         if(filename is None or str(filename) == ""):
             return(False)
 
-        if(filename.lower().endswith(".tby") == False):
-            filename += ".tby"
+        filename = self._normalizeTbyExportFilename(filename)
 
         try:
             sessionfile.save_tby(filename, self._buildTbyData())
@@ -1687,7 +1727,7 @@ class App(_AppBase):
     def setFile(self, filename, applyRecentOptions=False):
         #print(filename)
         if(not filename or filename == ''):
-            return
+            return(False)
         elif not os.path.isfile(filename):
             # On Windows, path may be returned with forward slashes from dialog
             # Try normalizing it
@@ -1697,12 +1737,12 @@ class App(_AppBase):
                     CTkMessagebox(master = self, title = _("Error: file not found"), 
                                   message=_("Unable to open file: {}").format(filename),
                                   icon = "cancel", font = ("", LBL_FONT_SIZE))
-                    return
+                    return(False)
             else:
                 CTkMessagebox(master = self, title = _("Error: file not found"), 
                               message=_("Unable to open file: {}").format(filename),
                               icon = "cancel", font = ("", LBL_FONT_SIZE))
-                return
+                return(False)
 
         # Saves the path and name of the selected file
         self.media = os.path.realpath(filename)
@@ -1739,7 +1779,7 @@ class App(_AppBase):
             if(filePlabackOptions is not None and isinstance(filePlabackOptions, dict)):
                 self.settings.moveToLastPosition(recentFileKey)
                 self._applyPlaybackOptions(filePlabackOptions)
-                return
+                return(True)
 
         # Default media loading policy: start from a clean playback state.
         self.settings.bUpdateForbidden = True
@@ -1749,6 +1789,7 @@ class App(_AppBase):
             self.settings.bUpdateForbidden = False
         self.settings.moveToLastPosition(recentFileKey)
         self.setRecentFilePBOptions()
+        return(True)
 
     # Saves the playback options to the recent files list
     def setRecentFilePBOptions(self):
@@ -2061,6 +2102,41 @@ class App(_AppBase):
             self.player.endPoint > self.player.startPoint
         )
 
+    def _normalizeLoopRestartDelay(self, value):
+        try:
+            delaySeconds = float(value)
+        except Exception:
+            delaySeconds = 0.25
+        return min(10.0, max(0.0, delaySeconds))
+
+    def _refreshLoopRestartDelaySettings(self):
+        self.loopRestartDelayEnabled = bool(self.settings.getVal(CFG_APP_SECTION, "LoopRestartDelayEnabled", False))
+        self.loopRestartDelaySeconds = self._normalizeLoopRestartDelay(
+            self.settings.getVal(CFG_APP_SECTION, "LoopRestartDelaySeconds", 0.25)
+        )
+
+    def _applyLoopRestartDelaySettings(self, enabled, delaySeconds):
+        self.loopRestartDelayEnabled = bool(enabled)
+        self.loopRestartDelaySeconds = self._normalizeLoopRestartDelay(delaySeconds)
+
+    def _cancelPendingLoopRestart(self):
+        if(self._loopRestartAfterID):
+            try:
+                self.after_cancel(self._loopRestartAfterID)
+            except Exception:
+                pass
+            self._loopRestartAfterID = ""
+
+    def _restartLoopFromANow(self):
+        self._loopRestartAfterID = ""
+        if(self.player.canPlay == False):
+            return
+        if(self.hasValidLoopRange() == False):
+            return
+        self.player.seek_absolute(self.player.startPoint)
+        self.Play()
+        self.statusBarMessage(_("Restart loop from A"), timeout=1000)
+
     def updateLoopHint(self):
         if(self.player.loopEnabled == False):
             self.lblLoopHint.configure(text="Loop is off")
@@ -2079,12 +2155,23 @@ class App(_AppBase):
             return
 
         if(self.hasValidLoopRange() == False):
+            self._cancelPendingLoopRestart()
             self.togglePlay()
             return
 
-        self.player.seek_absolute(self.player.startPoint)
-        self.Play()
-        self.statusBarMessage(_("Restart loop from A"), timeout=1000)
+        self._cancelPendingLoopRestart()
+        self._refreshLoopRestartDelaySettings()
+
+        if(self.loopRestartDelayEnabled and self.loopRestartDelaySeconds > 0):
+            delayMs = int(round(self.loopRestartDelaySeconds * 1000))
+            self._loopRestartAfterID = self.after(delayMs, self._restartLoopFromANow)
+            self.statusBarMessage(
+                _("Restart loop from A in {:.2f}s").format(self.loopRestartDelaySeconds),
+                timeout=min(max(delayMs + 400, 900), 6000),
+            )
+            return
+
+        self._restartLoopFromANow()
 
     def waveformSeek(self, targetSeconds):
         if(self.player.canPlay == False):
@@ -2257,6 +2344,9 @@ class App(_AppBase):
             if(duration and position and duration > 0 and position >= duration):
                 self.stopPlaying()
         else:
+            if(self.hasValidLoopRange() == False):
+                self._setLoopEnabledUI(False, showStatus=False)
+                return
             # If loop is enabled and playback is not within
             # the loop range, it seeks the playback at loop start
             #print(f"Position: {position} - Loopstart = {self.player.startPoint} - Loopend = {self.player.endPoint}")
@@ -2516,16 +2606,25 @@ class App(_AppBase):
             except:
                 return
     
-    # Open the about dialog
-    def openAboutDialog(self):
+    # Open the settings dialog
+    def openSettingsDialog(self):
         self.unbind_all('<KeyPress>')
         self.unbind_all('<1>')
         try:
-            popup = aboutdialog.aboutDialog(self)
+            popup = aboutdialog.aboutDialog(
+                self,
+                appSettings=self.settings,
+                onPlaybackSettingsChanged=self._applyLoopRestartDelaySettings,
+            )
             popup.show()
         finally:
+            self._refreshLoopRestartDelaySettings()
             self.bind_all('<1>', self._click_manager_)
             self.bind_all('<KeyPress>', self._hotkey_manager_)
+
+    # Backward-compatible alias kept for older call sites.
+    def openAboutDialog(self):
+        self.openSettingsDialog()
 
     # Writes an info message on status bar and enable erasing
     # after the timeout. If static flag is set, message
@@ -2617,7 +2716,7 @@ class App(_AppBase):
             else:
                 self.addFavoriteAtCurrent()
 
-        # Play / Pause (space restarts active loop from A)
+        # Play / Pause (space restarts active loop from A, optional delay in Settings)
         elif(key == 'space'):
             self.restartLoopFromA()
         elif(key == 'Return' or key == 'KP_Enter'):

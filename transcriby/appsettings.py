@@ -192,6 +192,8 @@ class AppSettings(object):
                 "LastSaveDir": USER_HOME_DIR,
                 "MaxRecentFileList": MAX_RECENTFILE_LIST,
                 "LastSessionTby": "",
+                "LoopRestartDelayEnabled": False,
+                "LoopRestartDelaySeconds": 0.25,
             },
             CFG_RECENTFILE_SECTION: {}
         }
