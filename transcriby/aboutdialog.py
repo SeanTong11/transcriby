@@ -177,6 +177,10 @@ class aboutDialog(ctk.CTkToplevel):
     def show(self):
         self.deiconify()
         apply_window_icon(self, self.resources_dir)
+        # CTkToplevel sets its own default icon asynchronously on Windows;
+        # override again after that point to keep About icon consistent.
+        self.after(450, lambda: apply_window_icon(self, self.resources_dir, schedule_retry=False))
+        self.after(900, lambda: apply_window_icon(self, self.resources_dir, schedule_retry=False))
         self.grab_set()
         self.wm_protocol("WM_DELETE_WINDOW", self.destroy)
         self.bind_all(sequence="<KeyPress>", func=self._keybind_)
