@@ -21,6 +21,13 @@ class aboutDialog(ctk.CTkToplevel):
         apply_window_icon(self, self.resources_dir)
                 
         self.wm_title(_("About"))
+        self.configure(fg_color=UI_BG_APP)
+
+        if self.master is not None:
+            try:
+                self.transient(self.master)
+            except Exception:
+                pass
         
         self.geometry("%dx%d" % (WIDTH, HEIGHT))
         self.resizable(width=False, height=False)
@@ -33,9 +40,22 @@ class aboutDialog(ctk.CTkToplevel):
         self.ico.grid(row=0, column=0, rowspan=2, padx=10, sticky="ns")
 
         self.tabview = ctk.CTkTabview(self)
+        self.tabview.configure(
+            fg_color=UI_BG_CARD,
+            segmented_button_selected_color=UI_ACCENT,
+            segmented_button_selected_hover_color=UI_ACCENT_HOVER,
+            segmented_button_unselected_color=UI_BG_CARD_ALT,
+            segmented_button_unselected_hover_color=UI_BG_CARD,
+            text_color=UI_TEXT_PRIMARY,
+        )
         self.tabview.grid(row=0, column=1, padx=10, pady=10, sticky="ewsn")
         
         self.closeButton = ctk.CTkButton(self, text=_("Close"), font=("", 14), command=self.destroy)
+        self.closeButton.configure(
+            fg_color=UI_ACCENT,
+            hover_color=UI_ACCENT_HOVER,
+            text_color=UI_BG_APP,
+        )
         self.closeButton.grid(row=1, column=1, pady=(8, 8), sticky="s")
 
         self.rowconfigure(0, weight=1)
@@ -43,6 +63,8 @@ class aboutDialog(ctk.CTkToplevel):
 
         tab1 = self.tabview.add(_("About"))
         tab2 = self.tabview.add(_("Shortcuts"))
+        tab1.configure(fg_color=UI_BG_CARD_ALT)
+        tab2.configure(fg_color=UI_BG_CARD_ALT)
 
         # Widget on tab 1: "About"
         self.aboutCoverImage = ctk.CTkImage(
@@ -66,7 +88,7 @@ class aboutDialog(ctk.CTkToplevel):
         self.authLabel.grid(row=3, column=0, sticky="n")
 
         self.linkLabel = ctk.CTkLabel(tab1, text=APP_URL, justify="center", anchor="center", 
-                                      compound="center", text_color="#1f538d", font=("", LBL_FONT_SIZE), cursor="hand2")
+                                      compound="center", text_color=UI_ACCENT, font=("", LBL_FONT_SIZE), cursor="hand2")
         self.linkLabel.grid(row=4, column=0, sticky="n")
         self.linkLabel.bind("<1>", lambda e: self.openUrl(APP_URL))
 

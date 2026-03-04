@@ -11,7 +11,6 @@ from CTkToolTip import *
 import datetime as dt
 import os
 import argparse
-import ctypes
 from PIL import Image
 import re
 import sys, pathlib
@@ -31,6 +30,7 @@ from transcriby.platform_utils import (
     get_resources_dir,
     get_locales_dir,
     apply_window_icon,
+    set_windows_app_user_model_id,
 )
 from transcriby import utils
 from transcriby.player import slowPlayer
@@ -88,11 +88,6 @@ class App(_AppBase):
 
         # Sets the app icon
         apply_window_icon(self, resources_dir)
-        if is_windows():
-            try:
-                ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("SeanTong11.Transcriby")
-            except Exception:
-                pass
 
         # Initialize the audio player
         self.player = slowPlayer()
@@ -2741,6 +2736,7 @@ def main():
 
     args = parser.parse_args()
 
+    set_windows_app_user_model_id(APP_USER_MODEL_ID)
     app = App(args)
 
     app.bind_all('<KeyPress>', app._hotkey_manager_)

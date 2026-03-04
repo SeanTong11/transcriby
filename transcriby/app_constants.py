@@ -14,6 +14,7 @@ APP_DESCRIPTION = "Transcriby is a simple audio player with speed/pitch \
 change capabilities, using mpv (libmpv)."
 
 APP_URL = "https://github.com/SeanTong11/transcriby"
+APP_USER_MODEL_ID = "SeanTong11.Transcriby"
 
 INITIAL_GEOMETRY = "1000x620"
 MIN_WINDOW_WIDTH = 920

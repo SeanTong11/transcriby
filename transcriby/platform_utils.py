@@ -7,6 +7,7 @@ Handles differences between Linux and Windows
 import os
 import sys
 import platform
+import ctypes
 
 
 def is_windows() -> bool:
@@ -114,7 +115,7 @@ def get_locales_dir() -> str:
     return os.path.join(_get_bundle_base_dir(), "locales")
 
 
-def apply_window_icon(window, resources_dir: str | None = None) -> bool:
+def apply_window_icon(window, resources_dir: str | None = None, schedule_retry: bool = True) -> bool:
     """Apply app icon assets to a Tk/CTk window.
 
     On Windows this sets both iconphoto (runtime) and iconbitmap (.ico) to improve
@@ -161,7 +162,36 @@ def apply_window_icon(window, resources_dir: str | None = None) -> bool:
             except Exception:
                 pass
 
+    # Some Windows environments apply a default icon after initial paint.
+    # Re-apply once on idle to keep taskbar/titlebar icon stable.
+    if is_windows() and icon_applied and schedule_retry:
+        try:
+            if not getattr(window, "_transcriby_icon_retry_scheduled", False):
+                setattr(window, "_transcriby_icon_retry_scheduled", True)
+
+                def _retry():
+                    try:
+                        apply_window_icon(window, resources_dir, schedule_retry=False)
+                    finally:
+                        setattr(window, "_transcriby_icon_retry_scheduled", False)
+
+                window.after_idle(_retry)
+        except Exception:
+            pass
+
     return icon_applied
+
+
+def set_windows_app_user_model_id(app_id: str) -> bool:
+    """Set explicit Windows AppUserModelID for stable taskbar icon grouping."""
+    if not is_windows():
+        return False
+
+    try:
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
+        return True
+    except Exception:
+        return False
 
 
 def check_cmd_exists(cmd: str) -> bool:
