@@ -210,6 +210,38 @@ def set_windows_app_user_model_id(app_id: str) -> bool:
         return False
 
 
+def set_windows_dpi_awareness() -> bool:
+    """Enable highest available DPI awareness on Windows before creating Tk windows."""
+    if not is_windows():
+        return False
+
+    user32 = ctypes.windll.user32
+    shcore = getattr(ctypes.windll, "shcore", None)
+
+    # Prefer Per-Monitor V2 when available.
+    try:
+        DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = ctypes.c_void_p(-4)
+        if user32.SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2):
+            return True
+    except Exception:
+        pass
+
+    # Fallback: Per-Monitor aware (Win 8.1+)
+    if shcore is not None:
+        try:
+            PROCESS_PER_MONITOR_DPI_AWARE = 2
+            if shcore.SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE) == 0:
+                return True
+        except Exception:
+            pass
+
+    # Legacy fallback
+    try:
+        return bool(user32.SetProcessDPIAware())
+    except Exception:
+        return False
+
+
 def _apply_windows_hicon(window, icon_path: str) -> None:
     """Force window big/small icons via Win32 API from .ico file."""
     if not is_windows():
@@ -226,9 +258,19 @@ def _apply_windows_hicon(window, icon_path: str) -> None:
     ICON_SMALL = 0
     ICON_BIG = 1
 
-    # Load explicit sizes for titlebar/taskbar contexts.
-    hicon_small = user32.LoadImageW(None, icon_path, IMAGE_ICON, 16, 16, LR_LOADFROMFILE)
-    hicon_big = user32.LoadImageW(None, icon_path, IMAGE_ICON, 32, 32, LR_LOADFROMFILE)
+    # Load icon sizes that match current system metrics (DPI-dependent).
+    SM_CXICON = 11
+    SM_CYICON = 12
+    SM_CXSMICON = 49
+    SM_CYSMICON = 50
+
+    small_w = max(16, int(user32.GetSystemMetrics(SM_CXSMICON)))
+    small_h = max(16, int(user32.GetSystemMetrics(SM_CYSMICON)))
+    big_w = max(32, int(user32.GetSystemMetrics(SM_CXICON)))
+    big_h = max(32, int(user32.GetSystemMetrics(SM_CYICON)))
+
+    hicon_small = user32.LoadImageW(None, icon_path, IMAGE_ICON, small_w, small_h, LR_LOADFROMFILE)
+    hicon_big = user32.LoadImageW(None, icon_path, IMAGE_ICON, big_w, big_h, LR_LOADFROMFILE)
 
     if hicon_small:
         user32.SendMessageW(hwnd, WM_SETICON, ICON_SMALL, hicon_small)

@@ -31,6 +31,7 @@ from transcriby.platform_utils import (
     get_locales_dir,
     apply_window_icon,
     set_windows_app_user_model_id,
+    set_windows_dpi_awareness,
 )
 from transcriby import utils
 from transcriby.player import slowPlayer
@@ -2736,6 +2737,7 @@ def main():
 
     args = parser.parse_args()
 
+    set_windows_dpi_awareness()
     set_windows_app_user_model_id(APP_USER_MODEL_ID)
     app = App(args)
 
