@@ -134,11 +134,11 @@ def apply_window_icon(window, resources_dir: str | None = None, schedule_retry: 
         icon_ico = os.path.join(resources_dir, "Icona.ico")
         if os.path.isfile(icon_ico):
             try:
-                window.wm_iconbitmap(default=icon_ico)
+                window.iconbitmap(icon_ico)
                 icon_applied = True
             except Exception:
                 try:
-                    window.iconbitmap(icon_ico)
+                    window.wm_iconbitmap(icon_ico)
                     icon_applied = True
                 except Exception:
                     pass
