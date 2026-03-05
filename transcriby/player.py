@@ -240,6 +240,34 @@ _ = gettext.gettext
 # Constants
 NANOSEC = 1000000000
 
+def get_mpv_runtime_details():
+    """Return diagnostic info about libmpv resolution/runtime backend."""
+    details = {
+        "env_mpv_library": os.environ.get("MPV_LIBRARY", ""),
+        "env_transcriby_mpv_library": os.environ.get("TRANSCRIBY_MPV_LIBRARY", ""),
+        "env_slowplay_mpv_library": os.environ.get("SLOWPLAY_MPV_LIBRARY", ""),
+        "find_library_mpv": "",
+        "backend_name": "",
+        "backend_realpath": "",
+    }
+
+    try:
+        found = ctypes.util.find_library("mpv")
+        details["find_library_mpv"] = found or ""
+    except Exception:
+        details["find_library_mpv"] = ""
+
+    try:
+        backend = getattr(mpv, "backend", None)
+        backend_name = getattr(backend, "_name", "") if backend is not None else ""
+        details["backend_name"] = backend_name or ""
+        if backend_name and os.path.isabs(backend_name) and os.path.exists(backend_name):
+            details["backend_realpath"] = os.path.realpath(backend_name)
+    except Exception:
+        pass
+
+    return(details)
+
 
 def _uri_to_path(uri: str) -> str:
     if uri.startswith("file://"):

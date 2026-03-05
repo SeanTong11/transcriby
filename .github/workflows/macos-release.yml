@@ -140,16 +140,47 @@ jobs:
             exit 1
           fi
 
-          brew_mpv_lib="$(brew --prefix mpv)/lib/libmpv.dylib"
-          backup=""
-          if [[ -f "${brew_mpv_lib}" ]]; then
-            backup="${brew_mpv_lib}.ci-bak"
-            mv "${brew_mpv_lib}" "${backup}"
-            trap 'if [[ -n "${backup}" && -f "${backup}" ]]; then mv "${backup}" "${brew_mpv_lib}"; fi' EXIT
-          fi
+          declare -a restores=()
+          restore_all() {
+            local entry
+            local orig
+            local bak
+            for entry in "${restores[@]}"; do
+              orig="${entry%%:::*}"
+              bak="${entry#*:::}"
+              if [[ -f "${bak}" ]]; then
+                mv "${bak}" "${orig}"
+              fi
+            done
+          }
+          trap restore_all EXIT
+
+          mpv_prefix="$(brew --prefix mpv)"
+          brew_prefix="$(brew --prefix)"
+          candidate_paths=(
+            "${mpv_prefix}/lib/libmpv.dylib"
+            "${mpv_prefix}/lib/libmpv.2.dylib"
+            "${brew_prefix}/lib/libmpv.dylib"
+            "${brew_prefix}/lib/libmpv.2.dylib"
+            "/opt/homebrew/lib/libmpv.dylib"
+            "/opt/homebrew/lib/libmpv.2.dylib"
+            "/usr/local/lib/libmpv.dylib"
+            "/usr/local/lib/libmpv.2.dylib"
+          )
+
+          for lib_path in "${candidate_paths[@]}"; do
+            if [[ -f "${lib_path}" ]]; then
+              bak_path="${lib_path}.ci-bak"
+              mv "${lib_path}" "${bak_path}"
+              restores+=("${lib_path}:::${bak_path}")
+              echo "[smoke] temporarily removed ${lib_path}"
+            fi
+          done
 
           unset MPV_LIBRARY TRANSCRIBY_MPV_LIBRARY SLOWPLAY_MPV_LIBRARY DYLD_FALLBACK_LIBRARY_PATH LD_LIBRARY_PATH
-          "${app_exe}" --smoke-check
+          smoke_log="${RUNNER_TEMP}/smoke-check.log"
+          TRANSCRIBY_REQUIRE_BUNDLED_MPV=1 "${app_exe}" --smoke-check 2>&1 | tee "${smoke_log}"
+          grep -q "smoke-check: bundled libmpv OK (" "${smoke_log}"
 
       - name: Package artifact
         shell: bash

@@ -35,6 +35,7 @@ from transcriby.platform_utils import (
     set_windows_dpi_awareness,
 )
 from transcriby import utils
+from transcriby import player as player_module
 from transcriby.player import slowPlayer
 from transcriby import filedialogs
 from transcriby.appsettings import *
@@ -2847,7 +2848,48 @@ def main():
         testPlayer = slowPlayer()
         try:
             testPlayer.Pause()
-            print("smoke-check: slowPlayer init OK")
+            print("smoke-check: slowPlayer init OK", flush=True)
+            details = player_module.get_mpv_runtime_details()
+            print(f"smoke-check: mpv backend name = {details.get('backend_name', '')}", flush=True)
+            print(f"smoke-check: mpv backend realpath = {details.get('backend_realpath', '')}", flush=True)
+            print(f"smoke-check: find_library('mpv') = {details.get('find_library_mpv', '')}", flush=True)
+            print(f"smoke-check: env MPV_LIBRARY = {details.get('env_mpv_library', '')}", flush=True)
+
+            requireBundledMpv = str(os.environ.get("TRANSCRIBY_REQUIRE_BUNDLED_MPV", "")).strip().lower() in ("1", "true", "yes")
+            if(requireBundledMpv):
+                exePath = pathlib.Path(sys.executable).resolve()
+                bundleRoot = None
+                for currentPath in [exePath, *exePath.parents]:
+                    if(str(currentPath.name).endswith(".app")):
+                        bundleRoot = currentPath.resolve()
+                        break
+
+                if(bundleRoot is None):
+                    print("smoke-check: ERROR: cannot determine .app bundle root from executable path", file=sys.stderr, flush=True)
+                    raise SystemExit(1)
+
+                candidatePath = details.get("backend_realpath", "")
+                if(candidatePath == ""):
+                    maybeFound = details.get("find_library_mpv", "")
+                    if(maybeFound and os.path.isabs(maybeFound)):
+                        candidatePath = os.path.realpath(maybeFound)
+
+                if(candidatePath == ""):
+                    print("smoke-check: ERROR: cannot determine resolved libmpv path", file=sys.stderr, flush=True)
+                    raise SystemExit(1)
+
+                resolvedPath = pathlib.Path(candidatePath).resolve()
+                try:
+                    resolvedPath.relative_to(bundleRoot)
+                except Exception:
+                    print(
+                        f"smoke-check: ERROR: libmpv path is outside app bundle: {resolvedPath} (bundle={bundleRoot})",
+                        file=sys.stderr,
+                        flush=True,
+                    )
+                    raise SystemExit(1)
+
+                print(f"smoke-check: bundled libmpv OK ({resolvedPath})", flush=True)
         finally:
             testPlayer.close()
         return(0)
