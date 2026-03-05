@@ -93,6 +93,63 @@ jobs:
             --hidden-import platform_utils \
             transcriby-launch.py
 
+      - name: Bundle libmpv into app
+        shell: bash
+        run: |
+          app_path="dist/Transcriby.app"
+          frameworks_dir="${app_path}/Contents/Frameworks"
+          bundled_lib="${frameworks_dir}/libmpv.dylib"
+
+          if [[ ! -d "${app_path}" ]]; then
+            echo "::error::Expected app bundle not found: ${app_path}"
+            ls -la dist || true
+            exit 1
+          fi
+
+          if [[ -z "${MPV_LIBRARY:-}" || ! -f "${MPV_LIBRARY}" ]]; then
+            echo "::error::MPV_LIBRARY is missing or invalid: '${MPV_LIBRARY:-}'"
+            exit 1
+          fi
+
+          mkdir -p "${frameworks_dir}"
+          cp -f "${MPV_LIBRARY}" "${bundled_lib}"
+          chmod 755 "${bundled_lib}"
+          echo "Bundled libmpv: ${bundled_lib}"
+
+      - name: Verify bundled libmpv exists
+        shell: bash
+        run: |
+          bundled_lib="dist/Transcriby.app/Contents/Frameworks/libmpv.dylib"
+          if [[ ! -f "${bundled_lib}" ]]; then
+            echo "::error::Bundled libmpv not found: ${bundled_lib}"
+            find dist/Transcriby.app -maxdepth 4 -type f | sed -n '1,200p' || true
+            exit 1
+          fi
+          ls -la "${bundled_lib}"
+          otool -L "${bundled_lib}" || true
+
+      - name: Smoke check bundled app without system mpv
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          app_exe="dist/Transcriby.app/Contents/MacOS/Transcriby"
+          if [[ ! -x "${app_exe}" ]]; then
+            echo "::error::App executable not found: ${app_exe}"
+            exit 1
+          fi
+
+          brew_mpv_lib="$(brew --prefix mpv)/lib/libmpv.dylib"
+          backup=""
+          if [[ -f "${brew_mpv_lib}" ]]; then
+            backup="${brew_mpv_lib}.ci-bak"
+            mv "${brew_mpv_lib}" "${backup}"
+            trap 'if [[ -n "${backup}" && -f "${backup}" ]]; then mv "${backup}" "${brew_mpv_lib}"; fi' EXIT
+          fi
+
+          unset MPV_LIBRARY TRANSCRIBY_MPV_LIBRARY SLOWPLAY_MPV_LIBRARY DYLD_FALLBACK_LIBRARY_PATH LD_LIBRARY_PATH
+          "${app_exe}" --smoke-check
+
       - name: Package artifact
         shell: bash
         run: |

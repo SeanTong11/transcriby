@@ -138,6 +138,11 @@ class App(_AppBase):
         self.favoriteCreateCounter = 0      # Monotonic id for favorites creation order
         self._pendingLoopRestore = None     # Deferred loop restore while media duration is unavailable
         self._pendingSeekRestore = None     # Deferred seek restore while media duration is unavailable
+        self._loopRestartAfterID = ""
+        self.loopRestartDelayEnabled = bool(self.settings.getVal(CFG_APP_SECTION, "LoopRestartDelayEnabled", False))
+        self.loopRestartDelaySeconds = self._normalizeLoopRestartDelay(
+            self.settings.getVal(CFG_APP_SECTION, "LoopRestartDelaySeconds", 0.25)
+        )
         self.favoriteRowsPerColumn = 4
         self.favoriteGridHeight = 96
         self.favoritePalette = [
@@ -1652,6 +1657,7 @@ class App(_AppBase):
 
     # Reset all values
     def resetValues(self):
+        self._cancelPendingLoopRestart()
         self.player.startPoint = -2
         self.player.endPoint = -1
         self.favorites = []
@@ -2061,6 +2067,36 @@ class App(_AppBase):
             self.player.endPoint > self.player.startPoint
         )
 
+    def _normalizeLoopRestartDelay(self, value):
+        try:
+            delaySeconds = float(value)
+        except Exception:
+            delaySeconds = 0.25
+        return(min(10.0, max(0.0, delaySeconds)))
+
+    def _refreshLoopRestartDelaySettings(self):
+        self.loopRestartDelayEnabled = bool(self.settings.getVal(CFG_APP_SECTION, "LoopRestartDelayEnabled", False))
+        self.loopRestartDelaySeconds = self._normalizeLoopRestartDelay(
+            self.settings.getVal(CFG_APP_SECTION, "LoopRestartDelaySeconds", 0.25)
+        )
+
+    def _cancelPendingLoopRestart(self):
+        if(self._loopRestartAfterID):
+            try:
+                self.after_cancel(self._loopRestartAfterID)
+            except Exception:
+                pass
+            self._loopRestartAfterID = ""
+
+    def _playAfterLoopRestartDelay(self):
+        self._loopRestartAfterID = ""
+        if(self.player.canPlay == False):
+            return
+        if(self.hasValidLoopRange() == False):
+            return
+        self.Play()
+        self.statusBarMessage(_("Restarted loop from A"), timeout=1000)
+
     def updateLoopHint(self):
         if(self.player.loopEnabled == False):
             self.lblLoopHint.configure(text="Loop is off")
@@ -2078,8 +2114,24 @@ class App(_AppBase):
             self.statusBarMessage(_("Please open a file..."))
             return
 
+        self._cancelPendingLoopRestart()
+
         if(self.hasValidLoopRange() == False):
             self.togglePlay()
+            return
+
+        self._refreshLoopRestartDelaySettings()
+
+        if(self.loopRestartDelayEnabled and self.loopRestartDelaySeconds > 0):
+            delayMs = int(round(self.loopRestartDelaySeconds * 1000))
+            # Desired behavior: jump to A first, then wait, then play.
+            self.player.seek_absolute(self.player.startPoint)
+            self.Pause()
+            self._loopRestartAfterID = self.after(delayMs, self._playAfterLoopRestartDelay)
+            self.statusBarMessage(
+                _("At A. Play in {:.2f}s").format(self.loopRestartDelaySeconds),
+                timeout=min(max(delayMs + 400, 900), 6000),
+            )
             return
 
         self.player.seek_absolute(self.player.startPoint)
@@ -2732,10 +2784,21 @@ class App(_AppBase):
 def main():
     parser = argparse.ArgumentParser(description = APP_DESCRIPTION, prog = APP_NAME)
     parser.add_argument("--delete-recent", help=_("Clear the list of recently played media"), action='store_true')
+    parser.add_argument("--smoke-check", help=_("Run non-GUI startup smoke check and exit"), action='store_true')
     parser.add_argument("-v", "--version", action="version", version=f"{APP_NAME} - {APP_VERSION}")
     parser.add_argument("media", nargs="?", help=_("URI of the media to open"))
 
     args = parser.parse_args()
+
+    if(args.smoke_check):
+        # Used by CI packaging checks to verify bundled libmpv loadability.
+        testPlayer = slowPlayer()
+        try:
+            testPlayer.Pause()
+            print("smoke-check: slowPlayer init OK")
+        finally:
+            testPlayer.close()
+        return(0)
 
     set_windows_dpi_awareness()
     set_windows_app_user_model_id(APP_USER_MODEL_ID)
