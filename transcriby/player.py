@@ -548,6 +548,10 @@ class slowPlayer():
 
     def __del__(self):
         """Cleanup"""
+        self.close()
+
+    def close(self):
+        """Explicitly terminate mpv backend."""
         try:
             self._player.terminate()
         except Exception:

@@ -14,7 +14,8 @@
   - Produces `Transcriby-Windows.zip` and `SHA256SUMS.txt`
 - macOS: `.github/workflows/macos-release.yml`
   - Builds both `arm64` and `x64`
-  - Bundles `libmpv.dylib` into the app bundle at build time
+  - Installs `mpv` only for build-time dependency resolution, then bundles `libmpv.dylib` into `Transcriby.app/Contents/Frameworks`
+  - Runs packaged-app smoke check (`--smoke-check`) after unsetting mpv-related env vars and temporarily removing system `libmpv.dylib`
   - Generates build metadata (`app_version`, `build_tag`, `build_commit`, `channel`) before packaging
   - Produces `Transcriby-macOS-arm64.zip`, `Transcriby-macOS-x64.zip`, and architecture-specific SHA256 files
 
