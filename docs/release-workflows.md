@@ -15,8 +15,10 @@
 - macOS: `.github/workflows/macos-release.yml`
   - Builds both `arm64` and `x64`
   - Installs `mpv` only for build-time dependency resolution, then bundles `libmpv.dylib` into `Transcriby.app/Contents/Frameworks`
+  - Rebases transitive `libmpv` dependencies into `Contents/Frameworks` via `tools/macos_bundle_dylibs.py` (`install_name_tool` rewrite to `@loader_path`)
   - Runs packaged-app smoke check (`--smoke-check`) after unsetting mpv-related env vars and temporarily removing common system `libmpv` files
   - Smoke check fails unless resolved `libmpv` path is inside the app bundle
+  - Build fails if any Frameworks dylib still references `/opt/homebrew`, `/usr/local`, or `/opt/local` absolute paths
   - Generates build metadata (`app_version`, `build_tag`, `build_commit`, `channel`) before packaging
   - Produces `Transcriby-macOS-arm64.zip`, `Transcriby-macOS-x64.zip`, and architecture-specific SHA256 files
 

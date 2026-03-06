@@ -117,6 +117,13 @@ jobs:
           chmod 755 "${bundled_lib}"
           echo "Bundled libmpv: ${bundled_lib}"
 
+      - name: Bundle and rebase libmpv dylib dependencies
+        shell: bash
+        run: |
+          python3 tools/macos_bundle_dylibs.py \
+            --app "dist/Transcriby.app" \
+            --root "dist/Transcriby.app/Contents/Frameworks/libmpv.dylib"
+
       - name: Verify bundled libmpv exists
         shell: bash
         run: |
@@ -128,6 +135,27 @@ jobs:
           fi
           ls -la "${bundled_lib}"
           otool -L "${bundled_lib}" || true
+
+      - name: Verify no external Homebrew-style refs remain
+        shell: bash
+        run: |
+          set -euo pipefail
+          app_fw="dist/Transcriby.app/Contents/Frameworks"
+          if [[ ! -d "${app_fw}" ]]; then
+            echo "::error::Frameworks directory missing: ${app_fw}"
+            exit 1
+          fi
+
+          bad_refs="$(
+            find "${app_fw}" -type f -name "*.dylib" -print0 \
+              | xargs -0 otool -L \
+              | grep -E '^\s+/(opt/homebrew|usr/local|opt/local)/' || true
+          )"
+          if [[ -n "${bad_refs}" ]]; then
+            echo "::error::External dylib references remain:"
+            echo "${bad_refs}"
+            exit 1
+          fi
 
       - name: Smoke check bundled app without system mpv
         shell: bash
