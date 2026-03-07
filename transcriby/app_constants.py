@@ -120,14 +120,6 @@ SAVE_EXTENSIONS_FILTER = (
 # Default save file extension
 SAVE_DEFAULT_EXTENSION = "mp3"
 
-# YouTube constants
-YTDLP_CMD = "yt-dlp"                   # Command to execute for video managing
-YT_AUDIO_FORMAT_PRESET = "aac"         # default audio extraction format 
-YT_AUDIO_FORMAT_EXTENSION = "m4a"      # default extracted audio extension
-YT_THUMB_FORMAT_EXTENSION = "png"      # default thumbnail extraction format
-YT_AUDIO_FILE_PREFIX = "trYT_"
-
-
 # Defines the minimum gap for loop, which is the gap between loop start and loop end
 # Also it defines the minimum distance from the loop end and the song end.
 #

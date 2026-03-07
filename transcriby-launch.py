@@ -1,12 +1,6 @@
 #!/usr/bin/env python3
 
-import sys
-import os
-
-# Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from transcriby import transcriby
+from transcriby.qt_main import main
 
 if __name__ == "__main__":
-    transcriby.main()
+    raise SystemExit(main())

@@ -134,11 +134,8 @@ def check_requirements():
         ('soundfile', 'soundfile', False),
         ('scipy', 'scipy', False),
         ('numpy', 'numpy', False),
-        ('customtkinter', 'customtkinter', False),
+        ('PySide6', 'PySide6', False),
         ('PIL', 'pillow', False),
-        ('CTkMessagebox', 'CTkMessagebox', False),
-        ('CTkToolTip', 'CTkToolTip', False),
-        ('tkinterdnd2', 'tkinterdnd2', False),
     ]
     
     for module, pkg, check_spec_only in required:
@@ -193,10 +190,7 @@ def build():
         "--hidden-import", "soundfile",
         "--hidden-import", "scipy",
         "--hidden-import", "numpy",
-        "--hidden-import", "customtkinter",
-        "--hidden-import", "CTkMessagebox",
-        "--hidden-import", "CTkToolTip",
-        "--hidden-import", "tkinterdnd2",
+        "--hidden-import", "PySide6",
         "--hidden-import", "platform_utils",
     ])
     

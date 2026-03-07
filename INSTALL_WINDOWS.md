@@ -23,10 +23,6 @@ Transcriby for Windows uses `mpv` (libmpv) for lightweight audio playback (no GS
    - Ensure `mpv.exe` and `libmpv-2.dll` are on PATH or placed next to `Transcriby.exe`
    - If `python-mpv` cannot find the DLL, set `TRANSCRIBY_MPV_DIR` to the folder containing `libmpv-2.dll` (often the same folder as `mpv.exe`)
 
-4. **FFmpeg** (optional, for YouTube support)
-   - Download from https://ffmpeg.org/download.html
-   - Add to PATH or place in the same folder as Transcriby
-
 ### Installation Steps
 
 1. **Clone or download the repository**
@@ -42,13 +38,13 @@ Transcriby for Windows uses `mpv` (libmpv) for lightweight audio playback (no GS
 
 3. **Run the application**
    ```cmd
-   uv run python transcriby-launch.py
+   uv run transcriby
    ```
 
    Or activate the environment and run:
    ```cmd
    .venv\Scripts\activate
-   python transcriby-launch.py
+   transcriby
    ```
 
 ---
@@ -61,7 +57,7 @@ If you prefer not to use uv:
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
-python transcriby-launch.py
+python -m transcriby.qt_main
 ```
 
 ---
@@ -113,10 +109,6 @@ Audio export uses `soundfile + scipy` and does not require ffmpeg.
 - Make sure you installed all requirements: `pip install -r requirements.txt`
 - Ensure your virtual environment is activated
 
-### "yt-dlp not found" error
-- Install yt-dlp: `pip install yt-dlp`
-- Or download `yt-dlp.exe` from https://github.com/yt-dlp/yt-dlp/releases
-
 ### GUI looks wrong or crashes
 - Make sure you have the latest Windows updates
 - Try running in compatibility mode (right-click → Properties → Compatibility)
@@ -145,7 +137,6 @@ Stored in the config file above
 | ← or 1 (numpad) | Rewind 5s |
 | → or 3 (numpad) | Forward 5s |
 | Ctrl+O | Open file |
-| Ctrl+Y | YouTube download |
 | Ctrl+R | Recent files |
 
 **Note**: Some numpad shortcuts may not work on laptops without a dedicated numpad.

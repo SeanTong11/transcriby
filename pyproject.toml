@@ -22,13 +22,9 @@ classifiers = [
 ]
 requires-python = ">=3.9"
 dependencies = [
-    "CTkListbox>=1.5",
-    "CTkMessagebox>=2.7",
-    "CTkToolTip>=0.8",
-    "customtkinter>=5.2.2",
+    "PySide6>=6.7.0",
     "pillow>=10.0.0",
     "requests>=2.32.0",
-    "tkinterdnd2>=0.4.3",
     "python-mpv>=1.0.0",
     "soundfile>=0.12.1",
     "scipy>=1.10.0",
@@ -39,16 +35,13 @@ dependencies = [
 build = [
     "pyinstaller>=6.0.0",
 ]
-youtube = [
-    "yt-dlp>=2024.0.0",
-]
 dev = [
     "pyinstaller>=6.0.0",
-    "yt-dlp>=2024.0.0",
 ]
 
 [project.scripts]
-transcriby = "transcriby.transcriby:main"
+transcriby = "transcriby.qt_main:main"
+transcriby-qt = "transcriby.qt_main:main"
 
 [project.urls]
 Homepage = "https://github.com/SeanTong11/transcriby"
@@ -64,5 +57,4 @@ packages = ["transcriby"]
 [dependency-groups]
 dev = [
     "pyinstaller>=6.0.0",
-    "yt-dlp>=2024.0.0",
 ]
