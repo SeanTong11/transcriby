@@ -6,11 +6,12 @@ from __future__ import annotations
 import datetime as dt
 import os
 
-from PySide6.QtCore import QSignalBlocker, Qt, QTimer
+from PySide6.QtCore import QSignalBlocker, Qt, QTimer, QUrl
 from PySide6.QtGui import QAction, QColor, QDragEnterEvent, QDropEvent, QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QAbstractSpinBox,
     QApplication,
+    QCheckBox,
     QDialog,
     QDialogButtonBox,
     QDoubleSpinBox,
@@ -87,7 +88,7 @@ def format_seconds_text(seconds: float | None) -> str:
 
 def build_open_filter() -> str:
     wildcard = " ".join([f"*.{ext}" for ext in OPEN_EXTENSIONS_FILTER])
-    return f"Supported Files ({wildcard});;All Files (*)"
+    return f"Supported Files ({wildcard} *.tby);;All Files (*)"
 
 
 def build_audio_save_filter() -> str:
@@ -262,15 +263,14 @@ class TranscribyQtWindow(QMainWindow):
         loop_center_col = QVBoxLayout()
         loop_center_col.setSpacing(6)
         loop_toggle_row = QHBoxLayout()
-        self.loop_toggle_button = QPushButton("Enable Loop")
-        self.loop_toggle_button.setCheckable(True)
-        self.loop_toggle_button.toggled.connect(self._on_loop_toggle_toggled)
+        self.loop_toggle_switch = QCheckBox("Enable loop")
+        self.loop_toggle_switch.toggled.connect(self._on_loop_toggle_toggled)
         self.loop_help_button = QPushButton("?")
         self.loop_help_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.loop_help_button.setFixedWidth(28)
         self.loop_help_button.clicked.connect(self._show_shortcuts_help)
         loop_toggle_row.addStretch(1)
-        loop_toggle_row.addWidget(self.loop_toggle_button)
+        loop_toggle_row.addWidget(self.loop_toggle_switch)
         loop_toggle_row.addWidget(self.loop_help_button)
         loop_toggle_row.addStretch(1)
         loop_center_col.addLayout(loop_toggle_row)
@@ -513,6 +513,25 @@ class TranscribyQtWindow(QMainWindow):
                 color: #19130E;
                 border-color: {UI_ACCENT_HOVER};
             }}
+            QCheckBox {{
+                spacing: 8px;
+                background: transparent;
+            }}
+            QCheckBox::indicator {{
+                width: 38px;
+                height: 20px;
+                border-radius: 10px;
+                border: 1px solid {UI_BORDER_COLOR};
+                background: #1F1812;
+            }}
+            QCheckBox::indicator:unchecked {{
+                image: none;
+            }}
+            QCheckBox::indicator:checked {{
+                image: none;
+                background: {UI_ACCENT};
+                border-color: {UI_ACCENT_HOVER};
+            }}
             QSlider::groove:horizontal {{
                 border: 1px solid {UI_BORDER_COLOR};
                 height: 5px;
@@ -550,6 +569,10 @@ class TranscribyQtWindow(QMainWindow):
                 background: {UI_ACCENT};
                 color: #19130E;
             }}
+            QListWidget::item:hover {{
+                background: #8A6A3A;
+                color: #F2E5C6;
+            }}
             """
         )
 
@@ -562,7 +585,7 @@ class TranscribyQtWindow(QMainWindow):
         self.seek_fwd_01_button.setToolTip("Seek forward (fine): 0.1s\nShortcut: .")
         self.seek_fwd_1_button.setToolTip("Seek forward (coarse): 1.0s\nShortcut: ]")
 
-        self.loop_toggle_button.setToolTip(
+        self.loop_toggle_switch.setToolTip(
             "Toggle loop playing\nShortcut: L\nTip: right-click and drag on timeline to set A/B"
         )
         self.loop_help_button.setToolTip(
@@ -691,7 +714,7 @@ class TranscribyQtWindow(QMainWindow):
         self.speed_spin.setValue(1.0)
 
     def _toggle_loop_shortcut(self):
-        self.loop_toggle_button.setChecked(not self.loop_toggle_button.isChecked())
+        self.loop_toggle_switch.setChecked(not self.loop_toggle_switch.isChecked())
 
     def _open_startup_session(self):
         loaded, message = self.controller.load_last_session_or_media()
@@ -712,7 +735,7 @@ class TranscribyQtWindow(QMainWindow):
         )
         if not filename:
             return
-        self.open_media_path(filename, apply_recent_options=False)
+        self._open_path(filename, apply_recent_options=False)
 
     def _on_open_tby_clicked(self):
         initial_dir = self.controller.settings.getVal("App", "LastOpenDir", os.path.expanduser("~"))
@@ -792,13 +815,36 @@ class TranscribyQtWindow(QMainWindow):
             return
         self.statusBar().showMessage(message, 2000)
 
+    def _normalize_recent_path(self, raw_path: str) -> str:
+        value = str(raw_path or "").strip()
+        if value.startswith("file://"):
+            try:
+                parsed = QUrl(value)
+                if parsed.isLocalFile():
+                    value = parsed.toLocalFile()
+            except Exception:
+                pass
+        return os.path.realpath(value) if value else value
+
+    def _open_path(self, file_path: str, apply_recent_options: bool) -> bool:
+        target = self._normalize_recent_path(file_path)
+        if not target:
+            return False
+        if str(target).lower().endswith(".tby"):
+            return self._open_tby_path(target)
+        self.open_media_path(target, apply_recent_options=apply_recent_options)
+        return True
+
     def _on_open_recent_clicked(self, file_key: str):
-        if not os.path.isfile(file_key):
+        normalized = self._normalize_recent_path(file_key)
+        if not os.path.isfile(normalized):
             self.controller.remove_recent_file(file_key)
+            if normalized and normalized != file_key:
+                self.controller.remove_recent_file(normalized)
             self._rebuild_recent_menu()
             QMessageBox.warning(self, "File not found", f"Unable to open file:\n{file_key}")
             return
-        self.open_media_path(file_key, apply_recent_options=True)
+        self._open_path(normalized, apply_recent_options=True)
 
     def _on_open_recent_dialog(self):
         recent = self.controller.get_recent_files()
@@ -825,6 +871,8 @@ class TranscribyQtWindow(QMainWindow):
         content.addWidget(file_list)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Open | QDialogButtonBox.Cancel, parent=dialog)
+        remove_button = buttons.addButton("Remove", QDialogButtonBox.ActionRole)
+        remove_button.clicked.connect(lambda: self._remove_selected_recent_item(file_list))
         buttons.accepted.connect(dialog.accept)
         buttons.rejected.connect(dialog.reject)
         content.addWidget(buttons)
@@ -838,6 +886,27 @@ class TranscribyQtWindow(QMainWindow):
         selected_path = str(item.data(Qt.UserRole) or "")
         if selected_path:
             self._on_open_recent_clicked(selected_path)
+
+    def _remove_selected_recent_item(self, file_list: QListWidget):
+        item = file_list.currentItem()
+        if item is None:
+            return
+        selected_path = str(item.data(Qt.UserRole) or "").strip()
+        if not selected_path:
+            return
+
+        self.controller.remove_recent_file(selected_path)
+        normalized = self._normalize_recent_path(selected_path)
+        if normalized and normalized != selected_path:
+            self.controller.remove_recent_file(normalized)
+
+        row = file_list.row(item)
+        removed_item = file_list.takeItem(row)
+        del removed_item
+
+        if file_list.count() > 0:
+            file_list.setCurrentRow(min(row, file_list.count() - 1))
+        self._rebuild_recent_menu()
 
     def _on_clear_recent_clicked(self):
         self.controller.clear_recent_files()
@@ -996,8 +1065,8 @@ class TranscribyQtWindow(QMainWindow):
 
     def _apply_loop_range_seconds(self, start_seconds: float, end_seconds: float):
         if self.controller.apply_loop_range_seconds(start_seconds, end_seconds):
-            if not self.loop_toggle_button.isChecked():
-                self.loop_toggle_button.setChecked(True)
+            if not self.loop_toggle_switch.isChecked():
+                self.loop_toggle_switch.setChecked(True)
             else:
                 self.statusBar().showMessage("Loop range updated", 1200)
         else:
@@ -1217,8 +1286,8 @@ class TranscribyQtWindow(QMainWindow):
             with QSignalBlocker(self.progress_slider):
                 self.progress_slider.setValue(int(snapshot.progress_ratio * 1000000))
 
-        with QSignalBlocker(self.loop_toggle_button):
-            self.loop_toggle_button.setChecked(snapshot.loop_enabled)
+        with QSignalBlocker(self.loop_toggle_switch):
+            self.loop_toggle_switch.setChecked(snapshot.loop_enabled)
 
         with QSignalBlocker(self.speed_spin):
             self.speed_spin.setValue(snapshot.speed)

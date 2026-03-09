@@ -113,11 +113,7 @@ class PlaybackController:
     def get_recent_files(self) -> dict:
         recent = self.settings.getRecentFiles()
         if isinstance(recent, dict):
-            filtered = {}
-            for key, value in recent.items():
-                if os.path.isfile(key):
-                    filtered[key] = value
-            return filtered
+            return dict(recent)
         return {}
 
     def remove_recent_file(self, file_key: str):

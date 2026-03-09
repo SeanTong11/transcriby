@@ -57,7 +57,7 @@ UI_DANGER_HOVER = "#854939"
 UI_FAVORITE_COLORS = (
     "#59D1D9",
     "#FF9F5A",
-    "#93C5FD",
+    "#F97316",
     "#EAB308",
     "#F59E0B",
     "#6EE7B7",
