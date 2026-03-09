@@ -52,6 +52,7 @@ class QtTimelineWidget(QWidget):
         self._select_start: float | None = None
         self._select_end: float | None = None
         self._right_anchor: float | None = None
+        self._right_press_pos_x: float | None = None
         self._right_dragging = False
         self._markers: list[dict] = []
 
@@ -104,6 +105,7 @@ class QtTimelineWidget(QWidget):
         self._select_start = None
         self._select_end = None
         self._right_anchor = None
+        self._right_press_pos_x = None
         self._right_dragging = False
         self.update()
 
@@ -178,6 +180,7 @@ class QtTimelineWidget(QWidget):
 
         if event.button() == Qt.MouseButton.RightButton:
             self._right_anchor = self._x_to_seconds(event.position().x())
+            self._right_press_pos_x = float(event.position().x())
             self._right_dragging = False
             self.set_selection_preview(self._right_anchor, self._right_anchor)
             event.accept()
@@ -195,7 +198,7 @@ class QtTimelineWidget(QWidget):
             return
 
         current = self._x_to_seconds(event.position().x())
-        if abs(current - self._right_anchor) > 0.005:
+        if self._right_press_pos_x is not None and abs(float(event.position().x()) - self._right_press_pos_x) >= 3.0:
             self._right_dragging = True
         self.set_selection_preview(self._right_anchor, current)
         event.accept()
@@ -207,9 +210,10 @@ class QtTimelineWidget(QWidget):
 
         end_seconds = self._x_to_seconds(event.position().x())
         anchor = float(self._right_anchor)
+        was_dragging = bool(self._right_dragging)
         self.clear_selection_preview()
 
-        if (not self._right_dragging) or (abs(end_seconds - anchor) < 0.01):
+        if (not was_dragging) or (abs(end_seconds - anchor) < 0.01):
             if self.on_context_request:
                 self.on_context_request(end_seconds, event.globalPosition().toPoint())
             event.accept()
@@ -221,6 +225,9 @@ class QtTimelineWidget(QWidget):
 
     def paintEvent(self, _event):
         height = max(1, self.height())
+        draw_top = 6
+        draw_bottom = max(draw_top + 1, height - 8)
+        draw_height = max(1, draw_bottom - draw_top)
 
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
@@ -232,24 +239,24 @@ class QtTimelineWidget(QWidget):
             painter.setPen(QPen(border_color, 1))
             painter.drawRect(self.rect().adjusted(0, 0, -1, -1))
             painter.setPen(border_color)
-            painter.drawText(8, height - 6, "LOOP")
+            painter.drawText(8, draw_bottom - 2, "LOOP")
 
         a_x = self._seconds_to_x(self._loop_start)
         b_x = self._seconds_to_x(self._loop_end)
         if a_x is not None and b_x is not None and b_x > a_x:
-            painter.fillRect(QRectF(a_x, 0, b_x - a_x, height), self._colors["loop_fill"])
+            painter.fillRect(QRectF(a_x, draw_top, b_x - a_x, draw_height), self._colors["loop_fill"])
             painter.setPen(QPen(self._colors["loop_marker"], 2))
-            painter.drawLine(int(a_x), 0, int(a_x), height)
-            painter.drawLine(int(b_x), 0, int(b_x), height)
+            painter.drawLine(int(a_x), draw_top, int(a_x), draw_bottom)
+            painter.drawLine(int(b_x), draw_top, int(b_x), draw_bottom)
 
         s_a_x = self._seconds_to_x(self._select_start)
         s_b_x = self._seconds_to_x(self._select_end)
         if s_a_x is not None and s_b_x is not None and abs(s_b_x - s_a_x) > 1:
             x1, x2 = (s_a_x, s_b_x) if s_a_x <= s_b_x else (s_b_x, s_a_x)
-            painter.fillRect(QRectF(x1, 0, x2 - x1, height), self._colors["select_fill"])
+            painter.fillRect(QRectF(x1, draw_top, x2 - x1, draw_height), self._colors["select_fill"])
             painter.setPen(QPen(self._colors["select_marker"], 2))
-            painter.drawLine(int(x1), 0, int(x1), height)
-            painter.drawLine(int(x2), 0, int(x2), height)
+            painter.drawLine(int(x1), draw_top, int(x1), draw_bottom)
+            painter.drawLine(int(x2), draw_top, int(x2), draw_bottom)
 
         painter.setFont(self.font())
         for marker in self._markers:
@@ -263,20 +270,25 @@ class QtTimelineWidget(QWidget):
             if not color.isValid():
                 color = self._colors["marker_fallback"]
             painter.setPen(QPen(color, 2))
-            painter.drawLine(int(marker_x), 0, int(marker_x), height)
+            marker_top = draw_top + 4
+            marker_bottom = draw_bottom - 4
+            if marker_bottom <= marker_top:
+                marker_top = draw_top
+                marker_bottom = draw_bottom
+            painter.drawLine(int(marker_x), marker_top, int(marker_x), marker_bottom)
             label = str(marker.get("label", "")).strip()
             if label:
                 text_x = int(marker_x) + 4
                 metrics = painter.fontMetrics()
                 text_width = metrics.horizontalAdvance(label)
                 text_height = metrics.height()
-                bg_rect = QRectF(text_x - 2, 2, text_width + 4, text_height)
+                bg_rect = QRectF(text_x - 2, draw_top + 1, text_width + 4, text_height)
                 label_bg = QColor(0, 0, 0, 120)
                 painter.fillRect(bg_rect, label_bg)
                 painter.setPen(QColor("#FFFFFF"))
-                painter.drawText(text_x, 2 + metrics.ascent(), label)
+                painter.drawText(text_x, draw_top + 1 + metrics.ascent(), label)
 
         playhead_x = self._seconds_to_x(self._playhead)
         if playhead_x is not None:
             painter.setPen(QPen(self._colors["playhead"], 2))
-            painter.drawLine(int(playhead_x), 0, int(playhead_x), height)
+            painter.drawLine(int(playhead_x), draw_top, int(playhead_x), draw_bottom)

@@ -59,7 +59,7 @@ UI_FAVORITE_COLORS = (
     "#FF9F5A",
     "#93C5FD",
     "#EAB308",
-    "#D8B4FE",
+    "#F59E0B",
     "#6EE7B7",
 )
 

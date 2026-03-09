@@ -145,7 +145,6 @@ class SettingsDialog(QDialog):
         link.setOpenExternalLinks(False)
         link.linkActivated.connect(lambda _url: webbrowser.open(APP_URL))
         layout.addWidget(link, 0, Qt.AlignHCenter)
-        layout.addStretch(1)
 
     def _build_shortcuts_tab(self):
         layout = QVBoxLayout(self.shortcuts_tab)

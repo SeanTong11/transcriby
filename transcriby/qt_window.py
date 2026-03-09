@@ -50,6 +50,7 @@ from transcriby.app_constants import (
     OPEN_EXTENSIONS_FILTER,
     SAVE_DEFAULT_EXTENSION,
     SAVE_EXTENSIONS_FILTER,
+    SPEED_SLIDER_MIN,
     STEPS_SEC_MOVE_1,
     STEPS_SEC_MOVE_2,
     STEPS_SEC_MOVE_3,
@@ -184,19 +185,35 @@ class TranscribyQtWindow(QMainWindow):
         playback_layout.setContentsMargins(10, 12, 10, 10)
         playback_layout.setSpacing(8)
 
+        self.seek_back_1_button = QPushButton("<<")
+        self.seek_back_1_button.clicked.connect(lambda: self._seek_relative(-1.0))
+        self.seek_back_01_button = QPushButton("<")
+        self.seek_back_01_button.clicked.connect(lambda: self._seek_relative(-0.1))
         self.play_button = QPushButton("Play >")
         self.play_button.clicked.connect(self._on_toggle_play_clicked)
         self.stop_button = QPushButton("Stop")
         self.stop_button.clicked.connect(self._on_stop_clicked)
         self.rewind_button = QPushButton("Rewind")
         self.rewind_button.clicked.connect(self._on_rewind_clicked)
-        self.restart_a_button = QPushButton("Restart A")
-        self.restart_a_button.clicked.connect(self._on_restart_loop_clicked)
+        self.seek_fwd_01_button = QPushButton(">")
+        self.seek_fwd_01_button.clicked.connect(lambda: self._seek_relative(0.1))
+        self.seek_fwd_1_button = QPushButton(">>")
+        self.seek_fwd_1_button.clicked.connect(lambda: self._seek_relative(1.0))
+        for btn in (
+            self.seek_back_1_button,
+            self.seek_back_01_button,
+            self.seek_fwd_01_button,
+            self.seek_fwd_1_button,
+        ):
+            btn.setFixedWidth(42)
         playback_layout.addStretch(1)
         playback_layout.addWidget(self.rewind_button)
+        playback_layout.addWidget(self.seek_back_1_button)
+        playback_layout.addWidget(self.seek_back_01_button)
         playback_layout.addWidget(self.play_button)
         playback_layout.addWidget(self.stop_button)
-        playback_layout.addWidget(self.restart_a_button)
+        playback_layout.addWidget(self.seek_fwd_01_button)
+        playback_layout.addWidget(self.seek_fwd_1_button)
         playback_layout.addStretch(1)
         root.addWidget(playback_box)
 
@@ -205,30 +222,19 @@ class TranscribyQtWindow(QMainWindow):
         loop_layout.setContentsMargins(10, 12, 10, 10)
         loop_layout.setSpacing(8)
 
-        loop_header_row = QHBoxLayout()
+        loop_body_row = QHBoxLayout()
+        loop_body_row.setSpacing(14)
+
+        loop_left_col = QVBoxLayout()
+        loop_left_col.setSpacing(6)
+        self.loop_a_label = QLabel("A: ---")
+        loop_left_col.addWidget(self.loop_a_label, 0, Qt.AlignLeft)
+        loop_a_buttons = QHBoxLayout()
+        loop_a_buttons.setSpacing(6)
+        self.reset_a_button = QPushButton("Reset A")
+        self.reset_a_button.clicked.connect(self._on_reset_loop_start_clicked)
         self.set_a_button = QPushButton("Set A")
         self.set_a_button.clicked.connect(self._on_set_loop_start_clicked)
-        self.set_b_button = QPushButton("Set B")
-        self.set_b_button.clicked.connect(self._on_set_loop_end_clicked)
-        self.loop_toggle_button = QPushButton("Loop")
-        self.loop_toggle_button.setCheckable(True)
-        self.loop_toggle_button.toggled.connect(self._on_loop_toggle_toggled)
-        self.loop_a_label = QLabel("A: ---")
-        self.loop_b_label = QLabel("B: ---")
-        self.loop_hint_label = QLabel("Loop is off")
-        self.loop_hint_label.setStyleSheet(f"color: {UI_TEXT_MUTED};")
-        loop_header_row.addWidget(self.loop_a_label)
-        loop_header_row.addWidget(self.loop_b_label)
-        loop_header_row.addStretch(1)
-        loop_header_row.addWidget(self.set_a_button)
-        loop_header_row.addWidget(self.set_b_button)
-        loop_header_row.addWidget(self.loop_toggle_button)
-        loop_layout.addLayout(loop_header_row)
-        loop_layout.addWidget(self.loop_hint_label)
-
-        loop_adjust_row = QHBoxLayout()
-        loop_adjust_row.setSpacing(6)
-        loop_adjust_row.addWidget(QLabel("A"))
         self.loop_a_back_coarse_button = QPushButton("<<")
         self.loop_a_back_coarse_button.clicked.connect(lambda: self._on_move_loop_start_clicked(-MOVE_LOOP_POINTS_COARSE))
         self.loop_a_back_fine_button = QPushButton("<")
@@ -237,14 +243,55 @@ class TranscribyQtWindow(QMainWindow):
         self.loop_a_fwd_fine_button.clicked.connect(lambda: self._on_move_loop_start_clicked(MOVE_LOOP_POINTS_FINE))
         self.loop_a_fwd_coarse_button = QPushButton(">>")
         self.loop_a_fwd_coarse_button.clicked.connect(lambda: self._on_move_loop_start_clicked(MOVE_LOOP_POINTS_COARSE))
+        for btn in (
+            self.loop_a_back_coarse_button,
+            self.loop_a_back_fine_button,
+            self.loop_a_fwd_fine_button,
+            self.loop_a_fwd_coarse_button,
+        ):
+            btn.setFixedWidth(42)
+        loop_a_buttons.addWidget(self.reset_a_button)
+        loop_a_buttons.addWidget(self.set_a_button)
+        loop_a_buttons.addWidget(self.loop_a_back_coarse_button)
+        loop_a_buttons.addWidget(self.loop_a_back_fine_button)
+        loop_a_buttons.addWidget(self.loop_a_fwd_fine_button)
+        loop_a_buttons.addWidget(self.loop_a_fwd_coarse_button)
+        loop_left_col.addLayout(loop_a_buttons)
+        loop_body_row.addLayout(loop_left_col, 1)
 
-        loop_adjust_row.addWidget(self.loop_a_back_coarse_button)
-        loop_adjust_row.addWidget(self.loop_a_back_fine_button)
-        loop_adjust_row.addWidget(self.loop_a_fwd_fine_button)
-        loop_adjust_row.addWidget(self.loop_a_fwd_coarse_button)
-        loop_adjust_row.addSpacing(16)
+        loop_center_col = QVBoxLayout()
+        loop_center_col.setSpacing(6)
+        loop_toggle_row = QHBoxLayout()
+        self.loop_toggle_button = QPushButton("Enable Loop")
+        self.loop_toggle_button.setCheckable(True)
+        self.loop_toggle_button.toggled.connect(self._on_loop_toggle_toggled)
+        self.loop_help_button = QPushButton("?")
+        self.loop_help_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.loop_help_button.setFixedWidth(28)
+        self.loop_help_button.clicked.connect(self._show_shortcuts_help)
+        loop_toggle_row.addStretch(1)
+        loop_toggle_row.addWidget(self.loop_toggle_button)
+        loop_toggle_row.addWidget(self.loop_help_button)
+        loop_toggle_row.addStretch(1)
+        loop_center_col.addLayout(loop_toggle_row)
+        self.loop_hint_label = QLabel("Loop is off")
+        self.loop_hint_label.setAlignment(Qt.AlignCenter)
+        self.loop_hint_label.setWordWrap(True)
+        self.loop_hint_label.setStyleSheet(f"color: {UI_TEXT_MUTED};")
+        loop_center_col.addWidget(self.loop_hint_label, 0, Qt.AlignCenter)
+        loop_body_row.addLayout(loop_center_col, 1)
 
-        loop_adjust_row.addWidget(QLabel("B"))
+        loop_right_col = QVBoxLayout()
+        loop_right_col.setSpacing(6)
+        self.loop_b_label = QLabel("B: ---")
+        self.loop_b_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        loop_right_col.addWidget(self.loop_b_label, 0, Qt.AlignRight)
+        loop_b_buttons = QHBoxLayout()
+        loop_b_buttons.setSpacing(6)
+        self.set_b_button = QPushButton("Set B")
+        self.set_b_button.clicked.connect(self._on_set_loop_end_clicked)
+        self.reset_b_button = QPushButton("Reset B")
+        self.reset_b_button.clicked.connect(self._on_reset_loop_end_clicked)
         self.loop_b_back_coarse_button = QPushButton("<<")
         self.loop_b_back_coarse_button.clicked.connect(lambda: self._on_move_loop_end_clicked(-MOVE_LOOP_POINTS_COARSE))
         self.loop_b_back_fine_button = QPushButton("<")
@@ -253,13 +300,23 @@ class TranscribyQtWindow(QMainWindow):
         self.loop_b_fwd_fine_button.clicked.connect(lambda: self._on_move_loop_end_clicked(MOVE_LOOP_POINTS_FINE))
         self.loop_b_fwd_coarse_button = QPushButton(">>")
         self.loop_b_fwd_coarse_button.clicked.connect(lambda: self._on_move_loop_end_clicked(MOVE_LOOP_POINTS_COARSE))
+        for btn in (
+            self.loop_b_back_coarse_button,
+            self.loop_b_back_fine_button,
+            self.loop_b_fwd_fine_button,
+            self.loop_b_fwd_coarse_button,
+        ):
+            btn.setFixedWidth(42)
+        loop_b_buttons.addWidget(self.set_b_button)
+        loop_b_buttons.addWidget(self.reset_b_button)
+        loop_b_buttons.addWidget(self.loop_b_back_coarse_button)
+        loop_b_buttons.addWidget(self.loop_b_back_fine_button)
+        loop_b_buttons.addWidget(self.loop_b_fwd_fine_button)
+        loop_b_buttons.addWidget(self.loop_b_fwd_coarse_button)
+        loop_right_col.addLayout(loop_b_buttons)
+        loop_body_row.addLayout(loop_right_col, 1)
 
-        loop_adjust_row.addWidget(self.loop_b_back_coarse_button)
-        loop_adjust_row.addWidget(self.loop_b_back_fine_button)
-        loop_adjust_row.addWidget(self.loop_b_fwd_fine_button)
-        loop_adjust_row.addWidget(self.loop_b_fwd_coarse_button)
-        loop_adjust_row.addStretch(1)
-        loop_layout.addLayout(loop_adjust_row)
+        loop_layout.addLayout(loop_body_row)
         root.addWidget(loop_box)
 
         favorites_box = QGroupBox("Favorites")
@@ -300,7 +357,7 @@ class TranscribyQtWindow(QMainWindow):
         audio_form.setVerticalSpacing(8)
 
         self.speed_slider = QSlider(Qt.Horizontal)
-        self.speed_slider.setRange(int(MIN_SPEED_PERCENT * 10), int(MAX_SPEED_PERCENT * 10))
+        self.speed_slider.setRange(int(SPEED_SLIDER_MIN * 10), int(MAX_SPEED_PERCENT * 10))
         self.speed_slider.valueChanged.connect(self._on_speed_slider_changed)
         self.speed_spin = QDoubleSpinBox()
         self.speed_spin.setDecimals(1)
@@ -419,6 +476,7 @@ class TranscribyQtWindow(QMainWindow):
         shortcuts_action.triggered.connect(self._show_shortcuts_help)
         help_menu.addAction(shortcuts_action)
 
+        self._configure_tooltips()
         self.statusBar().showMessage("Ready")
 
     def _apply_styles(self):
@@ -457,25 +515,25 @@ class TranscribyQtWindow(QMainWindow):
             }}
             QSlider::groove:horizontal {{
                 border: 1px solid {UI_BORDER_COLOR};
-                height: 6px;
-                border-radius: 3px;
+                height: 5px;
+                border-radius: 2px;
                 background: {UI_BG_CARD_ALT};
             }}
             QSlider::sub-page:horizontal {{
-                background: #E6D2A2;
-                border-radius: 3px;
+                background: #D6BC82;
+                border-radius: 2px;
             }}
             QSlider::add-page:horizontal {{
-                background: #1A140F;
-                border-radius: 3px;
+                background: #1F1812;
+                border-radius: 2px;
             }}
             QSlider::handle:horizontal {{
-                background: #E6D2A2;
-                border: 1px solid {UI_BORDER_COLOR};
-                width: 16px;
-                height: 16px;
-                margin: -6px 0;
-                border-radius: 8px;
+                background: #F1D9A0;
+                border: 1px solid #1A140F;
+                width: 14px;
+                height: 14px;
+                margin: -5px 0;
+                border-radius: 7px;
             }}
             QSpinBox, QDoubleSpinBox {{
                 background: {UI_BG_CARD_ALT};
@@ -494,6 +552,53 @@ class TranscribyQtWindow(QMainWindow):
             }}
             """
         )
+
+    def _configure_tooltips(self):
+        self.rewind_button.setToolTip("Rewind to start (or loop start when loop is enabled)\nShortcut: Home")
+        self.seek_back_1_button.setToolTip("Seek backward (coarse): 1.0s\nShortcut: [")
+        self.seek_back_01_button.setToolTip("Seek backward (fine): 0.1s\nShortcut: ,")
+        self.play_button.setToolTip("Play / Pause\nShortcuts: Enter, Numpad 0")
+        self.stop_button.setToolTip("Stop and rewind\nShortcut: Numpad .")
+        self.seek_fwd_01_button.setToolTip("Seek forward (fine): 0.1s\nShortcut: .")
+        self.seek_fwd_1_button.setToolTip("Seek forward (coarse): 1.0s\nShortcut: ]")
+
+        self.loop_toggle_button.setToolTip(
+            "Toggle loop playing\nShortcut: L\nTip: right-click and drag on timeline to set A/B"
+        )
+        self.loop_help_button.setToolTip(
+            "How to set loop A/B:\n- Press A to set loop start\n- Press B to set loop end\n"
+            "- Or right-click and drag on timeline"
+        )
+        self.reset_a_button.setToolTip("Reset loop start point\nShortcut: Ctrl+A")
+        self.set_a_button.setToolTip("Set loop start point\nShortcut: A")
+        self.reset_b_button.setToolTip("Reset loop end point\nShortcut: Ctrl+B")
+        self.set_b_button.setToolTip("Set loop end point\nShortcut: B")
+        self.loop_a_back_coarse_button.setToolTip(f"Move loop start left by {MOVE_LOOP_POINTS_COARSE} ms")
+        self.loop_a_back_fine_button.setToolTip(f"Move loop start left by {MOVE_LOOP_POINTS_FINE} ms")
+        self.loop_a_fwd_fine_button.setToolTip(f"Move loop start right by {MOVE_LOOP_POINTS_FINE} ms")
+        self.loop_a_fwd_coarse_button.setToolTip(f"Move loop start right by {MOVE_LOOP_POINTS_COARSE} ms")
+        self.loop_b_back_coarse_button.setToolTip(f"Move loop end left by {MOVE_LOOP_POINTS_COARSE} ms")
+        self.loop_b_back_fine_button.setToolTip(f"Move loop end left by {MOVE_LOOP_POINTS_FINE} ms")
+        self.loop_b_fwd_fine_button.setToolTip(f"Move loop end right by {MOVE_LOOP_POINTS_FINE} ms")
+        self.loop_b_fwd_coarse_button.setToolTip(f"Move loop end right by {MOVE_LOOP_POINTS_COARSE} ms")
+
+        self.favorite_add_button.setToolTip("Add favorite at current position\nShortcut: M")
+        self.favorite_delete_button.setToolTip("Delete selected favorite\nShortcut: Shift+M")
+        self.favorite_prev_button.setToolTip("Jump to previous favorite\nShortcut: Ctrl+[")
+        self.favorite_next_button.setToolTip("Jump to next favorite\nShortcut: Ctrl+]")
+
+        self.speed_slider.setToolTip("Playback speed")
+        self.speed_spin.setToolTip("Playback speed value")
+        self.speed_reset_button.setToolTip("Reset playback speed to 100%\nShortcut: Numpad 5")
+        self.semitones_slider.setToolTip("Transpose in semitones")
+        self.semitones_spin.setToolTip("Transpose value")
+        self.semitones_reset_button.setToolTip("Reset transpose")
+        self.cents_slider.setToolTip("Fine pitch in cents")
+        self.cents_spin.setToolTip("Pitch cents value")
+        self.cents_reset_button.setToolTip("Reset pitch cents")
+        self.volume_slider.setToolTip("Playback volume")
+        self.volume_spin.setToolTip("Volume percent")
+        self.volume_reset_button.setToolTip("Reset volume")
 
     def _bind_shortcuts(self):
         self._add_shortcut("Space", self._on_restart_loop_clicked)
@@ -563,6 +668,14 @@ class TranscribyQtWindow(QMainWindow):
     def _seek_relative(self, seconds: float):
         if not self.controller.seek_relative(seconds):
             self.statusBar().showMessage("Please open a file...", 1200)
+
+    def _speed_to_slider_value(self, speed_value: float) -> int:
+        clamped = max(SPEED_SLIDER_MIN, min(MAX_SPEED_PERCENT, float(speed_value)))
+        return int(round(clamped * 10.0))
+
+    def _slider_value_to_speed(self, slider_value: int) -> float:
+        ui_speed = max(SPEED_SLIDER_MIN, min(MAX_SPEED_PERCENT, float(slider_value) / 10.0))
+        return max(MIN_SPEED_PERCENT, ui_speed)
 
     def _nudge_speed(self, step: float):
         new_value = round(self.speed_spin.value() + step, 1)
@@ -804,8 +917,13 @@ class TranscribyQtWindow(QMainWindow):
             self.statusBar().showMessage("Please open a file...", 1200)
             return
         current_pos = self.controller.player.query_position()
-        if self.controller.set_loop_start(current_pos):
-            self.statusBar().showMessage("Loop start updated", 1000)
+        ok, boundary_reset = self.controller.set_loop_start_relaxed(current_pos)
+        if ok:
+            if boundary_reset:
+                self.statusBar().showMessage("Loop start updated (B reset)", 1200)
+            else:
+                self.statusBar().showMessage("Loop start updated", 1000)
+            self._on_tick()
         else:
             self.statusBar().showMessage("Loop start must be before B", 1200)
 
@@ -814,8 +932,13 @@ class TranscribyQtWindow(QMainWindow):
             self.statusBar().showMessage("Please open a file...", 1200)
             return
         current_pos = self.controller.player.query_position()
-        if self.controller.set_loop_end(current_pos):
-            self.statusBar().showMessage("Loop end updated", 1000)
+        ok, boundary_reset = self.controller.set_loop_end_relaxed(current_pos)
+        if ok:
+            if boundary_reset:
+                self.statusBar().showMessage("Loop end updated (A reset)", 1200)
+            else:
+                self.statusBar().showMessage("Loop end updated", 1000)
+            self._on_tick()
         else:
             self.statusBar().showMessage("Loop end must be after A", 1200)
 
@@ -825,6 +948,7 @@ class TranscribyQtWindow(QMainWindow):
             return
         if self.controller.set_loop_start(0):
             self.statusBar().showMessage("Loop start reset", 1000)
+            self._on_tick()
 
     def _on_reset_loop_end_clicked(self):
         if not self.controller.player.canPlay:
@@ -833,6 +957,7 @@ class TranscribyQtWindow(QMainWindow):
         duration = self.controller.player.query_duration()
         if duration and self.controller.set_loop_end(duration):
             self.statusBar().showMessage("Loop end reset", 1000)
+            self._on_tick()
 
     def _on_move_loop_start_clicked(self, shift_ms: int):
         ok, message = self.controller.move_loop_start_ms(shift_ms)
@@ -913,8 +1038,12 @@ class TranscribyQtWindow(QMainWindow):
             self.statusBar().showMessage("Please open a file...", 1200)
             return
         target = self.controller.player.pipeline_time(self._loop_context_seconds)
-        if self.controller.set_loop_start(target):
-            self.statusBar().showMessage("Loop start updated", 1000)
+        ok, boundary_reset = self.controller.set_loop_start_relaxed(target)
+        if ok:
+            if boundary_reset:
+                self.statusBar().showMessage("Loop start updated (B reset)", 1200)
+            else:
+                self.statusBar().showMessage("Loop start updated", 1000)
             self._on_tick()
         else:
             self.statusBar().showMessage("Loop start must be before B", 1200)
@@ -924,20 +1053,28 @@ class TranscribyQtWindow(QMainWindow):
             self.statusBar().showMessage("Please open a file...", 1200)
             return
         target = self.controller.player.pipeline_time(self._loop_context_seconds)
-        if self.controller.set_loop_end(target):
-            self.statusBar().showMessage("Loop end updated", 1000)
+        ok, boundary_reset = self.controller.set_loop_end_relaxed(target)
+        if ok:
+            if boundary_reset:
+                self.statusBar().showMessage("Loop end updated (A reset)", 1200)
+            else:
+                self.statusBar().showMessage("Loop end updated", 1000)
             self._on_tick()
         else:
             self.statusBar().showMessage("Loop end must be after A", 1200)
 
     def _on_speed_changed(self, value: float):
-        slider_value = int(round(value * 10.0))
+        slider_value = self._speed_to_slider_value(value)
         with QSignalBlocker(self.speed_slider):
             self.speed_slider.setValue(slider_value)
         self.controller.set_speed(value)
 
     def _on_speed_slider_changed(self, value: int):
-        speed_value = max(MIN_SPEED_PERCENT, min(MAX_SPEED_PERCENT, float(value) / 10.0))
+        speed_value = self._slider_value_to_speed(value)
+        normalized_slider_value = self._speed_to_slider_value(speed_value)
+        if normalized_slider_value != int(value):
+            with QSignalBlocker(self.speed_slider):
+                self.speed_slider.setValue(normalized_slider_value)
         with QSignalBlocker(self.speed_spin):
             self.speed_spin.setValue(speed_value)
         self.controller.set_speed(speed_value)
@@ -1086,7 +1223,7 @@ class TranscribyQtWindow(QMainWindow):
         with QSignalBlocker(self.speed_spin):
             self.speed_spin.setValue(snapshot.speed)
         with QSignalBlocker(self.speed_slider):
-            self.speed_slider.setValue(int(round(snapshot.speed * 10.0)))
+            self.speed_slider.setValue(self._speed_to_slider_value(snapshot.speed))
 
         with QSignalBlocker(self.semitones_spin):
             self.semitones_spin.setValue(snapshot.semitones)
@@ -1117,12 +1254,9 @@ class TranscribyQtWindow(QMainWindow):
         if not snapshot.loop_enabled:
             self.loop_hint_label.setText("Loop is off")
         elif snapshot.loop_start_seconds is not None and snapshot.loop_end_seconds is not None:
-            self.loop_hint_label.setText(
-                f"A/B active: {format_seconds_text(snapshot.loop_start_seconds)} -> "
-                f"{format_seconds_text(snapshot.loop_end_seconds)}"
-            )
+            self.loop_hint_label.setText("Loop active")
         else:
-            self.loop_hint_label.setText("Loop is on. Set A and B.")
+            self.loop_hint_label.setText("Loop is on. Set A/B.")
 
         duration_seconds = None
         if snapshot.duration_ns is not None and snapshot.duration_ns > 0:

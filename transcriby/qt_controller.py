@@ -647,6 +647,50 @@ class PlaybackController:
             self.persist_recent_options()
         return True
 
+    def set_loop_start_relaxed(self, loop_point_ns: int | float, persist: bool = True) -> tuple[bool, bool]:
+        """Set loop start and reset B when needed to keep a valid order.
+
+        Returns:
+            (success, boundary_reset)
+        """
+        if loop_point_ns is None:
+            return False, False
+
+        if self.set_loop_start(loop_point_ns, persist=False):
+            if persist:
+                self.persist_recent_options()
+            return True, False
+
+        # If A crosses B, clear B and retry.
+        self.player.endPoint = -1
+        if self.set_loop_start(loop_point_ns, persist=False):
+            if persist:
+                self.persist_recent_options()
+            return True, True
+        return False, False
+
+    def set_loop_end_relaxed(self, loop_point_ns: int | float, persist: bool = True) -> tuple[bool, bool]:
+        """Set loop end and reset A when needed to keep a valid order.
+
+        Returns:
+            (success, boundary_reset)
+        """
+        if loop_point_ns is None:
+            return False, False
+
+        if self.set_loop_end(loop_point_ns, persist=False):
+            if persist:
+                self.persist_recent_options()
+            return True, False
+
+        # If B crosses A, clear A and retry.
+        self.player.startPoint = -2
+        if self.set_loop_end(loop_point_ns, persist=False):
+            if persist:
+                self.persist_recent_options()
+            return True, True
+        return False, False
+
     def move_loop_start_ms(self, shift_ms: int | float) -> tuple[bool, str]:
         if not self.player.canPlay:
             return False, "Please open a file..."
