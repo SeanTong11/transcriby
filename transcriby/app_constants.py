@@ -16,9 +16,9 @@ change capabilities, using mpv (libmpv)."
 APP_URL = "https://github.com/SeanTong11/transcriby"
 APP_USER_MODEL_ID = "SeanTong11.Transcriby"
 
-INITIAL_GEOMETRY = "1000x620"
-MIN_WINDOW_WIDTH = 920
-MIN_WINDOW_HEIGHT = 560
+INITIAL_GEOMETRY = "1280x860"
+MIN_WINDOW_WIDTH = 1120
+MIN_WINDOW_HEIGHT = 760
 
 THEME_NAME = "clam"         # tkInter Theme
 LBL_FONT_SIZE = 14          # Label standard size
@@ -54,6 +54,14 @@ UI_SUCCESS = "#CDB07A"
 UI_SUCCESS_HOVER = "#B6965F"
 UI_DANGER = "#9F5C4C"
 UI_DANGER_HOVER = "#854939"
+UI_FAVORITE_COLORS = (
+    "#59D1D9",
+    "#FF9F5A",
+    "#93C5FD",
+    "#EAB308",
+    "#D8B4FE",
+    "#6EE7B7",
+)
 
 # Timeline/loop overlay tokens
 UI_TIMELINE_BG = "#14100C"

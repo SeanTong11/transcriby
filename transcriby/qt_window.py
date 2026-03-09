@@ -7,11 +7,10 @@ import datetime as dt
 import os
 
 from PySide6.QtCore import QSignalBlocker, Qt, QTimer
-from PySide6.QtGui import QAction, QDragEnterEvent, QDropEvent, QIcon, QKeySequence, QShortcut
+from PySide6.QtGui import QAction, QColor, QDragEnterEvent, QDropEvent, QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QAbstractSpinBox,
     QApplication,
-    QCheckBox,
     QDialog,
     QDialogButtonBox,
     QDoubleSpinBox,
@@ -36,6 +35,8 @@ from PySide6.QtWidgets import (
 from transcriby.app_constants import (
     APP_TITLE,
     INITIAL_GEOMETRY,
+    MIN_WINDOW_HEIGHT,
+    MIN_WINDOW_WIDTH,
     MAX_PITCH_CENTS,
     MAX_PITCH_SEMITONES,
     MAX_SPEED_PERCENT,
@@ -55,10 +56,12 @@ from transcriby.app_constants import (
     STEPS_SEMITONES,
     STEPS_SPEED,
     UI_ACCENT,
+    UI_ACCENT_HOVER,
     UI_BG_APP,
     UI_BG_CARD,
     UI_BG_CARD_ALT,
     UI_BORDER_COLOR,
+    UI_FAVORITE_COLORS,
     UI_TEXT_MUTED,
     UPDATE_INTERVAL,
     WAVEFORM_HEIGHT,
@@ -135,7 +138,7 @@ class TranscribyQtWindow(QMainWindow):
     def _setup_window(self):
         width, height = INITIAL_GEOMETRY.split("x")
         self.resize(int(width), int(height))
-        self.setMinimumSize(920, 560)
+        self.setMinimumSize(MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT)
         self.setWindowTitle(APP_TITLE)
         self.setAcceptDrops(True)
 
@@ -151,19 +154,8 @@ class TranscribyQtWindow(QMainWindow):
         root_widget = QWidget(self)
         self.setCentralWidget(root_widget)
         root = QVBoxLayout(root_widget)
-        root.setContentsMargins(12, 12, 12, 12)
-        root.setSpacing(10)
-
-        top_row = QHBoxLayout()
-        self.open_button = QPushButton("Open")
-        self.open_button.clicked.connect(self._on_open_clicked)
-        self.open_button.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.open_button.customContextMenuRequested.connect(self._on_open_button_context_menu)
-        self.file_label = QLabel("No media loaded")
-        self.file_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        top_row.addWidget(self.open_button)
-        top_row.addWidget(self.file_label, 1)
-        root.addLayout(top_row)
+        root.setContentsMargins(14, 12, 14, 12)
+        root.setSpacing(8)
 
         self.time_label = QLabel("0:00:00.000")
         self.time_label.setAlignment(Qt.AlignCenter)
@@ -187,7 +179,11 @@ class TranscribyQtWindow(QMainWindow):
         )
         root.addWidget(self.timeline)
 
-        controls_row = QHBoxLayout()
+        playback_box = QGroupBox("Playback Control")
+        playback_layout = QHBoxLayout(playback_box)
+        playback_layout.setContentsMargins(10, 12, 10, 10)
+        playback_layout.setSpacing(8)
+
         self.play_button = QPushButton("Play >")
         self.play_button.clicked.connect(self._on_toggle_play_clicked)
         self.stop_button = QPushButton("Stop")
@@ -196,34 +192,42 @@ class TranscribyQtWindow(QMainWindow):
         self.rewind_button.clicked.connect(self._on_rewind_clicked)
         self.restart_a_button = QPushButton("Restart A")
         self.restart_a_button.clicked.connect(self._on_restart_loop_clicked)
+        playback_layout.addStretch(1)
+        playback_layout.addWidget(self.rewind_button)
+        playback_layout.addWidget(self.play_button)
+        playback_layout.addWidget(self.stop_button)
+        playback_layout.addWidget(self.restart_a_button)
+        playback_layout.addStretch(1)
+        root.addWidget(playback_box)
+
+        loop_box = QGroupBox("Loop Control")
+        loop_layout = QVBoxLayout(loop_box)
+        loop_layout.setContentsMargins(10, 12, 10, 10)
+        loop_layout.setSpacing(8)
+
+        loop_header_row = QHBoxLayout()
         self.set_a_button = QPushButton("Set A")
         self.set_a_button.clicked.connect(self._on_set_loop_start_clicked)
         self.set_b_button = QPushButton("Set B")
         self.set_b_button.clicked.connect(self._on_set_loop_end_clicked)
-        self.loop_checkbox = QCheckBox("Loop")
-        self.loop_checkbox.stateChanged.connect(self._on_loop_toggle_changed)
-
-        controls_row.addWidget(self.play_button)
-        controls_row.addWidget(self.stop_button)
-        controls_row.addWidget(self.rewind_button)
-        controls_row.addWidget(self.restart_a_button)
-        controls_row.addStretch(1)
-        controls_row.addWidget(self.set_a_button)
-        controls_row.addWidget(self.set_b_button)
-        controls_row.addWidget(self.loop_checkbox)
-        root.addLayout(controls_row)
-
-        loop_row = QHBoxLayout()
+        self.loop_toggle_button = QPushButton("Loop")
+        self.loop_toggle_button.setCheckable(True)
+        self.loop_toggle_button.toggled.connect(self._on_loop_toggle_toggled)
         self.loop_a_label = QLabel("A: ---")
         self.loop_b_label = QLabel("B: ---")
         self.loop_hint_label = QLabel("Loop is off")
         self.loop_hint_label.setStyleSheet(f"color: {UI_TEXT_MUTED};")
-        loop_row.addWidget(self.loop_a_label)
-        loop_row.addWidget(self.loop_b_label)
-        loop_row.addWidget(self.loop_hint_label, 1)
-        root.addLayout(loop_row)
+        loop_header_row.addWidget(self.loop_a_label)
+        loop_header_row.addWidget(self.loop_b_label)
+        loop_header_row.addStretch(1)
+        loop_header_row.addWidget(self.set_a_button)
+        loop_header_row.addWidget(self.set_b_button)
+        loop_header_row.addWidget(self.loop_toggle_button)
+        loop_layout.addLayout(loop_header_row)
+        loop_layout.addWidget(self.loop_hint_label)
 
         loop_adjust_row = QHBoxLayout()
+        loop_adjust_row.setSpacing(6)
         loop_adjust_row.addWidget(QLabel("A"))
         self.loop_a_back_coarse_button = QPushButton("<<")
         self.loop_a_back_coarse_button.clicked.connect(lambda: self._on_move_loop_start_clicked(-MOVE_LOOP_POINTS_COARSE))
@@ -255,7 +259,8 @@ class TranscribyQtWindow(QMainWindow):
         loop_adjust_row.addWidget(self.loop_b_fwd_fine_button)
         loop_adjust_row.addWidget(self.loop_b_fwd_coarse_button)
         loop_adjust_row.addStretch(1)
-        root.addLayout(loop_adjust_row)
+        loop_layout.addLayout(loop_adjust_row)
+        root.addWidget(loop_box)
 
         favorites_box = QGroupBox("Favorites")
         favorites_layout = QVBoxLayout(favorites_box)
@@ -289,27 +294,54 @@ class TranscribyQtWindow(QMainWindow):
 
         root.addWidget(favorites_box)
 
-        params_box = QGroupBox("Playback")
-        params_form = QFormLayout(params_box)
-        params_form.setHorizontalSpacing(14)
-        params_form.setVerticalSpacing(8)
+        audio_box = QGroupBox("Audio Controls")
+        audio_form = QFormLayout(audio_box)
+        audio_form.setHorizontalSpacing(14)
+        audio_form.setVerticalSpacing(8)
 
+        self.speed_slider = QSlider(Qt.Horizontal)
+        self.speed_slider.setRange(int(MIN_SPEED_PERCENT * 10), int(MAX_SPEED_PERCENT * 10))
+        self.speed_slider.valueChanged.connect(self._on_speed_slider_changed)
         self.speed_spin = QDoubleSpinBox()
         self.speed_spin.setDecimals(1)
         self.speed_spin.setSingleStep(STEPS_SPEED)
         self.speed_spin.setRange(MIN_SPEED_PERCENT, MAX_SPEED_PERCENT)
         self.speed_spin.valueChanged.connect(self._on_speed_changed)
-        params_form.addRow("Speed", self.speed_spin)
+        self.speed_reset_button = QPushButton("Reset")
+        self.speed_reset_button.clicked.connect(self._on_reset_speed_clicked)
+        speed_row = QHBoxLayout()
+        speed_row.addWidget(self.speed_slider, 1)
+        speed_row.addWidget(self.speed_spin)
+        speed_row.addWidget(self.speed_reset_button)
+        audio_form.addRow("Speed", speed_row)
 
+        self.semitones_slider = QSlider(Qt.Horizontal)
+        self.semitones_slider.setRange(MIN_PITCH_SEMITONES, MAX_PITCH_SEMITONES)
+        self.semitones_slider.valueChanged.connect(self._on_semitones_slider_changed)
         self.semitones_spin = QSpinBox()
         self.semitones_spin.setRange(MIN_PITCH_SEMITONES, MAX_PITCH_SEMITONES)
-        self.semitones_spin.valueChanged.connect(self._on_pitch_changed)
-        params_form.addRow("Semitones", self.semitones_spin)
+        self.semitones_spin.valueChanged.connect(self._on_semitones_changed)
+        self.semitones_reset_button = QPushButton("Reset")
+        self.semitones_reset_button.clicked.connect(self._on_reset_semitones_clicked)
+        semitone_row = QHBoxLayout()
+        semitone_row.addWidget(self.semitones_slider, 1)
+        semitone_row.addWidget(self.semitones_spin)
+        semitone_row.addWidget(self.semitones_reset_button)
+        audio_form.addRow("Transpose", semitone_row)
 
+        self.cents_slider = QSlider(Qt.Horizontal)
+        self.cents_slider.setRange(MIN_PITCH_CENTS, MAX_PITCH_CENTS)
+        self.cents_slider.valueChanged.connect(self._on_cents_slider_changed)
         self.cents_spin = QSpinBox()
         self.cents_spin.setRange(MIN_PITCH_CENTS, MAX_PITCH_CENTS)
-        self.cents_spin.valueChanged.connect(self._on_pitch_changed)
-        params_form.addRow("Cents", self.cents_spin)
+        self.cents_spin.valueChanged.connect(self._on_cents_changed)
+        self.cents_reset_button = QPushButton("Reset")
+        self.cents_reset_button.clicked.connect(self._on_reset_cents_clicked)
+        cents_row = QHBoxLayout()
+        cents_row.addWidget(self.cents_slider, 1)
+        cents_row.addWidget(self.cents_spin)
+        cents_row.addWidget(self.cents_reset_button)
+        audio_form.addRow("Pitch (cents)", cents_row)
 
         volume_row = QHBoxLayout()
         self.volume_slider = QSlider(Qt.Horizontal)
@@ -318,11 +350,19 @@ class TranscribyQtWindow(QMainWindow):
         self.volume_spin = QSpinBox()
         self.volume_spin.setRange(MIN_VOLUME, MAX_VOLUME)
         self.volume_spin.valueChanged.connect(self._on_volume_spin_changed)
+        self.volume_reset_button = QPushButton("Reset")
+        self.volume_reset_button.clicked.connect(self._on_reset_volume_clicked)
         volume_row.addWidget(self.volume_slider, 1)
         volume_row.addWidget(self.volume_spin)
-        params_form.addRow("Volume", volume_row)
+        volume_row.addWidget(self.volume_reset_button)
+        audio_form.addRow("Volume", volume_row)
 
-        root.addWidget(params_box)
+        root.addWidget(audio_box)
+
+        self.media_info_label = QLabel("No media loaded")
+        self.media_info_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        self.media_info_label.setStyleSheet(f"color: {UI_TEXT_MUTED};")
+        root.addWidget(self.media_info_label)
 
         menu_bar = self.menuBar()
         file_menu = menu_bar.addMenu("File")
@@ -410,18 +450,38 @@ class TranscribyQtWindow(QMainWindow):
                 background: {UI_ACCENT};
                 color: #19130E;
             }}
+            QPushButton:checked {{
+                background: {UI_ACCENT};
+                color: #19130E;
+                border-color: {UI_ACCENT_HOVER};
+            }}
             QSlider::groove:horizontal {{
                 border: 1px solid {UI_BORDER_COLOR};
-                height: 8px;
-                border-radius: 4px;
+                height: 6px;
+                border-radius: 3px;
                 background: {UI_BG_CARD_ALT};
+            }}
+            QSlider::sub-page:horizontal {{
+                background: #E6D2A2;
+                border-radius: 3px;
+            }}
+            QSlider::add-page:horizontal {{
+                background: #1A140F;
+                border-radius: 3px;
             }}
             QSlider::handle:horizontal {{
                 background: #E6D2A2;
                 border: 1px solid {UI_BORDER_COLOR};
                 width: 16px;
-                margin: -5px 0;
+                height: 16px;
+                margin: -6px 0;
                 border-radius: 8px;
+            }}
+            QSpinBox, QDoubleSpinBox {{
+                background: {UI_BG_CARD_ALT};
+                border: 1px solid {UI_BORDER_COLOR};
+                border-radius: 6px;
+                padding: 2px 6px;
             }}
             QListWidget {{
                 background: {UI_BG_CARD_ALT};
@@ -518,7 +578,7 @@ class TranscribyQtWindow(QMainWindow):
         self.speed_spin.setValue(1.0)
 
     def _toggle_loop_shortcut(self):
-        self.loop_checkbox.setChecked(not self.loop_checkbox.isChecked())
+        self.loop_toggle_button.setChecked(not self.loop_toggle_button.isChecked())
 
     def _open_startup_session(self):
         loaded, message = self.controller.load_last_session_or_media()
@@ -627,9 +687,6 @@ class TranscribyQtWindow(QMainWindow):
             return
         self.open_media_path(file_key, apply_recent_options=True)
 
-    def _on_open_button_context_menu(self, _position):
-        self._on_open_recent_dialog()
-
     def _on_open_recent_dialog(self):
         recent = self.controller.get_recent_files()
         keys = list(recent.keys())
@@ -709,7 +766,7 @@ class TranscribyQtWindow(QMainWindow):
             self.setWindowTitle(f"{APP_TITLE} - {self.controller.media_filename}")
         else:
             self.setWindowTitle(APP_TITLE)
-        self.file_label.setText(self.controller.song_metadata or "No media loaded")
+        self.media_info_label.setText(self.controller.song_metadata or "No media loaded")
 
     def _on_toggle_play_clicked(self):
         if not self.controller.toggle_play():
@@ -789,8 +846,7 @@ class TranscribyQtWindow(QMainWindow):
         if ok:
             self._on_tick()
 
-    def _on_loop_toggle_changed(self, state: int):
-        enabled = state == Qt.Checked
+    def _on_loop_toggle_toggled(self, enabled: bool):
         self.controller.set_loop_enabled(enabled)
         if enabled:
             self.statusBar().showMessage("Loop enabled", 1000)
@@ -815,8 +871,8 @@ class TranscribyQtWindow(QMainWindow):
 
     def _apply_loop_range_seconds(self, start_seconds: float, end_seconds: float):
         if self.controller.apply_loop_range_seconds(start_seconds, end_seconds):
-            if not self.loop_checkbox.isChecked():
-                self.loop_checkbox.setChecked(True)
+            if not self.loop_toggle_button.isChecked():
+                self.loop_toggle_button.setChecked(True)
             else:
                 self.statusBar().showMessage("Loop range updated", 1200)
         else:
@@ -875,7 +931,36 @@ class TranscribyQtWindow(QMainWindow):
             self.statusBar().showMessage("Loop end must be after A", 1200)
 
     def _on_speed_changed(self, value: float):
+        slider_value = int(round(value * 10.0))
+        with QSignalBlocker(self.speed_slider):
+            self.speed_slider.setValue(slider_value)
         self.controller.set_speed(value)
+
+    def _on_speed_slider_changed(self, value: int):
+        speed_value = max(MIN_SPEED_PERCENT, min(MAX_SPEED_PERCENT, float(value) / 10.0))
+        with QSignalBlocker(self.speed_spin):
+            self.speed_spin.setValue(speed_value)
+        self.controller.set_speed(speed_value)
+
+    def _on_semitones_changed(self, value: int):
+        with QSignalBlocker(self.semitones_slider):
+            self.semitones_slider.setValue(int(value))
+        self._on_pitch_changed()
+
+    def _on_semitones_slider_changed(self, value: int):
+        with QSignalBlocker(self.semitones_spin):
+            self.semitones_spin.setValue(int(value))
+        self._on_pitch_changed()
+
+    def _on_cents_changed(self, value: int):
+        with QSignalBlocker(self.cents_slider):
+            self.cents_slider.setValue(int(value))
+        self._on_pitch_changed()
+
+    def _on_cents_slider_changed(self, value: int):
+        with QSignalBlocker(self.cents_spin):
+            self.cents_spin.setValue(int(value))
+        self._on_pitch_changed()
 
     def _on_pitch_changed(self):
         self.controller.set_pitch_components(self.semitones_spin.value(), self.cents_spin.value())
@@ -887,6 +972,15 @@ class TranscribyQtWindow(QMainWindow):
     def _on_volume_spin_changed(self, value: int):
         self._sync_volume_slider(value)
         self.controller.set_volume_percent(value)
+
+    def _on_reset_semitones_clicked(self):
+        self.semitones_spin.setValue(0)
+
+    def _on_reset_cents_clicked(self):
+        self.cents_spin.setValue(0)
+
+    def _on_reset_volume_clicked(self):
+        self.volume_spin.setValue(MAX_VOLUME // 2)
 
     def _sync_volume_spin(self, value: int):
         with QSignalBlocker(self.volume_spin):
@@ -931,14 +1025,21 @@ class TranscribyQtWindow(QMainWindow):
     def _build_timeline_markers(self) -> list[dict]:
         markers = []
         for favorite in self.controller.get_favorites_display():
+            fav_index = int(favorite.get("index", 0))
             markers.append(
                 {
-                    "index": favorite.get("index"),
+                    "index": fav_index,
                     "time_seconds": favorite.get("time_seconds"),
-                    "label": str(int(favorite.get("index", 0)) + 1),
+                    "label": str(fav_index + 1),
+                    "color": self._favorite_color_for_index(fav_index),
                 }
             )
         return markers
+
+    def _favorite_color_for_index(self, index: int) -> str:
+        if not UI_FAVORITE_COLORS:
+            return UI_ACCENT
+        return UI_FAVORITE_COLORS[int(index) % len(UI_FAVORITE_COLORS)]
 
     def _show_shortcuts_help(self):
         self._open_settings_dialog(open_tab="shortcuts")
@@ -956,7 +1057,10 @@ class TranscribyQtWindow(QMainWindow):
             with QSignalBlocker(self.favorite_list):
                 self.favorite_list.clear()
                 for favorite in self.controller.get_favorites_display():
-                    self.favorite_list.addItem(favorite.get("label", "Favorite"))
+                    fav_index = int(favorite.get("index", 0))
+                    item = QListWidgetItem(favorite.get("label", "Favorite"))
+                    item.setForeground(QColor(self._favorite_color_for_index(fav_index)))
+                    self.favorite_list.addItem(item)
 
                 if snapshot.selected_favorite_index is None:
                     self.favorite_list.setCurrentRow(-1)
@@ -976,17 +1080,23 @@ class TranscribyQtWindow(QMainWindow):
             with QSignalBlocker(self.progress_slider):
                 self.progress_slider.setValue(int(snapshot.progress_ratio * 1000000))
 
-        with QSignalBlocker(self.loop_checkbox):
-            self.loop_checkbox.setChecked(snapshot.loop_enabled)
+        with QSignalBlocker(self.loop_toggle_button):
+            self.loop_toggle_button.setChecked(snapshot.loop_enabled)
 
         with QSignalBlocker(self.speed_spin):
             self.speed_spin.setValue(snapshot.speed)
+        with QSignalBlocker(self.speed_slider):
+            self.speed_slider.setValue(int(round(snapshot.speed * 10.0)))
 
         with QSignalBlocker(self.semitones_spin):
             self.semitones_spin.setValue(snapshot.semitones)
+        with QSignalBlocker(self.semitones_slider):
+            self.semitones_slider.setValue(int(snapshot.semitones))
 
         with QSignalBlocker(self.cents_spin):
             self.cents_spin.setValue(snapshot.cents)
+        with QSignalBlocker(self.cents_slider):
+            self.cents_slider.setValue(int(snapshot.cents))
 
         self._sync_volume_slider(snapshot.volume_percent)
         self._sync_volume_spin(snapshot.volume_percent)
@@ -1022,7 +1132,7 @@ class TranscribyQtWindow(QMainWindow):
         self.timeline.set_loop_enabled(snapshot.loop_enabled)
         self.timeline.set_loop(snapshot.loop_start_seconds, snapshot.loop_end_seconds)
 
-        self.file_label.setText(snapshot.song_metadata or "No media loaded")
+        self.media_info_label.setText(snapshot.song_metadata or "No media loaded")
         if snapshot.favorites_revision != self._favorites_revision_seen:
             self._refresh_favorites_list(snapshot)
         else:
