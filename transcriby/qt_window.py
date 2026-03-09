@@ -483,7 +483,10 @@ class TranscribyQtWindow(QMainWindow):
         shortcut.activated.connect(lambda: self._run_shortcut_action(callback, allow_when_typing))
 
     def _add_keypad_shortcut(self, key, callback):
-        sequence_value = int(Qt.KeyboardModifier.KeypadModifier) | int(key)
+        modifier = Qt.KeyboardModifier.KeypadModifier
+        modifier_value = int(getattr(modifier, "value", modifier))
+        key_value = int(getattr(key, "value", key))
+        sequence_value = modifier_value | key_value
         shortcut = QShortcut(QKeySequence(sequence_value), self)
         shortcut.setContext(Qt.ApplicationShortcut)
         shortcut.activated.connect(lambda: self._run_shortcut_action(callback, allow_when_typing=False))
