@@ -23,8 +23,6 @@ classifiers = [
 requires-python = ">=3.9"
 dependencies = [
     "PySide6>=6.7.0",
-    "pillow>=10.0.0",
-    "requests>=2.32.0",
     "python-mpv>=1.0.0",
     "soundfile>=0.12.1",
     "scipy>=1.10.0",
@@ -34,9 +32,11 @@ dependencies = [
 [project.optional-dependencies]
 build = [
     "pyinstaller>=6.0.0",
+    "pillow>=10.0.0",
 ]
 dev = [
     "pyinstaller>=6.0.0",
+    "pillow>=10.0.0",
 ]
 
 [project.scripts]
@@ -57,4 +57,5 @@ packages = ["transcriby"]
 [dependency-groups]
 dev = [
     "pyinstaller>=6.0.0",
+    "pillow>=10.0.0",
 ]
