@@ -6,7 +6,7 @@ from __future__ import annotations
 import datetime as dt
 import os
 
-from PySide6.QtCore import QSignalBlocker, Qt, QTimer, QUrl
+from PySide6.QtCore import QSignalBlocker, QSize, Qt, QTimer, QUrl
 from PySide6.QtGui import QAction, QColor, QDragEnterEvent, QDropEvent, QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QAbstractSpinBox,
@@ -195,7 +195,10 @@ class TranscribyQtWindow(QMainWindow):
         self.seek_back_1_button.clicked.connect(lambda: self._seek_relative(-1.0))
         self.seek_back_01_button = QPushButton("<")
         self.seek_back_01_button.clicked.connect(lambda: self._seek_relative(-0.1))
-        self.play_button = QPushButton("Play >")
+        self.play_button = QPushButton("Play")
+        self.play_button.setObjectName("playButton")
+        self.play_button.setMinimumWidth(112)
+        self.play_button.setIconSize(QSize(14, 14))
         self.play_button.clicked.connect(self._on_toggle_play_clicked)
         self.stop_button = QPushButton("Stop")
         self.stop_button.clicked.connect(self._on_stop_clicked)
@@ -523,6 +526,10 @@ class TranscribyQtWindow(QMainWindow):
                 background: {UI_ACCENT};
                 color: #19130E;
                 border-color: {UI_ACCENT_HOVER};
+            }}
+            QPushButton#playButton {{
+                padding-left: 12px;
+                padding-right: 12px;
             }}
             QCheckBox {{
                 spacing: 8px;
