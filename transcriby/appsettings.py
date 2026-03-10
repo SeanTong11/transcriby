@@ -191,6 +191,7 @@ class AppSettings(object):
                 "LastSessionTby": "",
                 "LoopRestartDelayEnabled": False,
                 "LoopRestartDelaySeconds": 0.25,
+                "DebugLoggingEnabled": False,
             },
             CFG_RECENTFILE_SECTION: {}
         }

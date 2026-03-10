@@ -113,6 +113,20 @@ class SettingsDialog(QDialog):
         form.addRow("Delay (seconds)", self.delay_seconds)
         layout.addLayout(form)
 
+        self.debug_title = QLabel("Troubleshooting")
+        self.debug_title.setStyleSheet("font-size: 18px; font-weight: 600;")
+        layout.addWidget(self.debug_title)
+
+        debug_enabled, debug_path = self.controller.get_debug_logging_settings()
+        self.debug_enabled = QCheckBox("Enable debug logging")
+        self.debug_enabled.setChecked(debug_enabled)
+        layout.addWidget(self.debug_enabled)
+
+        self.debug_path_label = QLabel(f"Debug log path: {debug_path}")
+        self.debug_path_label.setStyleSheet(f"color: {UI_TEXT_MUTED};")
+        self.debug_path_label.setWordWrap(True)
+        layout.addWidget(self.debug_path_label)
+
         row = QHBoxLayout()
         save_btn = QPushButton("Save")
         save_btn.clicked.connect(self._save_playback_settings)
@@ -178,8 +192,12 @@ class SettingsDialog(QDialog):
         enabled, normalized = self.controller.set_loop_restart_delay_settings(enabled, seconds)
         self.delay_enabled.setChecked(enabled)
         self.delay_seconds.setValue(normalized)
+        debug_enabled, debug_path = self.controller.set_debug_logging_settings(self.debug_enabled.isChecked())
+        self.debug_enabled.setChecked(debug_enabled)
+        self.debug_path_label.setText(f"Debug log path: {debug_path}")
 
     def _reset_playback_settings(self):
         self.delay_enabled.setChecked(False)
         self.delay_seconds.setValue(0.25)
+        self.debug_enabled.setChecked(False)
         self._save_playback_settings()

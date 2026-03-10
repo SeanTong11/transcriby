@@ -68,6 +68,7 @@ from transcriby.app_constants import (
     UPDATE_INTERVAL,
     WAVEFORM_HEIGHT,
 )
+from transcriby.debuglog import debug_log
 from transcriby.platform_utils import get_resources_dir
 from transcriby.qt_controller import PlaybackController, PlaybackSnapshot
 from transcriby.qt_settings_dialog import SettingsDialog
@@ -197,8 +198,9 @@ class TranscribyQtWindow(QMainWindow):
         self.seek_back_01_button.clicked.connect(lambda: self._seek_relative(-0.1))
         self.play_button = QPushButton("Play")
         self.play_button.setObjectName("playButton")
-        self.play_button.setMinimumWidth(112)
-        self.play_button.setIconSize(QSize(14, 14))
+        self.play_button.setMinimumWidth(132)
+        self.play_button.setIconSize(QSize(16, 16))
+        self.play_button.setContentsMargins(8, 0, 8, 0)
         self.play_button.clicked.connect(self._on_toggle_play_clicked)
         self.stop_button = QPushButton("Stop")
         self.stop_button.clicked.connect(self._on_stop_clicked)
@@ -528,8 +530,8 @@ class TranscribyQtWindow(QMainWindow):
                 border-color: {UI_ACCENT_HOVER};
             }}
             QPushButton#playButton {{
-                padding-left: 12px;
-                padding-right: 12px;
+                padding: 6px 18px;
+                min-width: 132px;
             }}
             QCheckBox {{
                 spacing: 8px;
@@ -698,17 +700,36 @@ class TranscribyQtWindow(QMainWindow):
             (",", lambda: self._seek_relative(-0.1)),
             (".", lambda: self._seek_relative(0.1)),
             ("m", self._on_add_favorite_clicked),
-            ("Shift+m", self._on_delete_favorite_clicked),
+            ("M", self._on_delete_favorite_clicked),
             ("Ctrl+[", self._on_jump_previous_favorite_clicked),
             ("Ctrl+]", self._on_jump_next_favorite_clicked),
             ("c", lambda: self._nudge_speed(STEPS_SPEED)),
             ("x", lambda: self._nudge_speed(-STEPS_SPEED)),
         ]
 
+        bound_count = 0
+        failed_keys = []
         for keydef, callback in keymap:
-            self.controller.player.register_window_key_binding(
+            ok = self.controller.player.register_window_key_binding(
                 keydef,
                 lambda cb=callback: QTimer.singleShot(0, cb),
+            )
+            if ok:
+                bound_count += 1
+            else:
+                failed_keys.append(keydef)
+
+        debug_log(
+            "ui",
+            "mpv_keybind_summary",
+            total=len(keymap),
+            bound=bound_count,
+            failed=",".join(failed_keys) if failed_keys else "none",
+        )
+        if failed_keys or self.controller.get_debug_logging_settings()[0]:
+            self.statusBar().showMessage(
+                f"mpv shortcuts bound: {bound_count}/{len(keymap)}",
+                2500,
             )
 
     def _add_shortcut(self, key: str, callback, allow_when_typing: bool = False):

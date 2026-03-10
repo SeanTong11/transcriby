@@ -43,6 +43,11 @@ from transcriby.appsettings import (
     PBO_DEF_SPEED,
     PBO_DEF_VOLUME,
 )
+from transcriby.debuglog import (
+    debug_log,
+    get_default_debug_log_path,
+    set_debug_logging_enabled,
+)
 from transcriby.player import slowPlayer
 from transcriby.platform_utils import is_valid_absolute_path, is_windows, uri_from_path
 from transcriby import sessionfile
@@ -75,6 +80,8 @@ class PlaybackController:
     def __init__(self):
         self.settings = AppSettings()
         self.settings.loadSettings()
+        self.debug_logging_enabled = False
+        self._refresh_debug_logging_settings()
 
         self.player = slowPlayer()
         self.player.updateInterval = UPDATE_INTERVAL
@@ -341,6 +348,32 @@ class PlaybackController:
         self.settings.setVal(CFG_APP_SECTION, "LoopRestartDelaySeconds", normalized_delay)
         self._refresh_loop_restart_delay_settings()
         return bool(self.loop_restart_delay_enabled), float(self.loop_restart_delay_seconds)
+
+    def _refresh_debug_logging_settings(self):
+        enabled = bool(self.settings.getVal(CFG_APP_SECTION, "DebugLoggingEnabled", False))
+        self.debug_logging_enabled = enabled
+        set_debug_logging_enabled(enabled)
+        debug_log(
+            "settings",
+            "debug_logging_refresh",
+            path=get_default_debug_log_path(),
+            enabled=enabled,
+        )
+
+    def get_debug_logging_settings(self) -> tuple[bool, str]:
+        self._refresh_debug_logging_settings()
+        return bool(self.debug_logging_enabled), get_default_debug_log_path()
+
+    def set_debug_logging_settings(self, enabled: bool) -> tuple[bool, str]:
+        self.settings.setVal(CFG_APP_SECTION, "DebugLoggingEnabled", bool(enabled))
+        self._refresh_debug_logging_settings()
+        debug_log(
+            "settings",
+            "debug_logging_updated",
+            path=get_default_debug_log_path(),
+            enabled=bool(self.debug_logging_enabled),
+        )
+        return bool(self.debug_logging_enabled), get_default_debug_log_path()
 
     def reset_values(self):
         self.player.startPoint = -2
