@@ -10,7 +10,11 @@ import os
 import shutil
 import sys
 
-from platform_utils import is_windows
+try:
+    from transcriby.platform_utils import is_windows
+except Exception:
+    # Fallback for direct execution from source directory.
+    from platform_utils import is_windows
 try:
     from transcriby.debuglog import debug_log
 except Exception:
