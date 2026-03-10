@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import pathlib
 import sys
 
@@ -32,6 +33,33 @@ def smoke_check() -> int:
         print(f"smoke-check: mpv backend realpath = {details.get('backend_realpath', '')}", flush=True)
         print(f"smoke-check: find_library('mpv') = {details.get('find_library_mpv', '')}", flush=True)
         print(f"smoke-check: env MPV_LIBRARY = {details.get('env_mpv_library', '')}", flush=True)
+
+        require_bundled = str(os.environ.get("TRANSCRIBY_REQUIRE_BUNDLED_MPV", "")).strip().lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+        if require_bundled:
+            backend_path = details.get("backend_realpath") or details.get("backend_name") or ""
+            backend_real = pathlib.Path(str(backend_path)).resolve() if backend_path else None
+            executable = pathlib.Path(sys.executable).resolve()
+            frameworks_dir = executable.parents[1] / "Frameworks"
+            if backend_real is None:
+                print("smoke-check: bundled libmpv FAIL (backend path missing)", file=sys.stderr, flush=True)
+                return 1
+            try:
+                in_frameworks = backend_real.is_relative_to(frameworks_dir)
+            except Exception:
+                in_frameworks = str(backend_real).startswith(str(frameworks_dir))
+            if not in_frameworks or backend_real.name not in {"libmpv.dylib", "libmpv.2.dylib"}:
+                print(
+                    f"smoke-check: bundled libmpv FAIL (got {backend_real}, expected under {frameworks_dir})",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                return 1
+            print(f"smoke-check: bundled libmpv OK ({backend_real})", flush=True)
     finally:
         test_player.close()
     return 0

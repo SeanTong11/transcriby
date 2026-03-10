@@ -89,7 +89,7 @@ jobs:
             --hidden-import scipy \
             --hidden-import numpy \
             --hidden-import PySide6 \
-            --hidden-import platform_utils \
+            --hidden-import transcriby.platform_utils \
             transcriby-launch.py
 
       - name: Bundle libmpv into app
