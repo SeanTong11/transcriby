@@ -11,6 +11,14 @@ import shutil
 import sys
 
 from platform_utils import is_windows
+try:
+    from transcriby.debuglog import debug_log
+except Exception:
+    try:
+        from debuglog import debug_log
+    except Exception:
+        def debug_log(*args, **kwargs):
+            return
 
 def _prepend_env_path_var(key: str, value: str):
     """Prepend a path entry to an env var if not already present."""
@@ -299,8 +307,20 @@ class slowPlayer():
     def __init__(self):
         """Initialize the audio player"""
         # mpv player (audio/video)
-        self._player = mpv.MPV(ytdl=False, vid="auto")
+        self._player = mpv.MPV(
+            ytdl=False,
+            vid="auto",
+            input_vo_keyboard=True,
+            input_default_bindings=False,
+        )
+        debug_log(
+            "mpv",
+            "initialized",
+            input_vo_keyboard=True,
+            input_default_bindings=False,
+        )
         self._player.pause = True
+        self._window_key_binding_names = []
 
         # Playback parameters
         self._speed = 1.0
@@ -574,12 +594,140 @@ class slowPlayer():
             print(f"Error saving file: {e}")
             raise
 
+    def register_window_key_binding(self, keydef: str, callback) -> bool:
+        """Bind a key on mpv video window and forward it to a callback."""
+        if not keydef or not callable(callback):
+            return False
+        register_fn = getattr(self._player, "register_key_binding", None)
+        if not callable(register_fn):
+            debug_log("mpv-keybind", "register_unavailable", key=keydef)
+            return False
+
+        sanitized = "".join(ch.lower() if ch.isalnum() else "_" for ch in str(keydef))
+        binding_name = f"transcriby_{sanitized}_{len(self._window_key_binding_names)}"
+
+        def _wrapped(*args, **kwargs):
+            # python-mpv callback signatures vary by version:
+            # some pass (state, name), some pass only name/state, some use kwargs.
+            raw_state = None
+            kw_state = kwargs.get("state")
+            if isinstance(kw_state, str):
+                raw_state = kw_state.strip().lower()
+            elif args and isinstance(args[0], str):
+                # In this runtime, callback receives tuples like ("d--", "space", "").
+                # Only the first token is the key-event state.
+                raw_state = args[0].strip().lower()
+
+            if raw_state:
+                if raw_state in {"up", "release"} or raw_state.startswith("u"):
+                    debug_log("mpv-keybind", "trigger_rejected", key=keydef, state=raw_state)
+                    return
+                if not (
+                    raw_state in {"down", "press", "repeat"}
+                    or raw_state.startswith("d")
+                    or raw_state.startswith("p")
+                    or raw_state.startswith("r")
+                ):
+                    debug_log("mpv-keybind", "trigger_rejected", key=keydef, state=raw_state)
+                    return
+
+            try:
+                debug_log(
+                    "mpv-keybind",
+                    "trigger_accepted",
+                    key=keydef,
+                    state=raw_state or "none",
+                )
+                callback()
+            except Exception:
+                debug_log("mpv-keybind", "callback_error", key=keydef, state=raw_state or "none")
+                return
+
+        attempts = [
+            ("key_name_cb_mode_kw", True, lambda: register_fn(str(keydef), binding_name, _wrapped, mode="force")),
+            ("key_name_cb_mode_pos", True, lambda: register_fn(str(keydef), binding_name, _wrapped, "force")),
+            ("key_name_cb", True, lambda: register_fn(str(keydef), binding_name, _wrapped)),
+            ("key_cb_mode_kw", False, lambda: register_fn(str(keydef), _wrapped, mode="force")),
+            ("key_cb_mode_pos", False, lambda: register_fn(str(keydef), _wrapped, "force")),
+            ("key_cb", False, lambda: register_fn(str(keydef), _wrapped)),
+        ]
+
+        for attempt_name, track_name, attempt_call in attempts:
+            try:
+                attempt_call()
+                if track_name:
+                    self._window_key_binding_names.append(binding_name)
+                debug_log(
+                    "mpv-keybind",
+                    "register_ok",
+                    key=keydef,
+                    attempt=attempt_name,
+                    name=binding_name if track_name else "none",
+                )
+                return True
+            except TypeError as ex:
+                debug_log(
+                    "mpv-keybind",
+                    "register_type_error",
+                    key=keydef,
+                    attempt=attempt_name,
+                    error=str(ex),
+                )
+            except Exception as ex:
+                debug_log(
+                    "mpv-keybind",
+                    "register_error",
+                    key=keydef,
+                    attempt=attempt_name,
+                    error=str(ex),
+                )
+
+        on_key_press = getattr(self._player, "on_key_press", None)
+        if callable(on_key_press):
+            try:
+                on_key_press(str(keydef))(_wrapped)
+                debug_log(
+                    "mpv-keybind",
+                    "register_ok",
+                    key=keydef,
+                    attempt="on_key_press",
+                    name="none",
+                )
+                return True
+            except Exception as ex:
+                debug_log(
+                    "mpv-keybind",
+                    "register_error",
+                    key=keydef,
+                    attempt="on_key_press",
+                    error=str(ex),
+                )
+
+        debug_log("mpv-keybind", "register_failed", key=keydef, name=binding_name)
+        return False
+
+    def clear_window_key_bindings(self):
+        unregister_fn = getattr(self._player, "unregister_key_binding", None)
+        if not callable(unregister_fn):
+            debug_log("mpv-keybind", "unregister_unavailable", count=len(self._window_key_binding_names))
+            self._window_key_binding_names.clear()
+            return
+        for binding_name in self._window_key_binding_names:
+            try:
+                unregister_fn(binding_name)
+                debug_log("mpv-keybind", "unregister_ok", name=binding_name)
+            except Exception:
+                debug_log("mpv-keybind", "unregister_error", name=binding_name)
+                pass
+        self._window_key_binding_names.clear()
+
     def __del__(self):
         """Cleanup"""
         self.close()
 
     def close(self):
         """Explicitly terminate mpv backend."""
+        self.clear_window_key_bindings()
         try:
             self._player.terminate()
         except Exception:

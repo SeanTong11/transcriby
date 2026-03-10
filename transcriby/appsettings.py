@@ -22,9 +22,6 @@ PBO_DEF_LOOP = "Loop"
 PBO_DEF_FAVORITES = "Favorites"
 
 PBO_DEF_METADATA = "Metadata"
-PBO_DEF_YOUTUBE = "YouTube"
-
-YOUTUBE_METADATA_PREFIX = "(YT) - "
 
 class AppSettings(object):
     def __init__(self, filename = ""):
@@ -194,6 +191,7 @@ class AppSettings(object):
                 "LastSessionTby": "",
                 "LoopRestartDelayEnabled": False,
                 "LoopRestartDelaySeconds": 0.25,
+                "DebugLoggingEnabled": False,
             },
             CFG_RECENTFILE_SECTION: {}
         }

@@ -87,10 +87,7 @@ jobs:
             --hidden-import soundfile \
             --hidden-import scipy \
             --hidden-import numpy \
-            --hidden-import customtkinter \
-            --hidden-import CTkMessagebox \
-            --hidden-import CTkToolTip \
-            --hidden-import tkinterdnd2 \
+            --hidden-import PySide6 \
             --hidden-import platform_utils \
             transcriby-launch.py
 

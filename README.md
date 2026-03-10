@@ -26,7 +26,6 @@ Current maintained repository: [SeanTong11/transcriby](https://github.com/SeanTo
 
 - [Speed and pitch change on the fly](#speed-and-pitch-change)
 - [Video playback in a synced external window](#speed-and-pitch-change)
-- [YouTube audio extraction from URL](#youtube-audio-extraction)
 - [Loop a range of the song, with fine adjustment of boundaries](#loop-ab)
 - [Timeline marker bar with click-to-seek](#timeline-marker-bar)
 - [Favorites and quick timestamp markers](#favorites-and-session-files)
@@ -41,19 +40,6 @@ Current maintained repository: [SeanTong11/transcriby](https://github.com/SeanTo
 It also supports video files like mp4/m4v/mkv, which will open in a separate mpv window while the audio controls stay in Transcriby.
 
 Speed change is made by moving the slider in 0.1x steps, or by entering the precise value in the edit box (for example `0.9`). The slider is visually centered at `1.0x`; effective speed is clamped to `0.1x .. 2.0x`. You can transpose your song up and down by semitones or fine adjust the pitch by cents, in case the song is not in tune with your instruments. For your convenience, Transcriby offers several numeric keypad shortcuts. Please take a look at the [shortcut](#optimized-keyobard-shortcuts) list further on in this document.
-
-### YouTube audio extraction:
-
-**Transcriby** can extract audio from YouTube videos and treat it like a regular audio file. Please follow these steps to operate on YouTube videos:
-
-- Click on the YouTube button to open the YouTube dialog
-- Paste a valid YouTube URL in the upper box and click on the YouTube icon next to it
-- The dialog will search for the specified URL and show the video info and its thumbnail
-- If that's the video you are looking for, click on "Open" button on the dialog to import it and get back to the main window *(downloading and extracting audio can take a little time, meanwhile the app might be unresponsive. Please wait until done)*
-
-Audio extracted from YouTube are marked with a leading "(YT)" on the title.
-
->**Note** To enable this feature, you need install the latest version of [yt-dlp](https://github.com/yt-dlp/yt-dlp) and ffmpeg. Make sure `yt-dlp` it is present on your execution path. If `yt-dlp` is not found on your system, you will get an error.
 
 ### Loop A/B:
 
@@ -120,7 +106,6 @@ See the [shortcuts](#shortcuts) section for a more complete key reference.
 Opening a regular media file always starts with clean/default playback values.
 Full playback restore (speed/pitch/loop/favorites/position) is done only from `.tby` session files.
 On startup, Transcriby tries to load the last `.tby` session first; if unavailable, it falls back to the last played media file.
-If the last played song was extracted from a YouTube video, the app will not automatically open it to prevent unwanted downloads. You can download it again by accessing the recent files dialog.
 
 - **Drag-n-drop**: you can drop audio files straight from your file manager or from other applications.
 
@@ -131,12 +116,11 @@ If the last played song was extracted from a YouTube video, the app will not aut
 - **Python 3.9 or higher**
 - **uv** - Fast Python package manager (install from [astral.sh/uv](https://astral.sh/uv))
 - **mpv** runtime (for audio playback)
-- **FFmpeg** (for YouTube support only)
 
 **mpv runtime install:**
 - **Windows**: Download from https://mpv.io/installation/ and ensure `mpv.exe` plus `libmpv*.dll` are on PATH (or next to the app)
 - **macOS**: `brew install mpv` (installs `libmpv.dylib`)
-- **Ubuntu/Debian/WSL**: `sudo apt-get install libmpv2 python3-tk`
+- **Ubuntu/Debian/WSL**: `sudo apt-get install libmpv2`
 - **Fedora**: `sudo dnf install mpv`
 - **Arch**: `sudo pacman -S mpv`
 
@@ -157,11 +141,11 @@ cd transcriby
 uv sync
 
 # Run the application
-uv run python transcriby-launch.py
+uv run transcriby
 
 # Or activate the environment and run normally
 .venv\Scripts\activate
-python transcriby-launch.py
+transcriby
 ```
 
 #### Linux / WSL
@@ -174,11 +158,11 @@ cd transcriby
 uv sync
 
 # Run the application
-uv run python transcriby-launch.py
+uv run transcriby
 
 # Or activate the environment and run normally
 source .venv/bin/activate
-python transcriby-launch.py
+transcriby
 ```
 
 #### macOS
@@ -194,16 +178,49 @@ git clone https://github.com/SeanTong11/transcriby.git
 cd transcriby
 
 uv sync
-uv run python transcriby-launch.py
+uv run transcriby
 ```
 
 ### Development Setup
 
-To install with all development dependencies (pyinstaller, yt-dlp):
+To install with all development dependencies:
 
 ```bash
 uv sync --dev
 ```
+
+### Qt UI
+
+Transcriby now runs on a single PySide6 frontend.
+
+Run it with:
+
+```bash
+uv run transcriby
+# or
+uv run transcriby-qt
+# or
+uv run python -m transcriby.qt_main
+```
+
+Current Qt feature set includes:
+- Open media + Open Recent
+- Open Recent dialog (`Ctrl+R`)
+- Drag and drop local files
+- Drag and drop `.tby` session files
+- Save As audio export
+- Open/Export `.tby` sessions
+- Startup restore (last `.tby` session first, then last media)
+- Loop A/B controls and restart-from-A behavior
+- Timeline overlay with playhead + favorites markers
+- Timeline hover time tooltip + marker click-to-jump
+- Loop A/B fine adjust buttons (`10ms` / `100ms`)
+- Timeline right-click menu: set loop start/end at cursor
+- Loop-enabled indicator on Play button
+- Right-drag on timeline to set loop A/B range
+- Open button right-click opens Recent dialog
+- Shortcuts help dialog (`F1`) and `.tby` export shortcut (`Ctrl+Shift+S`)
+- Favorites add/delete/jump with keyboard shortcuts
 
 ### Windows Build
 
@@ -234,7 +251,7 @@ If you prefer not to use uv:
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-python transcriby-launch.py
+python -m transcriby.qt_main
 ```
 
 ## Shortcuts
@@ -244,7 +261,6 @@ Transcriby offers the following shortcuts:
 #### General operations:
 - **Ctrl+O**: Open a file
 - **Ctrl+R**: Open recent files list
-- **Ctrl+Y**: Open YouTube search dialog
 - **Ctrl+Q**: Quit application
 
 #### Playback controls:
@@ -312,10 +328,6 @@ Audio export is performed with `soundfile + scipy` and does not require ffmpeg.
 ### "Module not found" error
 - Make sure you installed all requirements: `pip install -r requirements.txt`
 - Ensure your virtual environment is activated
-
-### "yt-dlp not found" error
-- Install yt-dlp: `pip install yt-dlp`
-- Or download from https://github.com/yt-dlp/yt-dlp/releases
 
 ### "PortAudio library not found" (Linux/WSL)
 - This project no longer uses PortAudio. If you see this error, you are running an old build.

@@ -10,7 +10,7 @@ This checklist is used before release for UI/UX and playback regressions.
 
 ## Baseline Startup
 
-- Launch app from `transcriby-launch.py`
+- Launch app from `uv run transcriby` (or `python -m transcriby.qt_main`)
 - App opens with expected default size and minimum resize limits
 - Main panels render without overlapping controls
 
@@ -31,10 +31,10 @@ This checklist is used before release for UI/UX and playback regressions.
 - Verify `Space` is normal Play/Pause toggle when loop is disabled
 - Verify `Ctrl+A`/`Ctrl+B` reset loop boundaries
 
-## Waveform
+## Timeline
 
-- Waveform appears after media is loaded
-- Click waveform to seek to clicked position
+- Timeline appears after media is loaded
+- Click timeline to seek to clicked position
 - Playhead updates while audio is playing
 - A/B markers and highlighted loop range match current loop points
 
@@ -49,11 +49,10 @@ This checklist is used before release for UI/UX and playback regressions.
 
 - Save As exports file without UI freeze
 - Recent files dialog opens and restores playback settings
-- YouTube dialog opens (if yt-dlp is installed)
 
 ## Shortcut Documentation Consistency
 
-- About dialog shortcut list matches actual behavior:
+- Shortcuts dialog (`F1`) list matches actual behavior:
   - Numpad 8: speed +5%
   - Numpad 2: speed -5%
   - Space: restart loop from A (loop enabled)

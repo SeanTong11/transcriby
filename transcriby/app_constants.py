@@ -16,9 +16,9 @@ change capabilities, using mpv (libmpv)."
 APP_URL = "https://github.com/SeanTong11/transcriby"
 APP_USER_MODEL_ID = "SeanTong11.Transcriby"
 
-INITIAL_GEOMETRY = "1000x620"
-MIN_WINDOW_WIDTH = 920
-MIN_WINDOW_HEIGHT = 560
+INITIAL_GEOMETRY = "1280x860"
+MIN_WINDOW_WIDTH = 1120
+MIN_WINDOW_HEIGHT = 760
 
 THEME_NAME = "clam"         # tkInter Theme
 LBL_FONT_SIZE = 14          # Label standard size
@@ -54,6 +54,14 @@ UI_SUCCESS = "#CDB07A"
 UI_SUCCESS_HOVER = "#B6965F"
 UI_DANGER = "#9F5C4C"
 UI_DANGER_HOVER = "#854939"
+UI_FAVORITE_COLORS = (
+    "#59D1D9",
+    "#FF9F5A",
+    "#F97316",
+    "#EAB308",
+    "#F59E0B",
+    "#6EE7B7",
+)
 
 # Timeline/loop overlay tokens
 UI_TIMELINE_BG = "#14100C"
@@ -119,14 +127,6 @@ SAVE_EXTENSIONS_FILTER = (
 
 # Default save file extension
 SAVE_DEFAULT_EXTENSION = "mp3"
-
-# YouTube constants
-YTDLP_CMD = "yt-dlp"                   # Command to execute for video managing
-YT_AUDIO_FORMAT_PRESET = "aac"         # default audio extraction format 
-YT_AUDIO_FORMAT_EXTENSION = "m4a"      # default extracted audio extension
-YT_THUMB_FORMAT_EXTENSION = "png"      # default thumbnail extraction format
-YT_AUDIO_FILE_PREFIX = "trYT_"
-
 
 # Defines the minimum gap for loop, which is the gap between loop start and loop end
 # Also it defines the minimum distance from the loop end and the song end.

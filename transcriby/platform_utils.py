@@ -8,6 +8,7 @@ import os
 import sys
 import platform
 import ctypes
+import tempfile
 
 
 def is_windows() -> bool:
@@ -121,84 +122,36 @@ def get_locales_dir() -> str:
 
 
 def apply_window_icon(window, resources_dir: str | None = None, schedule_retry: bool = True) -> bool:
-    """Apply app icon assets to a Tk/CTk window.
+    """Apply app icon assets to a Qt window when possible.
 
-    Windows: use .ico only to keep taskbar/titlebar frame selection consistent.
-    Linux/macOS: use multi-size iconphoto PNGs.
+    This helper is kept for compatibility but only supports Qt-style
+    windows (`setWindowIcon`) in the current codebase.
     """
+    _ = schedule_retry  # preserved for backward-compatible signature
     if resources_dir is None:
         resources_dir = get_resources_dir()
 
-    icon_applied = False
-    if is_windows():
-        icon_ico = os.path.join(resources_dir, "Icona.ico")
-        if os.path.isfile(icon_ico):
-            icon_ico_abs = os.path.abspath(icon_ico).replace("\\", "/")
-            try:
-                window.iconbitmap(icon_ico_abs)
-                icon_applied = True
-            except Exception:
-                try:
-                    window.wm_iconbitmap(icon_ico_abs)
-                    icon_applied = True
-                except Exception:
-                    pass
-            try:
-                _apply_windows_hicon(window, icon_ico_abs)
-                icon_applied = True
-            except Exception:
-                pass
-            try:
-                setattr(window, "_iconbitmap_method_called", True)
-            except Exception:
-                pass
-    else:
-        icon_images = []
-        icon_png_sizes = [256, 128, 96, 64, 48, 40, 32, 24, 20, 16]
-        try:
-            import tkinter as tk
+    icon_candidates = ["Icona.ico", "Icona-256.png", "Icona-128.png"]
+    icon_path = None
+    for file_name in icon_candidates:
+        candidate = os.path.join(resources_dir, file_name)
+        if os.path.isfile(candidate):
+            icon_path = candidate
+            break
 
-            for size in icon_png_sizes:
-                png_path = os.path.join(resources_dir, f"Icona-{size}.png")
-                if os.path.isfile(png_path):
-                    try:
-                        icon_images.append(tk.PhotoImage(master=window, file=png_path))
-                    except Exception:
-                        pass
+    if icon_path is None or not hasattr(window, "setWindowIcon"):
+        return False
 
-            if icon_images:
-                try:
-                    window.wm_iconphoto(True, *icon_images)
-                    icon_applied = True
-                except Exception:
-                    try:
-                        window.iconphoto(True, *icon_images)
-                        icon_applied = True
-                    except Exception:
-                        pass
-                setattr(window, "_transcriby_icon_images", icon_images)
-        except Exception:
-            pass
+    try:
+        from PySide6.QtGui import QIcon
+    except Exception:
+        return False
 
-    # Some Windows environments apply a default icon shortly after creation.
-    # Re-apply once after that window to keep taskbar/titlebar icon stable.
-    if is_windows() and icon_applied and schedule_retry:
-        try:
-            if not getattr(window, "_transcriby_icon_retry_scheduled", False):
-                setattr(window, "_transcriby_icon_retry_scheduled", True)
-
-                def _retry():
-                    try:
-                        apply_window_icon(window, resources_dir, schedule_retry=False)
-                    finally:
-                        setattr(window, "_transcriby_icon_retry_scheduled", False)
-
-                # CTk may apply its default icon around 200ms after creation.
-                window.after(320, _retry)
-        except Exception:
-            pass
-
-    return icon_applied
+    try:
+        window.setWindowIcon(QIcon(icon_path))
+        return True
+    except Exception:
+        return False
 
 
 def set_windows_app_user_model_id(app_id: str) -> bool:
@@ -214,7 +167,7 @@ def set_windows_app_user_model_id(app_id: str) -> bool:
 
 
 def set_windows_dpi_awareness() -> bool:
-    """Enable highest available DPI awareness on Windows before creating Tk windows."""
+    """Enable highest available DPI awareness on Windows before creating Qt windows."""
     if not is_windows():
         return False
 
@@ -244,43 +197,6 @@ def set_windows_dpi_awareness() -> bool:
     except Exception:
         return False
 
-
-def _apply_windows_hicon(window, icon_path: str) -> None:
-    """Force window big/small icons via Win32 API from .ico file."""
-    if not is_windows():
-        return
-
-    user32 = ctypes.windll.user32
-    hwnd = user32.GetParent(window.winfo_id())
-    if hwnd == 0:
-        hwnd = window.winfo_id()
-
-    IMAGE_ICON = 1
-    LR_LOADFROMFILE = 0x0010
-    WM_SETICON = 0x0080
-    ICON_SMALL = 0
-    ICON_BIG = 1
-
-    # Load icon sizes that match current system metrics (DPI-dependent).
-    SM_CXICON = 11
-    SM_CYICON = 12
-    SM_CXSMICON = 49
-    SM_CYSMICON = 50
-
-    small_w = max(16, int(user32.GetSystemMetrics(SM_CXSMICON)))
-    small_h = max(16, int(user32.GetSystemMetrics(SM_CYSMICON)))
-    big_w = max(32, int(user32.GetSystemMetrics(SM_CXICON)))
-    big_h = max(32, int(user32.GetSystemMetrics(SM_CYICON)))
-
-    hicon_small = user32.LoadImageW(None, icon_path, IMAGE_ICON, small_w, small_h, LR_LOADFROMFILE)
-    hicon_big = user32.LoadImageW(None, icon_path, IMAGE_ICON, big_w, big_h, LR_LOADFROMFILE)
-
-    if hicon_small:
-        user32.SendMessageW(hwnd, WM_SETICON, ICON_SMALL, hicon_small)
-        setattr(window, "_transcriby_hicon_small", hicon_small)
-    if hicon_big:
-        user32.SendMessageW(hwnd, WM_SETICON, ICON_BIG, hicon_big)
-        setattr(window, "_transcriby_hicon_big", hicon_big)
 
 
 def check_cmd_exists(cmd: str) -> bool:
@@ -332,7 +248,3 @@ def is_valid_absolute_path(path: str) -> bool:
     else:
         # Linux: /path
         return path.startswith("/")
-
-
-# Import tempfile here to avoid circular import issues
-import tempfile
