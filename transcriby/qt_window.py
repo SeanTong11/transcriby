@@ -162,7 +162,7 @@ class TranscribyQtWindow(QMainWindow):
         root_widget = QWidget(self)
         self.setCentralWidget(root_widget)
         root = QVBoxLayout(root_widget)
-        root.setContentsMargins(14, 12, 14, 12)
+        root.setContentsMargins(14, 12, 14, 8)
         root.setSpacing(8)
 
         self.time_label = QLabel("0:00:00.000")
@@ -425,6 +425,8 @@ class TranscribyQtWindow(QMainWindow):
         audio_form.addRow("Volume", volume_row)
 
         root.addWidget(audio_box)
+
+        root.addStretch(1)
 
         self.media_info_label = QLabel("No media loaded")
         self.media_info_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
@@ -1401,7 +1403,11 @@ class TranscribyQtWindow(QMainWindow):
         if snapshot.duration_ns is not None and snapshot.duration_ns > 0:
             duration_seconds = self.controller.player.song_time(snapshot.duration_ns)
         self.timeline.set_duration(duration_seconds)
-        self.timeline.set_playhead(snapshot.position_seconds)
+        timeline_playhead_seconds = snapshot.position_seconds
+        if duration_seconds is not None and duration_seconds > 0:
+            ratio = max(0.0, min(1.0, float(snapshot.progress_ratio)))
+            timeline_playhead_seconds = duration_seconds * ratio
+        self.timeline.set_playhead(timeline_playhead_seconds)
         self.timeline.set_loop_enabled(snapshot.loop_enabled)
         self.timeline.set_loop(snapshot.loop_start_seconds, snapshot.loop_end_seconds)
 

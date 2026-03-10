@@ -609,23 +609,39 @@ class slowPlayer():
         def _wrapped(*args, **kwargs):
             # python-mpv callback signatures vary by version:
             # some pass (state, name), some pass only name/state, some use kwargs.
-            states = []
-            for value in args:
-                if isinstance(value, str):
-                    states.append(value.lower())
+            raw_state = None
             kw_state = kwargs.get("state")
             if isinstance(kw_state, str):
-                states.append(kw_state.lower())
+                raw_state = kw_state.strip().lower()
+            elif args and isinstance(args[0], str):
+                # In this runtime, callback receives tuples like ("d--", "space", "").
+                # Only the first token is the key-event state.
+                raw_state = args[0].strip().lower()
 
-            # Trigger on key down/press/repeat; ignore explicit key-up/release only.
-            if any(state in {"up", "release"} for state in states):
-                return
+            if raw_state:
+                if raw_state in {"up", "release"} or raw_state.startswith("u"):
+                    debug_log("mpv-keybind", "trigger_rejected", key=keydef, state=raw_state)
+                    return
+                if not (
+                    raw_state in {"down", "press", "repeat"}
+                    or raw_state.startswith("d")
+                    or raw_state.startswith("p")
+                    or raw_state.startswith("r")
+                ):
+                    debug_log("mpv-keybind", "trigger_rejected", key=keydef, state=raw_state)
+                    return
+
             try:
-                debug_log("mpv-keybind", "trigger", key=keydef, states=",".join(states) if states else "unknown")
+                debug_log(
+                    "mpv-keybind",
+                    "trigger_accepted",
+                    key=keydef,
+                    state=raw_state or "none",
+                )
                 callback()
             except Exception:
-                debug_log("mpv-keybind", "callback_error", key=keydef)
-                pass
+                debug_log("mpv-keybind", "callback_error", key=keydef, state=raw_state or "none")
+                return
 
         attempts = [
             ("key_name_cb_mode_kw", True, lambda: register_fn(str(keydef), binding_name, _wrapped, mode="force")),
