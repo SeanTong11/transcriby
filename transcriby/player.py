@@ -301,6 +301,7 @@ class slowPlayer():
         # mpv player (audio/video)
         self._player = mpv.MPV(ytdl=False, vid="auto")
         self._player.pause = True
+        self._window_key_binding_names = []
 
         # Playback parameters
         self._speed = 1.0
@@ -574,12 +575,59 @@ class slowPlayer():
             print(f"Error saving file: {e}")
             raise
 
+    def register_window_key_binding(self, keydef: str, callback) -> bool:
+        """Bind a key on mpv video window and forward it to a callback."""
+        if not keydef or not callable(callback):
+            return False
+        register_fn = getattr(self._player, "register_key_binding", None)
+        if not callable(register_fn):
+            return False
+
+        sanitized = "".join(ch.lower() if ch.isalnum() else "_" for ch in str(keydef))
+        binding_name = f"slowplay_{sanitized}_{len(self._window_key_binding_names)}"
+
+        def _wrapped(state=None, _name=None):
+            if isinstance(state, str) and state not in {"down", "press", "repeat"}:
+                return
+            try:
+                callback()
+            except Exception:
+                pass
+
+        try:
+            register_fn(str(keydef), binding_name, _wrapped)
+            self._window_key_binding_names.append(binding_name)
+            return True
+        except TypeError:
+            pass
+        except Exception:
+            return False
+
+        try:
+            register_fn(str(keydef), _wrapped)
+            return True
+        except Exception:
+            return False
+
+    def clear_window_key_bindings(self):
+        unregister_fn = getattr(self._player, "unregister_key_binding", None)
+        if not callable(unregister_fn):
+            self._window_key_binding_names.clear()
+            return
+        for binding_name in self._window_key_binding_names:
+            try:
+                unregister_fn(binding_name)
+            except Exception:
+                pass
+        self._window_key_binding_names.clear()
+
     def __del__(self):
         """Cleanup"""
         self.close()
 
     def close(self):
         """Explicitly terminate mpv backend."""
+        self.clear_window_key_bindings()
         try:
             self._player.terminate()
         except Exception:

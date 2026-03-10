@@ -110,7 +110,8 @@ class TranscribyQtWindow(QMainWindow):
         self._syncing_favorites = False
         self._favorites_revision_seen = -1
         self._loop_context_seconds = None
-        self._loop_icon = QIcon()
+        self._play_icon = QIcon()
+        self._pause_icon = QIcon()
 
         self._tick_timer = QTimer(self)
         self._tick_timer.setInterval(UPDATE_INTERVAL)
@@ -124,6 +125,7 @@ class TranscribyQtWindow(QMainWindow):
         self._build_ui()
         self._apply_styles()
         self._bind_shortcuts()
+        self._bind_mpv_shortcuts()
         self._rebuild_recent_menu()
 
         if self.args.media:
@@ -148,9 +150,12 @@ class TranscribyQtWindow(QMainWindow):
         icon_path = os.path.join(resources_dir, "Icona.ico")
         if os.path.isfile(icon_path):
             self.setWindowIcon(QIcon(icon_path))
-        loop_icon_path = os.path.join(resources_dir, "Loop Icon.png")
-        if os.path.isfile(loop_icon_path):
-            self._loop_icon = QIcon(loop_icon_path)
+        play_icon_path = os.path.join(resources_dir, "play-control.svg")
+        if os.path.isfile(play_icon_path):
+            self._play_icon = QIcon(play_icon_path)
+        pause_icon_path = os.path.join(resources_dir, "pause-control.svg")
+        if os.path.isfile(pause_icon_path):
+            self._pause_icon = QIcon(pause_icon_path)
 
     def _build_ui(self):
         root_widget = QWidget(self)
@@ -480,6 +485,12 @@ class TranscribyQtWindow(QMainWindow):
         self.statusBar().showMessage("Ready")
 
     def _apply_styles(self):
+        resources_dir = get_resources_dir()
+        switch_off_path = os.path.join(resources_dir, "switch-off.svg").replace("\\", "/")
+        switch_on_path = os.path.join(resources_dir, "switch-on.svg").replace("\\", "/")
+        switch_off_image = f'image: url("{switch_off_path}");' if os.path.isfile(switch_off_path) else "image: none;"
+        switch_on_image = f'image: url("{switch_on_path}");' if os.path.isfile(switch_on_path) else "image: none;"
+
         self.setStyleSheet(
             f"""
             QWidget {{
@@ -520,17 +531,14 @@ class TranscribyQtWindow(QMainWindow):
             QCheckBox::indicator {{
                 width: 38px;
                 height: 20px;
-                border-radius: 10px;
-                border: 1px solid {UI_BORDER_COLOR};
-                background: #1F1812;
+                border: none;
+                background: transparent;
             }}
             QCheckBox::indicator:unchecked {{
-                image: none;
+                {switch_off_image}
             }}
             QCheckBox::indicator:checked {{
-                image: none;
-                background: {UI_ACCENT};
-                border-color: {UI_ACCENT_HOVER};
+                {switch_on_image}
             }}
             QSlider::groove:horizontal {{
                 border: 1px solid {UI_BORDER_COLOR};
@@ -577,11 +585,13 @@ class TranscribyQtWindow(QMainWindow):
         )
 
     def _configure_tooltips(self):
-        self.rewind_button.setToolTip("Rewind to start (or loop start when loop is enabled)\nShortcut: Home")
+        self.rewind_button.setToolTip(
+            "Restart from A when loop range is active, otherwise toggle Play/Pause\nShortcut: Space"
+        )
         self.seek_back_1_button.setToolTip("Seek backward (coarse): 1.0s\nShortcut: [")
         self.seek_back_01_button.setToolTip("Seek backward (fine): 0.1s\nShortcut: ,")
         self.play_button.setToolTip("Play / Pause\nShortcuts: Enter, Numpad 0")
-        self.stop_button.setToolTip("Stop and rewind\nShortcut: Numpad .")
+        self.stop_button.setToolTip("Stop playback")
         self.seek_fwd_01_button.setToolTip("Seek forward (fine): 0.1s\nShortcut: .")
         self.seek_fwd_1_button.setToolTip("Seek forward (coarse): 1.0s\nShortcut: ]")
 
@@ -594,8 +604,10 @@ class TranscribyQtWindow(QMainWindow):
         )
         self.reset_a_button.setToolTip("Reset loop start point\nShortcut: Ctrl+A")
         self.set_a_button.setToolTip("Set loop start point\nShortcut: A")
+        self.loop_a_label.setToolTip("Loop start point (A). Fine: 10 ms, Coarse: 100 ms")
         self.reset_b_button.setToolTip("Reset loop end point\nShortcut: Ctrl+B")
         self.set_b_button.setToolTip("Set loop end point\nShortcut: B")
+        self.loop_b_label.setToolTip("Loop end point (B). Fine: 10 ms, Coarse: 100 ms")
         self.loop_a_back_coarse_button.setToolTip(f"Move loop start left by {MOVE_LOOP_POINTS_COARSE} ms")
         self.loop_a_back_fine_button.setToolTip(f"Move loop start left by {MOVE_LOOP_POINTS_FINE} ms")
         self.loop_a_fwd_fine_button.setToolTip(f"Move loop start right by {MOVE_LOOP_POINTS_FINE} ms")
@@ -633,7 +645,6 @@ class TranscribyQtWindow(QMainWindow):
         self._add_shortcut("B", self._on_set_loop_end_clicked)
         self._add_shortcut("Ctrl+A", self._on_reset_loop_start_clicked)
         self._add_shortcut("Ctrl+B", self._on_reset_loop_end_clicked)
-        self._add_shortcut("Home", self._on_rewind_clicked)
         self._add_shortcut("Left", lambda: self._seek_relative(-STEPS_SEC_MOVE_1))
         self._add_shortcut("Right", lambda: self._seek_relative(STEPS_SEC_MOVE_1))
         self._add_shortcut("[", lambda: self._seek_relative(-1.0))
@@ -650,7 +661,6 @@ class TranscribyQtWindow(QMainWindow):
         self._add_shortcut("-", lambda: self._nudge_semitones(-STEPS_SEMITONES))
 
         self._add_keypad_shortcut(Qt.Key.Key_0, self._on_toggle_play_clicked)
-        self._add_keypad_shortcut(Qt.Key.Key_Period, self._on_stop_clicked)
         self._add_keypad_shortcut(Qt.Key.Key_1, lambda: self._seek_relative(-STEPS_SEC_MOVE_1))
         self._add_keypad_shortcut(Qt.Key.Key_4, lambda: self._seek_relative(-STEPS_SEC_MOVE_2))
         self._add_keypad_shortcut(Qt.Key.Key_7, lambda: self._seek_relative(-STEPS_SEC_MOVE_3))
@@ -664,6 +674,35 @@ class TranscribyQtWindow(QMainWindow):
         self._add_keypad_shortcut(Qt.Key.Key_Minus, lambda: self._nudge_semitones(-STEPS_SEMITONES))
         self._add_keypad_shortcut(Qt.Key.Key_Slash, self._on_set_loop_start_clicked)
         self._add_keypad_shortcut(Qt.Key.Key_Asterisk, self._on_set_loop_end_clicked)
+
+    def _bind_mpv_shortcuts(self):
+        keymap = [
+            ("SPACE", self._on_restart_loop_clicked),
+            ("ENTER", self._on_toggle_play_clicked),
+            ("l", self._toggle_loop_shortcut),
+            ("a", self._on_set_loop_start_clicked),
+            ("b", self._on_set_loop_end_clicked),
+            ("ctrl+a", self._on_reset_loop_start_clicked),
+            ("ctrl+b", self._on_reset_loop_end_clicked),
+            ("LEFT", lambda: self._seek_relative(-STEPS_SEC_MOVE_1)),
+            ("RIGHT", lambda: self._seek_relative(STEPS_SEC_MOVE_1)),
+            ("[", lambda: self._seek_relative(-1.0)),
+            ("]", lambda: self._seek_relative(1.0)),
+            (",", lambda: self._seek_relative(-0.1)),
+            (".", lambda: self._seek_relative(0.1)),
+            ("m", self._on_add_favorite_clicked),
+            ("M", self._on_delete_favorite_clicked),
+            ("ctrl+[", self._on_jump_previous_favorite_clicked),
+            ("ctrl+]", self._on_jump_next_favorite_clicked),
+            ("c", lambda: self._nudge_speed(STEPS_SPEED)),
+            ("x", lambda: self._nudge_speed(-STEPS_SPEED)),
+        ]
+
+        for keydef, callback in keymap:
+            self.controller.player.register_window_key_binding(
+                keydef,
+                lambda cb=callback: QTimer.singleShot(0, cb),
+            )
 
     def _add_shortcut(self, key: str, callback, allow_when_typing: bool = False):
         shortcut = QShortcut(QKeySequence(key), self)
@@ -958,7 +997,7 @@ class TranscribyQtWindow(QMainWindow):
         self.controller.stop_playing()
 
     def _on_rewind_clicked(self):
-        self.controller.rewind()
+        self._on_restart_loop_clicked()
 
     def _on_restart_loop_clicked(self):
         restart_result = self.controller.restart_loop_from_a()
@@ -1307,15 +1346,18 @@ class TranscribyQtWindow(QMainWindow):
         self._sync_volume_slider(snapshot.volume_percent)
         self._sync_volume_spin(snapshot.volume_percent)
 
-        if snapshot.loop_enabled and not self._loop_icon.isNull():
-            self.play_button.setIcon(self._loop_icon)
-        else:
-            self.play_button.setIcon(QIcon())
-
         if snapshot.is_playing:
-            self.play_button.setText("Pause ||")
+            self.play_button.setText("Pause")
+            if not self._pause_icon.isNull():
+                self.play_button.setIcon(self._pause_icon)
+            else:
+                self.play_button.setIcon(QIcon())
         else:
-            self.play_button.setText("Play >")
+            self.play_button.setText("Play")
+            if not self._play_icon.isNull():
+                self.play_button.setIcon(self._play_icon)
+            else:
+                self.play_button.setIcon(QIcon())
 
         self.loop_a_label.setText(f"A: {format_seconds_text(snapshot.loop_start_seconds)}")
         self.loop_b_label.setText(f"B: {format_seconds_text(snapshot.loop_end_seconds)}")

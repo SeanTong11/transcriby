@@ -46,7 +46,7 @@ SHORTCUT_ROWS = [
     ("Numpad 8/2/5", "Speed +0.1/-0.1/reset"),
     ("Numpad + / -", "Transpose semitone +/-"),
     ("Numpad / *", "Set loop A / B"),
-    ("Numpad 0 / .", "Play/Pause / Stop+Rewind"),
+    ("Numpad 0", "Play/Pause"),
     ("Timeline left click", "Seek to cursor"),
     ("Timeline marker click", "Jump to favorite marker"),
     ("Timeline right click", "Context: set A/B here"),

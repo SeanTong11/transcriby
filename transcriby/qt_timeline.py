@@ -238,8 +238,6 @@ class QtTimelineWidget(QWidget):
             border_color.setAlpha(120)
             painter.setPen(QPen(border_color, 1))
             painter.drawRect(self.rect().adjusted(0, 0, -1, -1))
-            painter.setPen(border_color)
-            painter.drawText(8, draw_bottom - 2, "LOOP")
 
         a_x = self._seconds_to_x(self._loop_start)
         b_x = self._seconds_to_x(self._loop_end)
@@ -292,3 +290,19 @@ class QtTimelineWidget(QWidget):
         if playhead_x is not None:
             painter.setPen(QPen(self._colors["playhead"], 2))
             painter.drawLine(int(playhead_x), draw_top, int(playhead_x), draw_bottom)
+
+        if self._loop_enabled:
+            metrics = painter.fontMetrics()
+            text = "LOOP"
+            text_width = metrics.horizontalAdvance(text)
+            text_height = metrics.height()
+            pill_x = 6
+            pill_y = max(1.0, float(draw_bottom - text_height - 2))
+            pill_rect = QRectF(pill_x, pill_y, text_width + 8, text_height + 2)
+            pill_bg = QColor(self._colors["bg"])
+            pill_bg.setAlpha(220)
+            painter.fillRect(pill_rect, pill_bg)
+            painter.setPen(QPen(self._colors["loop_marker"], 1))
+            painter.drawRect(pill_rect)
+            painter.setPen(self._colors["loop_marker"])
+            painter.drawText(int(pill_x + 4), int(pill_y + metrics.ascent() + 1), text)
