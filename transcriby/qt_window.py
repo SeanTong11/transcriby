@@ -6,7 +6,7 @@ from __future__ import annotations
 import datetime as dt
 import os
 
-from PySide6.QtCore import QSignalBlocker, QSize, Qt, QTimer, QUrl
+from PySide6.QtCore import QSignalBlocker, QSize, Signal, Slot, Qt, QTimer, QUrl
 from PySide6.QtGui import QAction, QColor, QDragEnterEvent, QDropEvent, QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QAbstractSpinBox,
@@ -102,6 +102,8 @@ def build_tby_filter() -> str:
 
 
 class TranscribyQtWindow(QMainWindow):
+    _mpv_shortcut_signal = Signal(object)
+
     def __init__(self, controller: PlaybackController, args):
         super().__init__()
         self.controller = controller
@@ -121,6 +123,10 @@ class TranscribyQtWindow(QMainWindow):
         self._loop_restart_timer = QTimer(self)
         self._loop_restart_timer.setSingleShot(True)
         self._loop_restart_timer.timeout.connect(self._on_delayed_loop_restart)
+        self._mpv_shortcut_signal.connect(
+            self._dispatch_mpv_shortcut,
+            Qt.ConnectionType.QueuedConnection,
+        )
 
         self._setup_window()
         self._build_ui()
@@ -714,7 +720,7 @@ class TranscribyQtWindow(QMainWindow):
         for keydef, callback in keymap:
             ok = self.controller.player.register_window_key_binding(
                 keydef,
-                lambda cb=callback: QTimer.singleShot(0, cb),
+                lambda cb=callback, key=keydef: self._queue_mpv_shortcut(key, cb),
             )
             if ok:
                 bound_count += 1
@@ -733,6 +739,26 @@ class TranscribyQtWindow(QMainWindow):
                 f"mpv shortcuts bound: {bound_count}/{len(keymap)}",
                 2500,
             )
+
+    def _queue_mpv_shortcut(self, keydef: str, callback):
+        try:
+            self._mpv_shortcut_signal.emit((str(keydef), callback))
+            debug_log("ui", "mpv_shortcut_queued", key=keydef)
+        except Exception as ex:
+            debug_log("ui", "mpv_shortcut_queue_error", key=keydef, error=str(ex))
+
+    @Slot(object)
+    def _dispatch_mpv_shortcut(self, payload):
+        try:
+            keydef, callback = payload
+        except Exception:
+            debug_log("ui", "mpv_shortcut_dispatch_error", error="invalid_payload")
+            return
+        try:
+            debug_log("ui", "mpv_shortcut_dispatch", key=str(keydef))
+            callback()
+        except Exception as ex:
+            debug_log("ui", "mpv_shortcut_dispatch_error", key=str(keydef), error=str(ex))
 
     def _add_shortcut(self, key: str, callback, allow_when_typing: bool = False):
         shortcut = QShortcut(QKeySequence(key), self)
