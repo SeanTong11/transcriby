@@ -65,6 +65,8 @@ class QtTimelineWidget(QWidget):
             "playhead": QColor(UI_TIMELINE_PLAYHEAD),
             "marker_fallback": QColor(UI_ACCENT),
         }
+        # Match QSlider handle center offset (handle width ~= 14px in current stylesheet).
+        self._track_padding_px = 7.0
 
     def clear(self):
         self._duration = None
@@ -112,16 +114,21 @@ class QtTimelineWidget(QWidget):
     def _x_to_seconds(self, x: float) -> float:
         if self._duration is None or self._duration <= 0:
             return 0.0
-        width = max(1, self.width())
-        ratio = max(0.0, min(1.0, float(x) / float(width)))
+        width = max(1.0, float(self.width()))
+        pad = min(self._track_padding_px, width * 0.5)
+        usable = max(1.0, width - 2.0 * pad)
+        ratio = (float(x) - pad) / usable
+        ratio = max(0.0, min(1.0, ratio))
         return float(self._duration) * ratio
 
     def _seconds_to_x(self, seconds: float | None) -> float | None:
         if self._duration is None or self._duration <= 0 or seconds is None:
             return None
-        width = max(1, self.width())
+        width = max(1.0, float(self.width()))
+        pad = min(self._track_padding_px, width * 0.5)
+        usable = max(1.0, width - 2.0 * pad)
         ratio = max(0.0, min(1.0, float(seconds) / float(self._duration)))
-        return float(width) * ratio
+        return pad + usable * ratio
 
     def _marker_hit_test(self, x: float, tolerance: float = 5.0) -> tuple[int, float] | None:
         if not self._markers:
@@ -289,7 +296,8 @@ class QtTimelineWidget(QWidget):
         playhead_x = self._seconds_to_x(self._playhead)
         if playhead_x is not None:
             painter.setPen(QPen(self._colors["playhead"], 2))
-            painter.drawLine(int(playhead_x), draw_top, int(playhead_x), draw_bottom)
+            x = int(round(playhead_x))
+            painter.drawLine(x, draw_top, x, draw_bottom)
 
         if self._loop_enabled:
             metrics = painter.fontMetrics()
