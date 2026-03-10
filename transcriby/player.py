@@ -299,7 +299,12 @@ class slowPlayer():
     def __init__(self):
         """Initialize the audio player"""
         # mpv player (audio/video)
-        self._player = mpv.MPV(ytdl=False, vid="auto")
+        self._player = mpv.MPV(
+            ytdl=False,
+            vid="auto",
+            input_vo_keyboard=True,
+            input_default_bindings=False,
+        )
         self._player.pause = True
         self._window_key_binding_names = []
 
@@ -586,8 +591,19 @@ class slowPlayer():
         sanitized = "".join(ch.lower() if ch.isalnum() else "_" for ch in str(keydef))
         binding_name = f"slowplay_{sanitized}_{len(self._window_key_binding_names)}"
 
-        def _wrapped(state=None, _name=None):
-            if isinstance(state, str) and state not in {"down", "press", "repeat"}:
+        def _wrapped(*args, **kwargs):
+            # python-mpv callback signatures vary by version:
+            # some pass (state, name), some pass only name/state, some use kwargs.
+            states = []
+            for value in args:
+                if isinstance(value, str):
+                    states.append(value.lower())
+            kw_state = kwargs.get("state")
+            if isinstance(kw_state, str):
+                states.append(kw_state.lower())
+
+            # Trigger on key down/press/repeat; ignore explicit key-up/release only.
+            if any(state in {"up", "release"} for state in states):
                 return
             try:
                 callback()
