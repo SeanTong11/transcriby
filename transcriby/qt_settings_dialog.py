@@ -29,8 +29,8 @@ from transcriby.qt_controller import PlaybackController
 SHORTCUT_ROWS = [
     ("Ctrl+O", "Open media file"),
     ("Ctrl+R", "Open recent files dialog"),
-    ("Ctrl+S", "Save As"),
-    ("Ctrl+Shift+S", "Export .tby session"),
+    ("Ctrl+S", "Save session (.tby)"),
+    ("Ctrl+Shift+S", "Save session as (.tby)"),
     ("Ctrl+Q", "Quit"),
     ("F1", "Open shortcuts help"),
     ("Space", "Restart from A (loop on) or play/pause"),

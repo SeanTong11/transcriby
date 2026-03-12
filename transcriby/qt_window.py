@@ -458,15 +458,19 @@ class TranscribyQtWindow(QMainWindow):
         self.recent_menu = file_menu.addMenu("Open Recent")
         file_menu.addSeparator()
 
-        save_as_action = QAction("Save As...", self)
-        save_as_action.setShortcut(QKeySequence("Ctrl+S"))
-        save_as_action.triggered.connect(self._on_save_as_clicked)
-        file_menu.addAction(save_as_action)
+        save_session_action = QAction("Save Session", self)
+        save_session_action.setShortcut(QKeySequence("Ctrl+S"))
+        save_session_action.triggered.connect(self._on_save_session_clicked)
+        file_menu.addAction(save_session_action)
 
-        export_tby_action = QAction("Export .tby...", self)
-        export_tby_action.setShortcut(QKeySequence("Ctrl+Shift+S"))
-        export_tby_action.triggered.connect(self._on_export_tby_clicked)
-        file_menu.addAction(export_tby_action)
+        save_session_as_action = QAction("Save Session As...", self)
+        save_session_as_action.setShortcut(QKeySequence("Ctrl+Shift+S"))
+        save_session_as_action.triggered.connect(self._on_save_session_as_clicked)
+        file_menu.addAction(save_session_as_action)
+
+        export_audio_action = QAction("Export Audio As...", self)
+        export_audio_action.triggered.connect(self._on_export_audio_as_clicked)
+        file_menu.addAction(export_audio_action)
 
         file_menu.addSeparator()
 
@@ -856,34 +860,58 @@ class TranscribyQtWindow(QMainWindow):
         self._on_tick()
         return True
 
-    def _on_export_tby_clicked(self):
+    def _default_session_stem(self) -> str:
+        if self.controller.has_session_tby_path():
+            current_tby = self.controller.get_session_tby_path()
+            if current_tby:
+                return os.path.splitext(os.path.basename(current_tby))[0] or "session"
+        if self.controller.media_filename:
+            return os.path.splitext(self.controller.media_filename)[0] or self.controller.media_filename
+        if self.controller.song_metadata:
+            return str(self.controller.song_metadata)
+        return "session"
+
+    def _on_save_session_clicked(self):
+        if not self.controller.player.canPlay:
+            self.statusBar().showMessage("Please open a file...", 1200)
+            return
+
+        if not self.controller.has_session_tby_path():
+            self._on_save_session_as_clicked()
+            return
+
+        ok, message, _saved_path = self.controller.save_tby_session()
+        if not ok:
+            QMessageBox.critical(self, "Error", message or "Unable to save .tby file")
+            return
+        self._rebuild_recent_menu()
+        self.statusBar().showMessage(message, 1500)
+
+    def _on_save_session_as_clicked(self):
         if not self.controller.player.canPlay:
             self.statusBar().showMessage("Please open a file...", 1200)
             return
 
         initial_dir = self.controller.settings.getVal("App", "LastSaveDir", os.path.expanduser("~"))
-        default_stem = "session"
-        if self.controller.media_filename:
-            default_stem = os.path.splitext(self.controller.media_filename)[0] or self.controller.media_filename
-        elif self.controller.song_metadata:
-            default_stem = self.controller.song_metadata
+        default_stem = self._default_session_stem()
 
         filename, _selected = QFileDialog.getSaveFileName(
             self,
-            "Export .tby",
+            "Save session as",
             os.path.join(initial_dir, default_stem + ".tby"),
             build_tby_filter(),
         )
         if not filename:
             return
 
-        ok, message, _saved_path = self.controller.export_tby_session(filename)
+        ok, message, _saved_path = self.controller.save_tby_session_as(filename)
         if not ok:
-            QMessageBox.critical(self, "Error", message or "Unable to export .tby file")
+            QMessageBox.critical(self, "Error", message or "Unable to save .tby file")
             return
+        self._rebuild_recent_menu()
         self.statusBar().showMessage(message, 1500)
 
-    def _on_save_as_clicked(self):
+    def _on_export_audio_as_clicked(self):
         if not self.controller.player.canPlay:
             self.statusBar().showMessage("Please open a file...", 1200)
             return
@@ -1444,6 +1472,11 @@ class TranscribyQtWindow(QMainWindow):
             self.favorite_count_label.setText(f"{snapshot.favorite_count} total")
 
     def _on_tick(self):
+        if self.controller.consume_mpv_exit_request():
+            app = QApplication.instance()
+            if app is not None:
+                app.quit()
+            return
         snapshot = self.controller.tick()
         self._apply_snapshot(snapshot)
 

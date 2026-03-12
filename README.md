@@ -208,8 +208,8 @@ Current Qt feature set includes:
 - Open Recent dialog (`Ctrl+R`)
 - Drag and drop local files
 - Drag and drop `.tby` session files
-- Save As audio export
-- Open/Export `.tby` sessions
+- Export Audio As
+- Open/Save `.tby` sessions
 - Startup restore (last `.tby` session first, then last media)
 - Loop A/B controls and restart-from-A behavior
 - Timeline overlay with playhead + favorites markers
@@ -219,7 +219,7 @@ Current Qt feature set includes:
 - Loop-enabled indicator on Play button
 - Right-drag on timeline to set loop A/B range
 - Open button right-click opens Recent dialog
-- Shortcuts help dialog (`F1`) and `.tby` export shortcut (`Ctrl+Shift+S`)
+- Shortcuts help dialog (`F1`) and `.tby` save shortcut (`Ctrl+Shift+S`)
 - Favorites add/delete/jump with keyboard shortcuts
 
 ### Windows Build

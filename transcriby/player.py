@@ -314,6 +314,7 @@ class slowPlayer():
         self._player = mpv.MPV(
             ytdl=False,
             vid="auto",
+            keep_open="always",
             input_vo_keyboard=True,
             input_default_bindings=False,
         )
@@ -325,6 +326,9 @@ class slowPlayer():
         )
         self._player.pause = True
         self._window_key_binding_names = []
+        self._mpv_exit_requested = False
+        self._lifecycle_event_handler = None
+        self._register_lifecycle_events()
 
         # Playback parameters
         self._speed = 1.0
@@ -410,6 +414,59 @@ class slowPlayer():
 
         af = "lavfi=[" + ",".join(filters) + "]"
         self._set_prop("af", af)
+
+    def _register_lifecycle_events(self):
+        event_callback = getattr(self._player, "event_callback", None)
+        if not callable(event_callback):
+            return
+
+        try:
+            @self._player.event_callback("shutdown", "end-file")
+            def _on_player_event(event):
+                try:
+                    event_id = event.event_id.value
+                except Exception:
+                    event_id = None
+
+                try:
+                    shutdown_id = mpv.MpvEventID.SHUTDOWN
+                except Exception:
+                    shutdown_id = None
+
+                if event_id == shutdown_id:
+                    self._mpv_exit_requested = True
+                    return
+
+                try:
+                    end_file_id = mpv.MpvEventID.END_FILE
+                except Exception:
+                    end_file_id = None
+                if event_id != end_file_id:
+                    return
+
+                reason = None
+                try:
+                    reason = event.data.reason
+                except Exception:
+                    reason = None
+
+                try:
+                    quit_reason = mpv.MpvEventEndFile.QUIT
+                except Exception:
+                    quit_reason = 3
+
+                if reason == quit_reason:
+                    self._mpv_exit_requested = True
+
+            self._lifecycle_event_handler = _on_player_event
+        except Exception:
+            self._lifecycle_event_handler = None
+
+    def consume_exit_request(self) -> bool:
+        if self._mpv_exit_requested:
+            self._mpv_exit_requested = False
+            return True
+        return False
 
     def MediaLoad(self, mediafile):
         """Load audio file or URL"""
@@ -725,12 +782,26 @@ class slowPlayer():
                 pass
         self._window_key_binding_names.clear()
 
+    def clear_lifecycle_events(self):
+        callback = self._lifecycle_event_handler
+        self._lifecycle_event_handler = None
+        if callback is None:
+            return
+        unregister = getattr(callback, "unregister_mpv_events", None)
+        if not callable(unregister):
+            return
+        try:
+            unregister()
+        except Exception:
+            pass
+
     def __del__(self):
         """Cleanup"""
         self.close()
 
     def close(self):
         """Explicitly terminate mpv backend."""
+        self.clear_lifecycle_events()
         self.clear_window_key_bindings()
         try:
             self._player.terminate()

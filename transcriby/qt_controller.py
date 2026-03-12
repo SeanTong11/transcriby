@@ -91,6 +91,7 @@ class PlaybackController:
         self.media_filename = ""
         self.media_path = ""
         self.song_metadata = ""
+        self.session_tby_path = ""
 
         self.semitones = DEFAULT_SEMITONES
         self.cents = DEFAULT_CENTS
@@ -133,6 +134,27 @@ class PlaybackController:
         if is_valid_absolute_path(filename):
             return uri_from_path(filename)
         return filename
+
+    def consume_mpv_exit_request(self) -> bool:
+        return bool(self.player.consume_exit_request())
+
+    def has_session_tby_path(self) -> bool:
+        return bool(str(self.session_tby_path or "").strip())
+
+    def get_session_tby_path(self) -> str:
+        return str(self.session_tby_path or "")
+
+    def _add_recent_tby_entry(self, tby_path: str):
+        normalized_tby = os.path.realpath(str(tby_path or "").strip())
+        if not normalized_tby:
+            return
+        self.settings.addRecentFile(
+            normalized_tby,
+            {
+                "EntryType": "tby",
+                "Metadata": os.path.basename(normalized_tby),
+            },
+        )
 
     def _touch_favorites(self):
         self.favorites_revision += 1
@@ -412,6 +434,7 @@ class PlaybackController:
         self.media_path = os.path.dirname(self.media)
         self.media_uri = self.filename_to_uri(self.media)
         self.song_metadata = self.media_filename
+        self.session_tby_path = ""
 
         self.settings.setVal(CFG_APP_SECTION, "LastOpenDir", self.media_path)
 
@@ -440,6 +463,8 @@ class PlaybackController:
         if not isinstance(recent, dict):
             return False
         for key in reversed(list(recent.keys())):
+            if str(key).lower().endswith(".tby"):
+                continue
             if os.path.isfile(key):
                 ok, _msg = self.load_file(key, apply_recent_options=False)
                 return ok
@@ -798,6 +823,16 @@ class PlaybackController:
         self.player.Rewind()
 
     def play(self):
+        if not self.player.loopEnabled:
+            duration = self.player.query_duration()
+            position = self.player.query_position()
+            if (
+                duration is not None
+                and position is not None
+                and duration > 0
+                and position >= duration
+            ):
+                self.player.seek_absolute(0)
         self.player.Play()
 
     def pause(self):
@@ -817,6 +852,14 @@ class PlaybackController:
             return
         self.pause()
         self.player.Rewind()
+
+    def stop_at_end(self):
+        if not self.player.canPlay:
+            return
+        self.pause()
+        duration = self.player.query_duration()
+        if duration is not None and duration > 0:
+            self.player.seek_absolute(duration)
 
     def restart_loop_from_a(self) -> int:
         """Restart loop from A.
@@ -985,8 +1028,9 @@ class PlaybackController:
         return os.path.realpath(media_path)
 
     def open_tby_session(self, tby_file: str) -> tuple[bool, str]:
+        normalized_tby = os.path.realpath(tby_file)
         try:
-            session_data = sessionfile.load_tby(tby_file)
+            session_data = sessionfile.load_tby(normalized_tby)
         except Exception as ex:
             return False, f"Unable to open .tby file: {ex}"
 
@@ -999,7 +1043,7 @@ class PlaybackController:
         if not media_path_raw:
             return False, "Invalid .tby file: missing media path"
 
-        media_path = self._resolve_session_media_path(media_path_raw, tby_file)
+        media_path = self._resolve_session_media_path(media_path_raw, normalized_tby)
         if not os.path.isfile(media_path):
             return False, f"Unable to open file: {media_path}"
 
@@ -1009,7 +1053,9 @@ class PlaybackController:
 
         self._apply_playback_options(playback_options)
         self.settings.setVal(CFG_APP_SECTION, "LastOpenDir", os.path.dirname(media_path))
-        self.settings.setLastSessionTby(os.path.realpath(tby_file))
+        self.session_tby_path = normalized_tby
+        self.settings.setLastSessionTby(normalized_tby)
+        self._add_recent_tby_entry(normalized_tby)
 
         status = "Loaded .tby session"
         build_info = session_data.get("build_info", {})
@@ -1019,7 +1065,15 @@ class PlaybackController:
                 status = f"{status} ({source_version})"
         return True, status
 
-    def export_tby_session(self, filename: str) -> tuple[bool, str, str]:
+    def save_tby_session(self) -> tuple[bool, str, str]:
+        if not self.player.canPlay:
+            return False, "Please open a file...", ""
+        current_path = str(self.session_tby_path or "").strip()
+        if not current_path:
+            return False, "No session file path. Use Save Session As...", ""
+        return self.save_tby_session_as(current_path)
+
+    def save_tby_session_as(self, filename: str) -> tuple[bool, str, str]:
         if not self.player.canPlay:
             return False, "Please open a file...", ""
 
@@ -1030,11 +1084,18 @@ class PlaybackController:
         try:
             sessionfile.save_tby(out_file, self._build_tby_data())
         except Exception as ex:
-            return False, f"Unable to export .tby file: {ex}", ""
+            return False, f"Unable to save .tby file: {ex}", ""
 
+        saved_realpath = os.path.realpath(out_file)
+        self.session_tby_path = saved_realpath
         self.settings.setVal(CFG_APP_SECTION, "LastSaveDir", os.path.dirname(out_file))
-        self.settings.setLastSessionTby(os.path.realpath(out_file))
-        return True, f"Exported .tby: {out_file}", out_file
+        self.settings.setLastSessionTby(saved_realpath)
+        self._add_recent_tby_entry(saved_realpath)
+        return True, f"Saved .tby: {out_file}", out_file
+
+    def export_tby_session(self, filename: str) -> tuple[bool, str, str]:
+        # Backward-compatible wrapper for older call sites.
+        return self.save_tby_session_as(filename)
 
     def normalize_audio_export_filename(self, filename: str) -> str:
         out = str(filename).strip()
@@ -1073,8 +1134,14 @@ class PlaybackController:
         duration, position = self.player.update_position()
 
         if not self.player.loopEnabled:
-            if duration and position and duration > 0 and position >= duration:
-                self.stop_playing()
+            if (
+                self.player.isPlaying
+                and duration is not None
+                and position is not None
+                and duration > 0
+                and position >= duration
+            ):
+                self.stop_at_end()
                 duration, position = self.player.update_position()
         else:
             if not self.has_valid_loop_range():
