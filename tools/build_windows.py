@@ -119,23 +119,22 @@ def check_requirements():
         print("Error: Python 3.8 or higher is required")
         return False
     
+    missing_items = []
+
     # Check if PyInstaller is installed
     try:
         import PyInstaller
         print(f"  PyInstaller: OK ({PyInstaller.__version__})")
     except ImportError:
         print("  PyInstaller: NOT FOUND")
-        print("  Installing PyInstaller...")
-        subprocess.run([sys.executable, "-m", "pip", "install", "pyinstaller"], check=True)
+        missing_items.append("pyinstaller")
     
     # Check core dependencies
     required = [
         ('mpv', 'python-mpv', True),
         ('soundfile', 'soundfile', False),
-        ('scipy', 'scipy', False),
         ('numpy', 'numpy', False),
         ('PySide6', 'PySide6', False),
-        ('PIL', 'pillow', False),
     ]
     
     for module, pkg, check_spec_only in required:
@@ -149,8 +148,26 @@ def check_requirements():
             print(f"  {module}: OK")
         except ImportError:
             print(f"  {module}: NOT FOUND")
-            print(f"  Installing {pkg}...")
-            subprocess.run([sys.executable, "-m", "pip", "install", pkg], check=True)
+            missing_items.append(pkg)
+
+    if missing_items:
+        unique_missing = []
+        seen = set()
+        for item in missing_items:
+            key = str(item).strip().lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            unique_missing.append(str(item))
+        print("\nMissing required Python packages:")
+        for pkg in unique_missing:
+            print(f"  - {pkg}")
+        print("\nInstall dependencies first, then rerun build script.")
+        print("Example:")
+        print("  uv sync")
+        print("or")
+        print("  uv pip install " + " ".join(unique_missing))
+        return False
     
     print("\nAll requirements satisfied!")
     return True
@@ -188,7 +205,6 @@ def build():
     cmd.extend([
         "--hidden-import", "mpv",
         "--hidden-import", "soundfile",
-        "--hidden-import", "scipy",
         "--hidden-import", "numpy",
         "--hidden-import", "PySide6",
         "--hidden-import", "platform_utils",
