@@ -17,12 +17,22 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QSpinBox,
     QTabWidget,
     QVBoxLayout,
     QWidget,
 )
 
-from transcriby.app_constants import APP_TITLE, APP_URL, APP_VERSION, UI_TEXT_MUTED
+from transcriby.app_constants import (
+    APP_TITLE,
+    APP_URL,
+    APP_VERSION,
+    DEFAULT_SEEK_STEP_COARSE_MS,
+    DEFAULT_SEEK_STEP_FINE_MS,
+    MAX_SEEK_STEP_MS,
+    MIN_SEEK_STEP_MS,
+    UI_TEXT_MUTED,
+)
 from transcriby.qt_controller import PlaybackController
 
 
@@ -40,8 +50,8 @@ SHORTCUT_ROWS = [
     ("Ctrl+A / Ctrl+B", "Reset loop start / end"),
     ("M / Shift+M", "Add / delete favorite"),
     ("Ctrl+[ / Ctrl+]", "Jump previous / next favorite"),
-    ("[ ]", "Seek -/+ 1.0s"),
-    (", .", "Seek -/+ 0.1s"),
+    ("[ ]", "Seek -/+ coarse step"),
+    (", .", "Seek -/+ fine step"),
     ("Numpad 1/3/4/6/7/9", "Seek 5/10/15s backward/forward"),
     ("Numpad 8/2/5", "Speed +0.1/-0.1/reset"),
     ("Numpad + / -", "Transpose semitone +/-"),
@@ -111,6 +121,19 @@ class SettingsDialog(QDialog):
         self.delay_seconds.setDecimals(2)
         self.delay_seconds.setValue(seconds)
         form.addRow("Delay (seconds)", self.delay_seconds)
+
+        seek_fine_ms, seek_coarse_ms = self.controller.get_seek_step_settings_ms()
+        self.seek_step_fine_ms = QSpinBox()
+        self.seek_step_fine_ms.setRange(MIN_SEEK_STEP_MS, MAX_SEEK_STEP_MS)
+        self.seek_step_fine_ms.setSingleStep(10)
+        self.seek_step_fine_ms.setValue(int(seek_fine_ms))
+        form.addRow("Seek fine (ms)", self.seek_step_fine_ms)
+
+        self.seek_step_coarse_ms = QSpinBox()
+        self.seek_step_coarse_ms.setRange(MIN_SEEK_STEP_MS, MAX_SEEK_STEP_MS)
+        self.seek_step_coarse_ms.setSingleStep(50)
+        self.seek_step_coarse_ms.setValue(int(seek_coarse_ms))
+        form.addRow("Seek coarse (ms)", self.seek_step_coarse_ms)
         layout.addLayout(form)
 
         self.debug_title = QLabel("Troubleshooting")
@@ -192,6 +215,12 @@ class SettingsDialog(QDialog):
         enabled, normalized = self.controller.set_loop_restart_delay_settings(enabled, seconds)
         self.delay_enabled.setChecked(enabled)
         self.delay_seconds.setValue(normalized)
+        normalized_fine_ms, normalized_coarse_ms = self.controller.set_seek_step_settings_ms(
+            int(self.seek_step_fine_ms.value()),
+            int(self.seek_step_coarse_ms.value()),
+        )
+        self.seek_step_fine_ms.setValue(int(normalized_fine_ms))
+        self.seek_step_coarse_ms.setValue(int(normalized_coarse_ms))
         debug_enabled, debug_path = self.controller.set_debug_logging_settings(self.debug_enabled.isChecked())
         self.debug_enabled.setChecked(debug_enabled)
         self.debug_path_label.setText(f"Debug log path: {debug_path}")
@@ -199,5 +228,7 @@ class SettingsDialog(QDialog):
     def _reset_playback_settings(self):
         self.delay_enabled.setChecked(False)
         self.delay_seconds.setValue(0.25)
+        self.seek_step_fine_ms.setValue(DEFAULT_SEEK_STEP_FINE_MS)
+        self.seek_step_coarse_ms.setValue(DEFAULT_SEEK_STEP_COARSE_MS)
         self.debug_enabled.setChecked(False)
         self._save_playback_settings()

@@ -97,6 +97,11 @@ STEPS_SEC_MOVE_1 = 5        # Seconds to move using the num keypad +/- min
 STEPS_SEC_MOVE_2 = 10       # Seconds to move using the num keypad +/- med
 STEPS_SEC_MOVE_3 = 15       # Seconds to move using the num keypad +/- max
 
+DEFAULT_SEEK_STEP_FINE_MS = 100
+DEFAULT_SEEK_STEP_COARSE_MS = 1000
+MIN_SEEK_STEP_MS = 10
+MAX_SEEK_STEP_MS = 60000
+
 # Song position update interval in milliseconds
 UPDATE_INTERVAL = 20
 

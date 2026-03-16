@@ -199,9 +199,9 @@ class TranscribyQtWindow(QMainWindow):
         playback_layout.setSpacing(8)
 
         self.seek_back_1_button = QPushButton("<<")
-        self.seek_back_1_button.clicked.connect(lambda: self._seek_relative(-1.0))
+        self.seek_back_1_button.clicked.connect(self._seek_backward_coarse)
         self.seek_back_01_button = QPushButton("<")
-        self.seek_back_01_button.clicked.connect(lambda: self._seek_relative(-0.1))
+        self.seek_back_01_button.clicked.connect(self._seek_backward_fine)
         self.play_button = QPushButton("Play")
         self.play_button.setObjectName("playButton")
         self.play_button.setMinimumWidth(132)
@@ -213,9 +213,9 @@ class TranscribyQtWindow(QMainWindow):
         self.rewind_button = QPushButton("Rewind")
         self.rewind_button.clicked.connect(self._on_rewind_clicked)
         self.seek_fwd_01_button = QPushButton(">")
-        self.seek_fwd_01_button.clicked.connect(lambda: self._seek_relative(0.1))
+        self.seek_fwd_01_button.clicked.connect(self._seek_forward_fine)
         self.seek_fwd_1_button = QPushButton(">>")
-        self.seek_fwd_1_button.clicked.connect(lambda: self._seek_relative(1.0))
+        self.seek_fwd_1_button.clicked.connect(self._seek_forward_coarse)
         for btn in (
             self.seek_back_1_button,
             self.seek_back_01_button,
@@ -609,12 +609,9 @@ class TranscribyQtWindow(QMainWindow):
         self.rewind_button.setToolTip(
             "Restart from A when loop range is active, otherwise toggle Play/Pause\nShortcut: Space"
         )
-        self.seek_back_1_button.setToolTip("Seek backward (coarse): 1.0s\nShortcut: [")
-        self.seek_back_01_button.setToolTip("Seek backward (fine): 0.1s\nShortcut: ,")
+        self._configure_seek_tooltips()
         self.play_button.setToolTip("Play / Pause\nShortcuts: Enter, Numpad 0")
         self.stop_button.setToolTip("Stop playback")
-        self.seek_fwd_01_button.setToolTip("Seek forward (fine): 0.1s\nShortcut: .")
-        self.seek_fwd_1_button.setToolTip("Seek forward (coarse): 1.0s\nShortcut: ]")
 
         self.loop_toggle_switch.setToolTip(
             "Toggle loop playing\nShortcut: L\nTip: right-click and drag on timeline to set A/B"
@@ -656,6 +653,15 @@ class TranscribyQtWindow(QMainWindow):
         self.volume_spin.setToolTip("Volume percent")
         self.volume_reset_button.setToolTip("Reset volume")
 
+    def _configure_seek_tooltips(self):
+        fine_seconds, coarse_seconds = self.controller.get_seek_step_settings_seconds()
+        fine_ms = int(round(fine_seconds * 1000.0))
+        coarse_ms = int(round(coarse_seconds * 1000.0))
+        self.seek_back_1_button.setToolTip(f"Seek backward (coarse): {coarse_ms} ms\nShortcut: [")
+        self.seek_back_01_button.setToolTip(f"Seek backward (fine): {fine_ms} ms\nShortcut: ,")
+        self.seek_fwd_01_button.setToolTip(f"Seek forward (fine): {fine_ms} ms\nShortcut: .")
+        self.seek_fwd_1_button.setToolTip(f"Seek forward (coarse): {coarse_ms} ms\nShortcut: ]")
+
     def _bind_shortcuts(self):
         self._add_shortcut("Space", self._on_restart_loop_clicked)
         self._add_shortcut("F1", self._show_shortcuts_help, allow_when_typing=True)
@@ -668,10 +674,10 @@ class TranscribyQtWindow(QMainWindow):
         self._add_shortcut("Ctrl+B", self._on_reset_loop_end_clicked)
         self._add_shortcut("Left", lambda: self._seek_relative(-STEPS_SEC_MOVE_1))
         self._add_shortcut("Right", lambda: self._seek_relative(STEPS_SEC_MOVE_1))
-        self._add_shortcut("[", lambda: self._seek_relative(-1.0))
-        self._add_shortcut("]", lambda: self._seek_relative(1.0))
-        self._add_shortcut(",", lambda: self._seek_relative(-0.1))
-        self._add_shortcut(".", lambda: self._seek_relative(0.1))
+        self._add_shortcut("[", self._seek_backward_coarse)
+        self._add_shortcut("]", self._seek_forward_coarse)
+        self._add_shortcut(",", self._seek_backward_fine)
+        self._add_shortcut(".", self._seek_forward_fine)
         self._add_shortcut("Ctrl+[", self._on_jump_previous_favorite_clicked)
         self._add_shortcut("Ctrl+]", self._on_jump_next_favorite_clicked)
         self._add_shortcut("M", self._on_add_favorite_clicked)
@@ -707,10 +713,10 @@ class TranscribyQtWindow(QMainWindow):
             ("Ctrl+b", self._on_reset_loop_end_clicked),
             ("LEFT", lambda: self._seek_relative(-STEPS_SEC_MOVE_1)),
             ("RIGHT", lambda: self._seek_relative(STEPS_SEC_MOVE_1)),
-            ("[", lambda: self._seek_relative(-1.0)),
-            ("]", lambda: self._seek_relative(1.0)),
-            (",", lambda: self._seek_relative(-0.1)),
-            (".", lambda: self._seek_relative(0.1)),
+            ("[", self._seek_backward_coarse),
+            ("]", self._seek_forward_coarse),
+            (",", self._seek_backward_fine),
+            (".", self._seek_forward_fine),
             ("m", self._on_add_favorite_clicked),
             ("M", self._on_delete_favorite_clicked),
             ("Ctrl+[", self._on_jump_previous_favorite_clicked),
@@ -790,6 +796,22 @@ class TranscribyQtWindow(QMainWindow):
     def _seek_relative(self, seconds: float):
         if not self.controller.seek_relative(seconds):
             self.statusBar().showMessage("Please open a file...", 1200)
+
+    def _seek_backward_fine(self):
+        fine_seconds, _coarse_seconds = self.controller.get_seek_step_settings_seconds()
+        self._seek_relative(-float(fine_seconds))
+
+    def _seek_forward_fine(self):
+        fine_seconds, _coarse_seconds = self.controller.get_seek_step_settings_seconds()
+        self._seek_relative(float(fine_seconds))
+
+    def _seek_backward_coarse(self):
+        _fine_seconds, coarse_seconds = self.controller.get_seek_step_settings_seconds()
+        self._seek_relative(-float(coarse_seconds))
+
+    def _seek_forward_coarse(self):
+        _fine_seconds, coarse_seconds = self.controller.get_seek_step_settings_seconds()
+        self._seek_relative(float(coarse_seconds))
 
     def _speed_to_slider_value(self, speed_value: float) -> int:
         clamped = max(SPEED_SLIDER_MIN, min(MAX_SPEED_PERCENT, float(speed_value)))
@@ -1379,6 +1401,7 @@ class TranscribyQtWindow(QMainWindow):
     def _open_settings_dialog(self, open_tab: str = "playback"):
         dialog = SettingsDialog(self.controller, self, open_tab=open_tab)
         dialog.exec()
+        self._configure_seek_tooltips()
 
     def _refresh_favorites_list(self, snapshot: PlaybackSnapshot):
         self._syncing_favorites = True

@@ -47,7 +47,7 @@ This checklist is used before release for UI/UX and playback regressions.
 
 ## Non-Core Flows
 
-- Export Audio As exports file without UI freeze
+- Export Audio As exports file without UI freeze and without changing source timing
 - Recent files dialog opens and restores playback settings
 
 ## Shortcut Documentation Consistency

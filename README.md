@@ -77,9 +77,9 @@ You can also save/restore complete playback sessions with `.tby` files:
 - Current playback position
 - Favorite timestamps and colors
 
-### Export modified audio:
+### Export audio:
 
-It is possible to export modified songs by using the "Save as..." button. You can save your files either in mp3 or wav format, based on the extension of file to be saved. Currently saved audio files are in the format of 44.1K 16bit stereo. Mp3 are saved as constant bitrate 192k. Volume setting and metadata are ignored in the export operation.
+You can export audio by using the "Export Audio As..." action. The exported file keeps the original source timing (no speed or pitch processing is applied during export). You can save as mp3 or wav based on the selected extension. Volume setting and metadata are ignored in the export operation.
 
 ### Optimized keyobard shortcuts:
 
@@ -215,6 +215,7 @@ Current Qt feature set includes:
 - Timeline overlay with playhead + favorites markers
 - Timeline hover time tooltip + marker click-to-jump
 - Loop A/B fine adjust buttons (`10ms` / `100ms`)
+- Configurable fine/coarse seek step sizes (milliseconds) in Settings
 - Timeline right-click menu: set loop start/end at cursor
 - Loop-enabled indicator on Play button
 - Right-drag on timeline to set loop A/B range
@@ -307,7 +308,7 @@ The following commands are all assigned to the numeric keypad. Refer to the draw
 
 ## Export Notes
 
-Audio export is performed with `soundfile + scipy` and does not require ffmpeg.
+Audio export is performed with `soundfile` and does not require ffmpeg.
 
 ## Troubleshooting
 

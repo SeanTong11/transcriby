@@ -14,14 +14,18 @@ from transcriby.app_constants import (
     BUILD_COMMIT,
     BUILD_TAG,
     DEFAULT_CENTS,
+    DEFAULT_SEEK_STEP_COARSE_MS,
+    DEFAULT_SEEK_STEP_FINE_MS,
     DEFAULT_SEMITONES,
     DEFAULT_SPEED,
     DEFAULT_VOLUME,
     LOOP_MINIMUM_GAP,
+    MAX_SEEK_STEP_MS,
     MAX_PITCH_CENTS,
     MAX_PITCH_SEMITONES,
     MAX_SPEED_PERCENT,
     MAX_VOLUME,
+    MIN_SEEK_STEP_MS,
     MIN_PITCH_CENTS,
     MIN_PITCH_SEMITONES,
     MIN_SPEED_PERCENT,
@@ -108,6 +112,9 @@ class PlaybackController:
         self.loop_restart_delay_enabled = False
         self.loop_restart_delay_seconds = 0.25
         self._refresh_loop_restart_delay_settings()
+        self.seek_step_fine_seconds = DEFAULT_SEEK_STEP_FINE_MS / 1000.0
+        self.seek_step_coarse_seconds = DEFAULT_SEEK_STEP_COARSE_MS / 1000.0
+        self._refresh_seek_step_settings()
 
         self.reset_values()
 
@@ -370,6 +377,49 @@ class PlaybackController:
         self.settings.setVal(CFG_APP_SECTION, "LoopRestartDelaySeconds", normalized_delay)
         self._refresh_loop_restart_delay_settings()
         return bool(self.loop_restart_delay_enabled), float(self.loop_restart_delay_seconds)
+
+    def _normalize_seek_step_ms(self, value, default_ms: int) -> int:
+        try:
+            ms_value = int(round(float(value)))
+        except Exception:
+            ms_value = int(default_ms)
+        ms_value = min(MAX_SEEK_STEP_MS, max(MIN_SEEK_STEP_MS, ms_value))
+        return int(ms_value)
+
+    def _refresh_seek_step_settings(self):
+        fine_ms = self._normalize_seek_step_ms(
+            self.settings.getVal(CFG_APP_SECTION, "SeekStepFineMs", DEFAULT_SEEK_STEP_FINE_MS),
+            DEFAULT_SEEK_STEP_FINE_MS,
+        )
+        coarse_ms = self._normalize_seek_step_ms(
+            self.settings.getVal(CFG_APP_SECTION, "SeekStepCoarseMs", DEFAULT_SEEK_STEP_COARSE_MS),
+            DEFAULT_SEEK_STEP_COARSE_MS,
+        )
+        if coarse_ms < fine_ms:
+            coarse_ms = fine_ms
+        self.seek_step_fine_seconds = float(fine_ms) / 1000.0
+        self.seek_step_coarse_seconds = float(coarse_ms) / 1000.0
+
+    def get_seek_step_settings_ms(self) -> tuple[int, int]:
+        self._refresh_seek_step_settings()
+        return (
+            int(round(self.seek_step_fine_seconds * 1000.0)),
+            int(round(self.seek_step_coarse_seconds * 1000.0)),
+        )
+
+    def get_seek_step_settings_seconds(self) -> tuple[float, float]:
+        self._refresh_seek_step_settings()
+        return float(self.seek_step_fine_seconds), float(self.seek_step_coarse_seconds)
+
+    def set_seek_step_settings_ms(self, fine_ms, coarse_ms) -> tuple[int, int]:
+        normalized_fine_ms = self._normalize_seek_step_ms(fine_ms, DEFAULT_SEEK_STEP_FINE_MS)
+        normalized_coarse_ms = self._normalize_seek_step_ms(coarse_ms, DEFAULT_SEEK_STEP_COARSE_MS)
+        if normalized_coarse_ms < normalized_fine_ms:
+            normalized_coarse_ms = normalized_fine_ms
+        self.settings.setVal(CFG_APP_SECTION, "SeekStepFineMs", normalized_fine_ms)
+        self.settings.setVal(CFG_APP_SECTION, "SeekStepCoarseMs", normalized_coarse_ms)
+        self._refresh_seek_step_settings()
+        return self.get_seek_step_settings_ms()
 
     def _refresh_debug_logging_settings(self):
         enabled = bool(self.settings.getVal(CFG_APP_SECTION, "DebugLoggingEnabled", False))

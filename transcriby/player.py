@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Transcriby audio player using mpv (libmpv) for playback.
-Exports use soundfile + scipy (no rubberband).
+Exports use soundfile.
 """
 
 import math
@@ -244,7 +244,6 @@ else:
 import mpv
 import numpy as np
 import soundfile as sf
-from scipy import signal
 
 import gettext
 _ = gettext.gettext
@@ -621,30 +620,13 @@ class slowPlayer():
         return t * self._speed / NANOSEC
 
     def fileSave(self, src, dest, callback=None):
-        """Export audio file with current tempo/pitch settings using scipy"""
+        """Export audio file without applying playback speed or pitch changes."""
         try:
             src_path = _uri_to_path(src)
             if not os.path.isfile(src_path):
                 raise RuntimeError("Source file not found for export")
 
             data, sr = sf.read(src_path, dtype=np.float32)
-
-            # Apply speed change
-            if self._speed != 1.0:
-                orig_len = len(data)
-                new_len = int(orig_len / self._speed)
-                if len(data.shape) == 1:
-                    data = signal.resample(data, new_len)
-                else:
-                    data = signal.resample(data, new_len, axis=0)
-
-            # Apply pitch change
-            if self._pitch_ratio != 1.0:
-                pitch_ratio = 1.0 / self._pitch_ratio
-                if len(data.shape) == 1:
-                    data = signal.resample(data, int(len(data) * pitch_ratio))
-                else:
-                    data = signal.resample(data, int(data.shape[0] * pitch_ratio), axis=0)
 
             sf.write(dest, data, sr)
 
