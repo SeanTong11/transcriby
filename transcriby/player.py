@@ -15,6 +15,7 @@ try:
 except Exception:
     # Fallback for direct execution from source directory.
     from platform_utils import is_windows
+from transcriby.mpv_options import build_mpv_init_options
 try:
     from transcriby.debuglog import debug_log
 except Exception:
@@ -309,24 +310,20 @@ def _split_atempo(factor: float) -> list[float]:
 class slowPlayer():
     def __init__(self):
         """Initialize the audio player"""
-        # mpv player (audio/video)
-        self._player = mpv.MPV(
-            ytdl=False,
-            vid="auto",
-            keep_open="always",
-            input_vo_keyboard=True,
-            input_default_bindings=False,
-        )
-        debug_log(
-            "mpv",
-            "initialized",
-            input_vo_keyboard=True,
-            input_default_bindings=False,
-        )
-        self._player.pause = True
+        self._player = None
         self._window_key_binding_names = []
         self._mpv_exit_requested = False
         self._lifecycle_event_handler = None
+
+        # mpv player (audio/video)
+        init_options = build_mpv_init_options()
+        self._player = mpv.MPV(**init_options)
+        debug_log(
+            "mpv",
+            "initialized",
+            **init_options,
+        )
+        self._player.pause = True
         self._register_lifecycle_events()
 
         # Playback parameters
@@ -785,7 +782,10 @@ class slowPlayer():
         """Explicitly terminate mpv backend."""
         self.clear_lifecycle_events()
         self.clear_window_key_bindings()
+        player = getattr(self, "_player", None)
+        if player is None:
+            return
         try:
-            self._player.terminate()
+            player.terminate()
         except Exception:
             pass
