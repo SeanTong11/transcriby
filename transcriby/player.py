@@ -368,25 +368,34 @@ class slowPlayer():
             return False
 
     def _refresh_audio_params(self) -> bool:
-        """Refresh audio params and return True if sample rate is available."""
-        sr = None
+        """Refresh audio params and return True when the runtime sample rate changes."""
+        runtime_sr = None
+        params = self._get_prop("audio_params")
+        if isinstance(params, dict):
+            runtime_sr = params.get("samplerate") or params.get("sample_rate")
+
+        file_sr = None
         if self._media_path and os.path.isfile(self._media_path):
             try:
                 info = sf.info(self._media_path)
-                sr = info.samplerate
+                file_sr = info.samplerate
             except Exception:
-                sr = None
+                file_sr = None
 
+        sr = runtime_sr if runtime_sr is not None else file_sr
         if sr is None:
-            params = self._get_prop("audio_params")
-            if isinstance(params, dict):
-                sr = params.get("samplerate") or params.get("sample_rate")
+            return False
 
-        if sr is not None:
-            self._sample_rate = int(sr)
-            return True
+        try:
+            normalized_sr = int(sr)
+        except Exception:
+            return False
 
-        return False
+        if normalized_sr == self._sample_rate:
+            return False
+
+        self._sample_rate = normalized_sr
+        return True
 
     def _apply_pitch_filter(self):
         """Apply pitch shift using mpv audio filters (lavfi)."""
@@ -574,9 +583,8 @@ class slowPlayer():
                 self.title = self.title or meta.get("title", "")
 
         # Refresh audio params if not set yet
-        if not self._sample_rate:
-            if self._refresh_audio_params():
-                self._apply_pitch_filter()
+        if self._refresh_audio_params():
+            self._apply_pitch_filter()
 
     def ReadyToPlay(self):
         """Prepare for playback"""

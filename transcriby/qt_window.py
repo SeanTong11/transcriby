@@ -73,6 +73,7 @@ from transcriby.platform_utils import get_resources_dir
 from transcriby.qt_controller import PlaybackController, PlaybackSnapshot
 from transcriby.qt_settings_dialog import SettingsDialog
 from transcriby.qt_timeline import QtTimelineWidget
+from transcriby.qt_widgets import ShortcutStepDoubleSpinBox, ShortcutStepSpinBox
 
 
 def format_seconds_text(seconds: float | None) -> str:
@@ -375,7 +376,7 @@ class TranscribyQtWindow(QMainWindow):
         self.speed_slider = QSlider(Qt.Horizontal)
         self.speed_slider.setRange(int(SPEED_SLIDER_MIN * 10), int(MAX_SPEED_PERCENT * 10))
         self.speed_slider.valueChanged.connect(self._on_speed_slider_changed)
-        self.speed_spin = QDoubleSpinBox()
+        self.speed_spin = ShortcutStepDoubleSpinBox()
         self.speed_spin.setDecimals(1)
         self.speed_spin.setSingleStep(STEPS_SPEED)
         self.speed_spin.setRange(MIN_SPEED_PERCENT, MAX_SPEED_PERCENT)
@@ -420,7 +421,7 @@ class TranscribyQtWindow(QMainWindow):
         self.volume_slider = QSlider(Qt.Horizontal)
         self.volume_slider.setRange(MIN_VOLUME, MAX_VOLUME)
         self.volume_slider.valueChanged.connect(self._on_volume_slider_changed)
-        self.volume_spin = QSpinBox()
+        self.volume_spin = ShortcutStepSpinBox()
         self.volume_spin.setRange(MIN_VOLUME, MAX_VOLUME)
         self.volume_spin.valueChanged.connect(self._on_volume_spin_changed)
         self.volume_reset_button = QPushButton("Reset")

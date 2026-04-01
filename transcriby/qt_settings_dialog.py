@@ -34,6 +34,7 @@ from transcriby.app_constants import (
     UI_TEXT_MUTED,
 )
 from transcriby.qt_controller import PlaybackController
+from transcriby.qt_widgets import ShortcutStepDoubleSpinBox, ShortcutStepSpinBox
 
 
 SHORTCUT_ROWS = [
@@ -115,7 +116,7 @@ class SettingsDialog(QDialog):
         layout.addWidget(self.delay_enabled)
 
         form = QFormLayout()
-        self.delay_seconds = QDoubleSpinBox()
+        self.delay_seconds = ShortcutStepDoubleSpinBox()
         self.delay_seconds.setRange(0.0, 10.0)
         self.delay_seconds.setSingleStep(0.05)
         self.delay_seconds.setDecimals(2)
@@ -123,13 +124,13 @@ class SettingsDialog(QDialog):
         form.addRow("Delay (seconds)", self.delay_seconds)
 
         seek_fine_ms, seek_coarse_ms = self.controller.get_seek_step_settings_ms()
-        self.seek_step_fine_ms = QSpinBox()
+        self.seek_step_fine_ms = ShortcutStepSpinBox()
         self.seek_step_fine_ms.setRange(MIN_SEEK_STEP_MS, MAX_SEEK_STEP_MS)
         self.seek_step_fine_ms.setSingleStep(10)
         self.seek_step_fine_ms.setValue(int(seek_fine_ms))
         form.addRow("Seek fine (ms)", self.seek_step_fine_ms)
 
-        self.seek_step_coarse_ms = QSpinBox()
+        self.seek_step_coarse_ms = ShortcutStepSpinBox()
         self.seek_step_coarse_ms.setRange(MIN_SEEK_STEP_MS, MAX_SEEK_STEP_MS)
         self.seek_step_coarse_ms.setSingleStep(50)
         self.seek_step_coarse_ms.setValue(int(seek_coarse_ms))
