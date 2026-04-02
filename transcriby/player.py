@@ -613,16 +613,16 @@ class slowPlayer():
         self._set_prop("volume", self._volume * 100.0)
 
     def pipeline_time(self, t):
-        """Convert song time (seconds) to pipeline time (ns)"""
+        """Convert media time (seconds) to internal nanoseconds."""
         if t is None:
             return None
-        return t / self._speed * NANOSEC
+        return t * NANOSEC
 
     def song_time(self, t):
-        """Convert pipeline time (ns) to song time (seconds)"""
+        """Convert internal nanoseconds back to media time (seconds)."""
         if t is None:
             return None
-        return t * self._speed / NANOSEC
+        return t / NANOSEC
 
     def fileSave(self, src, dest, callback=None):
         """Export audio file without applying playback speed or pitch changes."""

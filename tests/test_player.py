@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
 
-from transcriby.player import slowPlayer
+from transcriby.player import NANOSEC, slowPlayer
 
 
 def build_player(backend=None) -> slowPlayer:
@@ -82,6 +82,17 @@ class SlowPlayerAudioParamsTest(unittest.TestCase):
 
         self.assertLess(effective_semitones, -2.4)
         self.assertGreater(effective_semitones, -2.6)
+
+
+class SlowPlayerTimelineTest(unittest.TestCase):
+    def test_pipeline_and_song_time_do_not_scale_with_playback_speed(self):
+        player = build_player()
+        player._speed = 0.5
+        timeline_seconds = 12.5
+        timeline_ns = int(timeline_seconds * NANOSEC)
+
+        self.assertEqual(player.pipeline_time(timeline_seconds), timeline_ns)
+        self.assertEqual(player.song_time(timeline_ns), timeline_seconds)
 
 
 if __name__ == "__main__":

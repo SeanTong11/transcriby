@@ -974,17 +974,8 @@ class PlaybackController:
         if abs(new_tempo - old_tempo) < 1e-9:
             return new_tempo
 
-        curpos = self.player.songPosition
         self.player.tempo = new_tempo
         self.player.set_speed(new_tempo)
-        if curpos is not None and curpos >= 0:
-            self.player.seek_absolute(self.player.pipeline_time(curpos))
-
-        if old_tempo > 0 and new_tempo > 0:
-            if self.player.startPoint is not None and self.player.startPoint >= 0:
-                self.player.startPoint = int((self.player.startPoint * old_tempo) / new_tempo)
-            if self.player.endPoint is not None and self.player.endPoint >= 0:
-                self.player.endPoint = int((self.player.endPoint * old_tempo) / new_tempo)
 
         if persist:
             self.persist_recent_options()
