@@ -14,7 +14,6 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QDialog,
     QDialogButtonBox,
-    QDoubleSpinBox,
     QFileDialog,
     QFormLayout,
     QGroupBox,
@@ -28,7 +27,6 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QSlider,
-    QSpinBox,
     QVBoxLayout,
     QWidget,
 )
@@ -167,6 +165,7 @@ class TranscribyQtWindow(QMainWindow):
 
     def _build_ui(self):
         root_widget = QWidget(self)
+        root_widget.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
         self.setCentralWidget(root_widget)
         root = QVBoxLayout(root_widget)
         root.setContentsMargins(14, 12, 14, 8)
@@ -392,7 +391,7 @@ class TranscribyQtWindow(QMainWindow):
         self.semitones_slider = QSlider(Qt.Horizontal)
         self.semitones_slider.setRange(MIN_PITCH_SEMITONES, MAX_PITCH_SEMITONES)
         self.semitones_slider.valueChanged.connect(self._on_semitones_slider_changed)
-        self.semitones_spin = QSpinBox()
+        self.semitones_spin = ShortcutStepSpinBox()
         self.semitones_spin.setRange(MIN_PITCH_SEMITONES, MAX_PITCH_SEMITONES)
         self.semitones_spin.valueChanged.connect(self._on_semitones_changed)
         self.semitones_reset_button = QPushButton("Reset")
@@ -406,7 +405,7 @@ class TranscribyQtWindow(QMainWindow):
         self.cents_slider = QSlider(Qt.Horizontal)
         self.cents_slider.setRange(MIN_PITCH_CENTS, MAX_PITCH_CENTS)
         self.cents_slider.valueChanged.connect(self._on_cents_slider_changed)
-        self.cents_spin = QSpinBox()
+        self.cents_spin = ShortcutStepSpinBox()
         self.cents_spin.setRange(MIN_PITCH_CENTS, MAX_PITCH_CENTS)
         self.cents_spin.valueChanged.connect(self._on_cents_changed)
         self.cents_reset_button = QPushButton("Reset")
