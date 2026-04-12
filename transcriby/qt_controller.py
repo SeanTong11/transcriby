@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import os
+import time
 import urllib.parse
 
 from transcriby.app_constants import (
@@ -108,6 +109,9 @@ class PlaybackController:
 
         self._pending_loop_restore = None
         self._pending_seek_restore = None
+        self._pending_loop_seek_target = None
+        self._pending_loop_seek_deadline = 0.0
+        self._pending_loop_seek_grace_seconds = 0.15
 
         self.loop_restart_delay_enabled = False
         self.loop_restart_delay_seconds = 0.25
@@ -448,6 +452,7 @@ class PlaybackController:
         return bool(self.debug_logging_enabled), get_default_debug_log_path()
 
     def reset_values(self):
+        self._clear_loop_seek_guard()
         self.player.startPoint = -2
         self.player.endPoint = -1
         self.player.loopEnabled = False
@@ -715,8 +720,41 @@ class PlaybackController:
             and self.player.endPoint > self.player.startPoint
         )
 
+    def _clear_loop_seek_guard(self):
+        self._pending_loop_seek_target = None
+        self._pending_loop_seek_deadline = 0.0
+
+    def _arm_loop_seek_guard(self, target_ns: int):
+        self._pending_loop_seek_target = int(target_ns)
+        self._pending_loop_seek_deadline = time.monotonic() + float(self._pending_loop_seek_grace_seconds)
+
+    def _is_loop_seek_guard_active(self, position_ns: int | None) -> bool:
+        if self._pending_loop_seek_target is None:
+            return False
+
+        if time.monotonic() >= self._pending_loop_seek_deadline:
+            self._clear_loop_seek_guard()
+            return False
+
+        if position_ns is None:
+            return True
+
+        if (
+            self.player.startPoint is not None
+            and self.player.endPoint is not None
+            and self.player.startPoint >= 0
+            and self.player.endPoint > self.player.startPoint
+            and self.player.startPoint <= position_ns < self.player.endPoint
+        ):
+            self._clear_loop_seek_guard()
+            return False
+
+        return True
+
     def set_loop_enabled(self, enabled: bool, persist: bool = True):
         self.player.loopEnabled = bool(enabled)
+        if not self.player.loopEnabled:
+            self._clear_loop_seek_guard()
         if persist:
             self.persist_recent_options()
 
@@ -930,11 +968,13 @@ class PlaybackController:
         self._refresh_loop_restart_delay_settings()
         if self.loop_restart_delay_enabled and self.loop_restart_delay_seconds > 0:
             delay_ms = int(round(self.loop_restart_delay_seconds * 1000))
-            self.player.seek_absolute(self.player.startPoint)
+            if self.player.seek_absolute(self.player.startPoint):
+                self._arm_loop_seek_guard(self.player.startPoint)
             self.pause()
             return delay_ms
 
-        self.player.seek_absolute(self.player.startPoint)
+        if self.player.seek_absolute(self.player.startPoint):
+            self._arm_loop_seek_guard(self.player.startPoint)
         self.play()
         return 0
 
@@ -1175,6 +1215,7 @@ class PlaybackController:
         duration, position = self.player.update_position()
 
         if not self.player.loopEnabled:
+            self._clear_loop_seek_guard()
             if (
                 self.player.isPlaying
                 and duration is not None
@@ -1190,8 +1231,12 @@ class PlaybackController:
             elif position is not None and (
                 position < self.player.startPoint or position >= self.player.endPoint
             ):
-                self.player.seek_absolute(self.player.startPoint)
-                duration, position = self.player.update_position()
+                if not self._is_loop_seek_guard_active(position):
+                    if self.player.seek_absolute(self.player.startPoint):
+                        self._arm_loop_seek_guard(self.player.startPoint)
+                    duration, position = self.player.update_position()
+            else:
+                self._clear_loop_seek_guard()
 
         if self.player.endPoint is not None and self.player.endPoint <= 0:
             if duration is not None and duration > 0:

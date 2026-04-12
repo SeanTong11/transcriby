@@ -523,17 +523,18 @@ class slowPlayer():
     def seek_absolute(self, newPos):
         """Seek to absolute position (newPos in nanoseconds, pipeline time)"""
         if not self.canPlay or not self.media:
-            return
+            return False
         if newPos is None:
-            return
+            return False
         song_seconds = self.song_time(newPos)
         if song_seconds is None:
-            return
+            return False
         try:
             self._player.command("seek", str(song_seconds), "absolute", "exact")
         except Exception:
-            return
+            return False
         self.songPosition = song_seconds
+        return True
 
     def seek_relative(self, newPos):
         """Seek relative to current position (newPos in seconds)"""
